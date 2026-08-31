@@ -46,6 +46,7 @@ const LEAD_TONES: Record<LeadStatus, BadgeTone> = {
   PROPOSAL: "cta",
   NEGOTIATION: "warning",
   DEAL: "success",
+  PRODUCTION: "info",
   COMPLETED: "success",
 };
 

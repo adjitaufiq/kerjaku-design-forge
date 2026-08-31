@@ -10,6 +10,9 @@ import type {
   ProjectStatus,
   ProjectType,
   Proposal,
+  ProposalItem,
+  ProposalStatus,
+  ProposalVersion,
   Workshop,
 } from "./models";
 
@@ -97,6 +100,43 @@ export interface AssetRepository {
 
 export interface ProposalRepository {
   listByProjects(projectIds: string[]): Promise<Proposal[]>;
+  list(workspaceId: string): Promise<Proposal[]>;
+  get(id: string): Promise<Proposal | null>;
+  create(workspaceId: string, input: { projectId: string; title: string }): Promise<Proposal>;
+  update(
+    id: string,
+    patch: Partial<{
+      title: string;
+      status: ProposalStatus;
+      conceptNote: string | null;
+      scopeOfWork: string | null;
+      materialSpec: string | null;
+      terms: string | null;
+      totalAmount: number;
+      pdfUrl: string | null;
+    }>,
+  ): Promise<void>;
+  listItems(proposalId: string): Promise<ProposalItem[]>;
+  addItem(
+    workspaceId: string,
+    input: {
+      proposalId: string;
+      position: number;
+      description: string;
+      quantity: number;
+      price: number;
+    },
+  ): Promise<ProposalItem>;
+  updateItem(
+    id: string,
+    patch: Partial<{ description: string; quantity: number; price: number; position: number }>,
+  ): Promise<void>;
+  removeItem(id: string): Promise<void>;
+  listVersions(proposalId: string): Promise<ProposalVersion[]>;
+  addVersion(
+    workspaceId: string,
+    input: { proposalId: string; version: number; pdfUrl: string | null; totalAmount: number },
+  ): Promise<ProposalVersion>;
 }
 
 export interface DataLayer {
