@@ -165,9 +165,37 @@ export interface Proposal {
   projectId: string;
   title: string;
   status: ProposalStatus;
+  conceptNote: string | null;
+  scopeOfWork: string | null;
+  materialSpec: string | null;
+  terms: string | null;
+  totalAmount: number;
+  pdfUrl: string | null;
+  shareToken: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProposalItem {
+  id: string;
+  workspaceId: string;
+  proposalId: string;
+  position: number;
+  description: string;
+  quantity: number;
+  price: number;
+  subtotal: number;
+}
+
+export interface ProposalVersion {
+  id: string;
+  proposalId: string;
+  version: number;
+  pdfUrl: string | null;
   totalAmount: number;
   createdAt: string;
 }
+
 
 export const PROPOSAL_STATUS_LABEL: Record<ProposalStatus, string> = {
   DRAFT: "Draft",
