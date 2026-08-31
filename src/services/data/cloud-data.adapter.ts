@@ -286,7 +286,7 @@ export const cloudDataLayer: DataLayer = {
       const path = `${workspaceId}/${projectId}/${crypto.randomUUID()}.${ext}`;
       const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, file, {
         upsert: false,
-        contentType: file.type || undefined,
+        ...(file.type ? { contentType: file.type } : {}),
       });
       if (uploadError) throw new Error(uploadError.message);
 
