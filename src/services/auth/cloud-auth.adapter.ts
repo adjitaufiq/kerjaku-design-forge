@@ -13,7 +13,7 @@ function toAuthUser(user: CloudUser | null | undefined): AuthUser | null {
   const name =
     (meta["name"] as string | undefined) ??
     (meta["full_name"] as string | undefined) ??
-    (user.email ? user.email.split("@")[0] : "User");
+    (user.email ? (user.email.split("@")[0] ?? "User") : "User");
   return {
     id: user.id,
     email: user.email ?? "",
