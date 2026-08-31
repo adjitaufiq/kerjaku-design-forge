@@ -176,5 +176,3 @@ function LeadsPage() {
     </>
   );
 }
-
-export { LEAD_STAGES, LEAD_STATUS_LABEL };
