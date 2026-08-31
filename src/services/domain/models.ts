@@ -9,6 +9,7 @@ export type LeadStatus =
   | "PROPOSAL"
   | "NEGOTIATION"
   | "DEAL"
+  | "PRODUCTION"
   | "COMPLETED";
 
 export type ProjectType =
@@ -27,7 +28,8 @@ export type ActivityType =
   | "PROPOSAL_SENT"
   | "AI_CONCEPT"
   | "CALL"
-  | "WHATSAPP";
+  | "WHATSAPP"
+  | "MEETING";
 
 export type AssetType = "CLIENT_PHOTO" | "PINTEREST_REFERENCE" | "SKETCHUP_RENDER";
 
@@ -110,6 +112,7 @@ export const LEAD_STAGES: LeadStatus[] = [
   "PROPOSAL",
   "NEGOTIATION",
   "DEAL",
+  "PRODUCTION",
   "COMPLETED",
 ];
 
@@ -120,6 +123,7 @@ export const LEAD_STATUS_LABEL: Record<LeadStatus, string> = {
   PROPOSAL: "Proposal Sent",
   NEGOTIATION: "Negotiation",
   DEAL: "Deal",
+  PRODUCTION: "Production",
   COMPLETED: "Completed",
 };
 
@@ -147,6 +151,7 @@ export const ACTIVITY_TYPE_LABEL: Record<ActivityType, string> = {
   AI_CONCEPT: "AI concept",
   CALL: "Call",
   WHATSAPP: "WhatsApp",
+  MEETING: "Meeting",
 };
 
 export function formatIDR(value: number): string {
@@ -165,9 +170,37 @@ export interface Proposal {
   projectId: string;
   title: string;
   status: ProposalStatus;
+  conceptNote: string | null;
+  scopeOfWork: string | null;
+  materialSpec: string | null;
+  terms: string | null;
+  totalAmount: number;
+  pdfUrl: string | null;
+  shareToken: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProposalItem {
+  id: string;
+  workspaceId: string;
+  proposalId: string;
+  position: number;
+  description: string;
+  quantity: number;
+  price: number;
+  subtotal: number;
+}
+
+export interface ProposalVersion {
+  id: string;
+  proposalId: string;
+  version: number;
+  pdfUrl: string | null;
   totalAmount: number;
   createdAt: string;
 }
+
 
 export const PROPOSAL_STATUS_LABEL: Record<ProposalStatus, string> = {
   DRAFT: "Draft",

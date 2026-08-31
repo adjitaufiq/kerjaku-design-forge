@@ -7,6 +7,8 @@ import type {
   Project,
   ProjectAsset,
   Proposal,
+  ProposalItem,
+  ProposalVersion,
   Workshop,
 } from "../domain/models";
 import type { DataLayer } from "../domain/repositories";
@@ -83,6 +85,33 @@ const mapProposal = (r: Row): Proposal => ({
   projectId: r["project_id"] as string,
   title: r["title"] as string,
   status: r["status"] as Proposal["status"],
+  conceptNote: (r["concept_note"] as string) ?? null,
+  scopeOfWork: (r["scope_of_work"] as string) ?? null,
+  materialSpec: (r["material_spec"] as string) ?? null,
+  terms: (r["terms"] as string) ?? null,
+  totalAmount: Number(r["total_amount"] ?? 0),
+  pdfUrl: (r["pdf_url"] as string) ?? null,
+  shareToken: r["share_token"] as string,
+  createdAt: r["created_at"] as string,
+  updatedAt: (r["updated_at"] as string) ?? (r["created_at"] as string),
+});
+
+const mapProposalItem = (r: Row): ProposalItem => ({
+  id: r["id"] as string,
+  workspaceId: r["workspace_id"] as string,
+  proposalId: r["proposal_id"] as string,
+  position: Number(r["position"] ?? 1),
+  description: (r["description"] as string) ?? "",
+  quantity: Number(r["quantity"] ?? 1),
+  price: Number(r["price"] ?? 0),
+  subtotal: Number(r["subtotal"] ?? 0),
+});
+
+const mapProposalVersion = (r: Row): ProposalVersion => ({
+  id: r["id"] as string,
+  proposalId: r["proposal_id"] as string,
+  version: Number(r["version"] ?? 1),
+  pdfUrl: (r["pdf_url"] as string) ?? null,
   totalAmount: Number(r["total_amount"] ?? 0),
   createdAt: r["created_at"] as string,
 });
@@ -314,6 +343,125 @@ export const cloudDataLayer: DataLayer = {
         .order("created_at", { ascending: false });
       if (error) throw new Error(error.message);
       return (data ?? []).map((r) => mapProposal(r as Row));
+    },
+    async list(workspaceId) {
+      const { data, error } = await supabase
+        .from("proposals")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: false });
+      if (error) throw new Error(error.message);
+      return (data ?? []).map((r) => mapProposal(r as Row));
+    },
+    async get(id) {
+      const { data, error } = await supabase
+        .from("proposals")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return data ? mapProposal(data as Row) : null;
+    },
+    async create(workspaceId, input) {
+      const res = await supabase
+        .from("proposals")
+        .insert({
+          workspace_id: workspaceId,
+          project_id: input.projectId,
+          title: input.title,
+        })
+        .select("*")
+        .single();
+      return mapProposal(unwrap(res) as Row);
+    },
+    async update(id, patch) {
+      const { error } = await supabase
+        .from("proposals")
+        .update({
+          ...(patch.title !== undefined ? { title: patch.title } : {}),
+          ...(patch.status !== undefined ? { status: patch.status } : {}),
+          ...(patch.conceptNote !== undefined ? { concept_note: patch.conceptNote } : {}),
+          ...(patch.scopeOfWork !== undefined ? { scope_of_work: patch.scopeOfWork } : {}),
+          ...(patch.materialSpec !== undefined ? { material_spec: patch.materialSpec } : {}),
+          ...(patch.terms !== undefined ? { terms: patch.terms } : {}),
+          ...(patch.totalAmount !== undefined ? { total_amount: patch.totalAmount } : {}),
+          ...(patch.pdfUrl !== undefined ? { pdf_url: patch.pdfUrl } : {}),
+        })
+        .eq("id", id);
+      if (error) throw new Error(error.message);
+    },
+    async listItems(proposalId) {
+      const { data, error } = await supabase
+        .from("proposal_items")
+        .select("*")
+        .eq("proposal_id", proposalId)
+        .order("position", { ascending: true });
+      if (error) throw new Error(error.message);
+      return (data ?? []).map((r) => mapProposalItem(r as Row));
+    },
+    async addItem(workspaceId, input) {
+      const res = await supabase
+        .from("proposal_items")
+        .insert({
+          workspace_id: workspaceId,
+          proposal_id: input.proposalId,
+          position: input.position,
+          description: input.description,
+          quantity: input.quantity,
+          price: input.price,
+          subtotal: input.quantity * input.price,
+        })
+        .select("*")
+        .single();
+      return mapProposalItem(unwrap(res) as Row);
+    },
+    async updateItem(id, patch) {
+      const current = await supabase
+        .from("proposal_items")
+        .select("quantity, price")
+        .eq("id", id)
+        .single();
+      if (current.error) throw new Error(current.error.message);
+      const quantity = patch.quantity ?? Number(current.data.quantity ?? 1);
+      const price = patch.price ?? Number(current.data.price ?? 0);
+      const { error } = await supabase
+        .from("proposal_items")
+        .update({
+          ...(patch.description !== undefined ? { description: patch.description } : {}),
+          ...(patch.position !== undefined ? { position: patch.position } : {}),
+          quantity,
+          price,
+          subtotal: quantity * price,
+        })
+        .eq("id", id);
+      if (error) throw new Error(error.message);
+    },
+    async removeItem(id) {
+      const { error } = await supabase.from("proposal_items").delete().eq("id", id);
+      if (error) throw new Error(error.message);
+    },
+    async listVersions(proposalId) {
+      const { data, error } = await supabase
+        .from("proposal_versions")
+        .select("*")
+        .eq("proposal_id", proposalId)
+        .order("version", { ascending: false });
+      if (error) throw new Error(error.message);
+      return (data ?? []).map((r) => mapProposalVersion(r as Row));
+    },
+    async addVersion(workspaceId, input) {
+      const res = await supabase
+        .from("proposal_versions")
+        .insert({
+          workspace_id: workspaceId,
+          proposal_id: input.proposalId,
+          version: input.version,
+          pdf_url: input.pdfUrl,
+          total_amount: input.totalAmount,
+        })
+        .select("*")
+        .single();
+      return mapProposalVersion(unwrap(res) as Row);
     },
   },
 };

@@ -435,6 +435,54 @@ export type Database = {
           },
         ]
       }
+      proposal_versions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          pdf_url: string | null
+          proposal_id: string
+          total_amount: number
+          version: number
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          pdf_url?: string | null
+          proposal_id: string
+          total_amount?: number
+          version?: number
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          pdf_url?: string | null
+          proposal_id?: string
+          total_amount?: number
+          version?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_versions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposal_versions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposals: {
         Row: {
           concept_note: string | null
@@ -634,6 +682,7 @@ export type Database = {
         | "AI_CONCEPT"
         | "CALL"
         | "WHATSAPP"
+        | "MEETING"
       app_role: "admin_workshop" | "sales" | "designer"
       asset_type: "CLIENT_PHOTO" | "PINTEREST_REFERENCE" | "SKETCHUP_RENDER"
       generation_status: "PENDING" | "PROCESSING" | "SUCCESS" | "FAILED"
@@ -645,6 +694,7 @@ export type Database = {
         | "NEGOTIATION"
         | "DEAL"
         | "COMPLETED"
+        | "PRODUCTION"
       project_status:
         | "DRAFT"
         | "DESIGN"
@@ -793,6 +843,7 @@ export const Constants = {
         "AI_CONCEPT",
         "CALL",
         "WHATSAPP",
+        "MEETING",
       ],
       app_role: ["admin_workshop", "sales", "designer"],
       asset_type: ["CLIENT_PHOTO", "PINTEREST_REFERENCE", "SKETCHUP_RENDER"],
@@ -805,6 +856,7 @@ export const Constants = {
         "NEGOTIATION",
         "DEAL",
         "COMPLETED",
+        "PRODUCTION",
       ],
       project_status: [
         "DRAFT",
