@@ -156,3 +156,54 @@ export function formatIDR(value: number): string {
     maximumFractionDigits: 0,
   }).format(value || 0);
 }
+
+export type ProposalStatus = "DRAFT" | "SENT" | "APPROVED" | "REJECTED";
+
+export interface Proposal {
+  id: string;
+  workspaceId: string;
+  projectId: string;
+  title: string;
+  status: ProposalStatus;
+  totalAmount: number;
+  createdAt: string;
+}
+
+export const PROPOSAL_STATUS_LABEL: Record<ProposalStatus, string> = {
+  DRAFT: "Draft",
+  SENT: "Sent",
+  APPROVED: "Approved",
+  REJECTED: "Rejected",
+};
+
+export const ASSET_TYPE_LABEL: Record<AssetType, string> = {
+  CLIENT_PHOTO: "Existing room photo",
+  PINTEREST_REFERENCE: "Reference image",
+  SKETCHUP_RENDER: "Render",
+};
+
+export const BUDGET_RANGES = [
+  "< Rp 25 jt",
+  "Rp 25 – 50 jt",
+  "Rp 50 – 100 jt",
+  "Rp 100 – 250 jt",
+  "> Rp 250 jt",
+];
+
+export const STYLE_PREFERENCES = [
+  "Modern Minimalist",
+  "Scandinavian",
+  "Japandi",
+  "Industrial",
+  "Classic",
+  "Luxury Modern",
+];
+
+export function formatDate(value: string | null): string {
+  if (!value) return "—";
+  return new Date(value).toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}

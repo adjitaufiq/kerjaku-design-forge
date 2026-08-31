@@ -21,11 +21,11 @@ export function Field({
   className,
 }: {
   label: string;
-  htmlFor?: string;
-  hint?: string;
-  error?: string;
+  htmlFor?: string | undefined;
+  hint?: string | undefined;
+  error?: string | undefined;
   children: ReactNode;
-  className?: string;
+  className?: string | undefined;
 }) {
   return (
     <div className={cn("space-y-1.5", className)}>
@@ -86,8 +86,8 @@ export function SelectField({
   onValueChange: (value: string) => void;
   options: { value: string; label: string }[];
   placeholder?: string;
-  hint?: string;
-  className?: string;
+  hint?: string | undefined;
+  className?: string | undefined;
 }) {
   return (
     <Field label={label} hint={hint} className={className}>
@@ -115,7 +115,7 @@ export function FileField({
   accept = "image/*",
 }: {
   label: string;
-  hint?: string;
+  hint?: string | undefined;
   file: File | null;
   onFileChange: (file: File | null) => void;
   accept?: string;

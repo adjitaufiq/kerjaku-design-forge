@@ -6,6 +6,7 @@ import type {
   Membership,
   Project,
   ProjectAsset,
+  Proposal,
   Workshop,
 } from "../domain/models";
 import type { DataLayer } from "../domain/repositories";
@@ -73,6 +74,16 @@ const mapAsset = (r: Row): ProjectAsset => ({
   projectId: r["project_id"] as string,
   type: r["type"] as ProjectAsset["type"],
   url: r["url"] as string,
+  createdAt: r["created_at"] as string,
+});
+
+const mapProposal = (r: Row): Proposal => ({
+  id: r["id"] as string,
+  workspaceId: r["workspace_id"] as string,
+  projectId: r["project_id"] as string,
+  title: r["title"] as string,
+  status: r["status"] as Proposal["status"],
+  totalAmount: Number(r["total_amount"] ?? 0),
   createdAt: r["created_at"] as string,
 });
 
@@ -275,7 +286,7 @@ export const cloudDataLayer: DataLayer = {
       const path = `${workspaceId}/${projectId}/${crypto.randomUUID()}.${ext}`;
       const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, file, {
         upsert: false,
-        contentType: file.type || undefined,
+        ...(file.type ? { contentType: file.type } : {}),
       });
       if (uploadError) throw new Error(uploadError.message);
 
@@ -285,6 +296,24 @@ export const cloudDataLayer: DataLayer = {
         .select("*")
         .single();
       return mapAsset(unwrap(res) as Row);
+    },
+    async getViewUrl(path) {
+      const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, 3600);
+      if (error) return null;
+      return data?.signedUrl ?? null;
+    },
+  },
+
+  proposals: {
+    async listByProjects(projectIds) {
+      if (projectIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("proposals")
+        .select("*")
+        .in("project_id", projectIds)
+        .order("created_at", { ascending: false });
+      if (error) throw new Error(error.message);
+      return (data ?? []).map((r) => mapProposal(r as Row));
     },
   },
 };
