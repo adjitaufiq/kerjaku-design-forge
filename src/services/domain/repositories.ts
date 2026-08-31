@@ -9,6 +9,7 @@ import type {
   ProjectAsset,
   ProjectStatus,
   ProjectType,
+  Proposal,
   Workshop,
 } from "./models";
 
@@ -90,6 +91,12 @@ export interface AssetRepository {
     type: ProjectAsset["type"],
     file: File,
   ): Promise<ProjectAsset>;
+  /** Resolve a temporary viewable URL for a stored asset path. */
+  getViewUrl(path: string): Promise<string | null>;
+}
+
+export interface ProposalRepository {
+  listByProjects(projectIds: string[]): Promise<Proposal[]>;
 }
 
 export interface DataLayer {
@@ -99,4 +106,5 @@ export interface DataLayer {
   consultations: ConsultationRepository;
   activities: ActivityRepository;
   assets: AssetRepository;
+  proposals: ProposalRepository;
 }
