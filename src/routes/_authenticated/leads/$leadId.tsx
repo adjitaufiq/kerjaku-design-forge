@@ -75,6 +75,7 @@ function LeadDetailPage() {
   const queryClient = useQueryClient();
   const [noteOpen, setNoteOpen] = useState(false);
   const [note, setNote] = useState({ type: "NOTE" as ActivityType, title: "", body: "" });
+  const [followUpDraft, setFollowUpDraft] = useState<string | null>(null);
 
   const leadQuery = useQuery({
     queryKey: ["lead", leadId],
@@ -140,6 +141,53 @@ function LeadDetailPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not add note"),
   });
 
+  const setFollowUp = useMutation({
+    mutationFn: async (date: string | null) => {
+      await data.leads.update(leadId, { nextFollowUp: date });
+      if (workspaceId && date) {
+        await data.activities.log(workspaceId, {
+          leadId,
+          type: "FOLLOW_UP",
+          title: `Follow up scheduled for ${formatDate(date)}`,
+          dueAt: new Date(date).toISOString(),
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lead", leadId] });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["activities", leadId] });
+      toast.success("Reminder updated");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not set reminder"),
+  });
+
+  const sendFollowUp = useMutation({
+    mutationFn: async () => {
+      const current = leadQuery.data;
+      if (!current) return;
+      const message = buildFollowUpMessage({
+        clientName: current.clientName,
+        workshopName: null,
+        projectName: projects[0]?.projectName ?? null,
+      });
+      window.open(buildWhatsAppUrl(current.phone, message), "_blank", "noopener");
+      if (workspaceId) {
+        await data.activities.log(workspaceId, {
+          leadId,
+          type: "WHATSAPP",
+          title: "Follow up sent via WhatsApp",
+          body: message,
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["activities", leadId] });
+      toast.success("Follow up logged");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not log follow up"),
+  });
+
   if (leadQuery.isLoading) {
     return <Skeleton className="h-72 rounded-2xl" />;
   }
@@ -155,6 +203,9 @@ function LeadDetailPage() {
       </GlassCard>
     );
   }
+
+  const followUpDate = followUpDraft ?? (lead.nextFollowUp ? lead.nextFollowUp.slice(0, 10) : "");
+  const followUpDue = !!lead.nextFollowUp && new Date(lead.nextFollowUp) <= new Date();
 
   const activities = activitiesQuery.data ?? [];
   const proposals = proposalsQuery.data ?? [];
@@ -312,7 +363,7 @@ function LeadDetailPage() {
                 name="nextFollowUp"
                 type="date"
                 value={followUpDate}
-                onChange={(e) => setFollowUpDate(e.target.value)}
+                onChange={(e) => setFollowUpDraft(e.target.value)}
               />
               <div className="flex flex-wrap gap-2">
                 <Button

@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   Building2,
   ClipboardList,
+  FileText,
   FolderKanban,
   LayoutDashboard,
   LogOut,
@@ -23,6 +24,7 @@ const NAV = [
   { to: "/leads", label: "Leads", icon: Users },
   { to: "/consultation", label: "Consultation", icon: ClipboardList },
   { to: "/projects", label: "Projects", icon: FolderKanban },
+  { to: "/proposals", label: "Proposals", icon: FileText },
   { to: "/settings", label: "Workshop Settings", icon: Building2 },
 ] as const;
 
