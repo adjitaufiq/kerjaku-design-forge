@@ -20,6 +20,7 @@ import { Route as ProposalTokenRouteImport } from './routes/proposal.$token'
 import { Route as AuthenticatedLeadsIndexRouteImport } from './routes/_authenticated/leads/index'
 import { Route as AuthenticatedLeadsLeadIdRouteImport } from './routes/_authenticated/leads/$leadId'
 import { Route as AuthenticatedProposalsIndexRouteImport } from './routes/_authenticated/proposals/index'
+import { Route as AuthenticatedProposalsProposalIdRouteImport } from './routes/_authenticated/proposals/$proposalId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -78,6 +79,12 @@ const AuthenticatedProposalsIndexRoute =
     path: '/proposals/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedProposalsProposalIdRoute =
+  AuthenticatedProposalsProposalIdRouteImport.update({
+    id: '/proposals/$proposalId',
+    path: '/proposals/$proposalId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -88,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/proposal/$token': typeof ProposalTokenRoute
   '/leads/$leadId': typeof AuthenticatedLeadsLeadIdRoute
+  '/proposals/$proposalId': typeof AuthenticatedProposalsProposalIdRoute
   '/leads/': typeof AuthenticatedLeadsIndexRoute
   '/proposals/': typeof AuthenticatedProposalsIndexRoute
 }
@@ -100,6 +108,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/proposal/$token': typeof ProposalTokenRoute
   '/leads/$leadId': typeof AuthenticatedLeadsLeadIdRoute
+  '/proposals/$proposalId': typeof AuthenticatedProposalsProposalIdRoute
   '/leads': typeof AuthenticatedLeadsIndexRoute
   '/proposals': typeof AuthenticatedProposalsIndexRoute
 }
@@ -114,6 +123,7 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/proposal/$token': typeof ProposalTokenRoute
   '/_authenticated/leads/$leadId': typeof AuthenticatedLeadsLeadIdRoute
+  '/_authenticated/proposals/$proposalId': typeof AuthenticatedProposalsProposalIdRoute
   '/_authenticated/leads/': typeof AuthenticatedLeadsIndexRoute
   '/_authenticated/proposals/': typeof AuthenticatedProposalsIndexRoute
 }
@@ -128,6 +138,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/proposal/$token'
     | '/leads/$leadId'
+    | '/proposals/$proposalId'
     | '/leads/'
     | '/proposals/'
   fileRoutesByTo: FileRoutesByTo
@@ -140,6 +151,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/proposal/$token'
     | '/leads/$leadId'
+    | '/proposals/$proposalId'
     | '/leads'
     | '/proposals'
   id:
@@ -153,6 +165,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/proposal/$token'
     | '/_authenticated/leads/$leadId'
+    | '/_authenticated/proposals/$proposalId'
     | '/_authenticated/leads/'
     | '/_authenticated/proposals/'
   fileRoutesById: FileRoutesById
@@ -243,6 +256,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProposalsIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/proposals/$proposalId': {
+      id: '/_authenticated/proposals/$proposalId'
+      path: '/proposals/$proposalId'
+      fullPath: '/proposals/$proposalId'
+      preLoaderRoute: typeof AuthenticatedProposalsProposalIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -252,6 +272,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProjectsRoute: typeof AuthenticatedProjectsRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedLeadsLeadIdRoute: typeof AuthenticatedLeadsLeadIdRoute
+  AuthenticatedProposalsProposalIdRoute: typeof AuthenticatedProposalsProposalIdRoute
   AuthenticatedLeadsIndexRoute: typeof AuthenticatedLeadsIndexRoute
   AuthenticatedProposalsIndexRoute: typeof AuthenticatedProposalsIndexRoute
 }
@@ -262,6 +283,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedProjectsRoute: AuthenticatedProjectsRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedLeadsLeadIdRoute: AuthenticatedLeadsLeadIdRoute,
+  AuthenticatedProposalsProposalIdRoute: AuthenticatedProposalsProposalIdRoute,
   AuthenticatedLeadsIndexRoute: AuthenticatedLeadsIndexRoute,
   AuthenticatedProposalsIndexRoute: AuthenticatedProposalsIndexRoute,
 }
