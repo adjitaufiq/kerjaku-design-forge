@@ -12,7 +12,7 @@ import {
 import { useState } from "react";
 
 import { EmptyStateCard } from "@/components/kerjaku/empty-state";
-import { GlassCard, SectionCard } from "@/components/kerjaku/glass-card";
+import { SectionCard } from "@/components/kerjaku/glass-card";
 import { KanbanBoard, KanbanCard, KanbanColumn } from "@/components/kerjaku/kanban";
 import { PageHeader } from "@/components/kerjaku/page-header";
 import { StatCard } from "@/components/kerjaku/stat-card";
