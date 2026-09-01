@@ -1,7 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { FolderKanban, HandCoins, Target, Users } from "lucide-react";
+import {
+  ClipboardList,
+  FolderKanban,
+  HandCoins,
+  Sparkles,
+  Target,
+  UserPlus,
+  Users,
+} from "lucide-react";
+import { useState } from "react";
 
+import { EmptyStateCard } from "@/components/kerjaku/empty-state";
 import { GlassCard, SectionCard } from "@/components/kerjaku/glass-card";
 import { KanbanBoard, KanbanCard, KanbanColumn } from "@/components/kerjaku/kanban";
 import { PageHeader } from "@/components/kerjaku/page-header";
@@ -11,7 +21,9 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { data } from "@/services/data";
+import { demoLeads, demoProjects, isDemoAvailable } from "@/services/demo/demo-data";
 import { formatDate, formatIDR, LEAD_STAGES, LEAD_STATUS_LABEL } from "@/services/domain/models";
+
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
