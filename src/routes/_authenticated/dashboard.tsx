@@ -46,7 +46,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 });
 
 function Dashboard() {
-  const { workspaceId } = useWorkspace();
+  const { workspaceId, isLoading: workspaceLoading } = useWorkspace();
 
   const leadsQuery = useQuery({
     queryKey: ["leads", workspaceId],
@@ -66,7 +66,9 @@ function Dashboard() {
   const realProjects = projectsQuery.data ?? [];
   const leads = useDemo ? demoLeads : realLeads;
   const projects = useDemo ? demoProjects : realProjects;
-  const loading = !useDemo && (leadsQuery.isLoading || projectsQuery.isLoading || !workspaceId);
+  const loading =
+    !useDemo &&
+    (workspaceLoading || (!!workspaceId && (leadsQuery.isLoading || projectsQuery.isLoading)));
   const isEmpty = !loading && leads.length === 0 && projects.length === 0;
 
   const activeLeads = leads.filter((l) => l.status !== "COMPLETED").length;

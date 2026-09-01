@@ -34,7 +34,7 @@ export const Route = createFileRoute("/_authenticated/projects")({
 });
 
 function ProjectsPage() {
-  const { workspaceId } = useWorkspace();
+  const { workspaceId, isLoading: workspaceLoading } = useWorkspace();
   const navigate = useNavigate();
 
   const projectsQuery = useQuery({
@@ -85,7 +85,7 @@ function ProjectsPage() {
         }
       />
 
-      {projectsQuery.isLoading || !workspaceId ? (
+      {workspaceLoading || (!!workspaceId && projectsQuery.isLoading) ? (
         <Skeleton className="h-64 rounded-2xl" />
       ) : (projectsQuery.data ?? []).length === 0 ? (
         <div className="grid gap-4 md:grid-cols-2">

@@ -40,7 +40,7 @@ export const Route = createFileRoute("/_authenticated/leads/")({
 const SOURCES = ["Instagram", "WhatsApp", "Referral", "Walk-in", "Website", "Other"];
 
 function LeadsPage() {
-  const { workspaceId } = useWorkspace();
+  const { workspaceId, isLoading: workspaceLoading } = useWorkspace();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -104,7 +104,7 @@ function LeadsPage() {
         }
       />
 
-      {leadsQuery.isLoading || !workspaceId ? (
+      {workspaceLoading || (!!workspaceId && leadsQuery.isLoading) ? (
         <Skeleton className="h-64 rounded-2xl" />
       ) : (leadsQuery.data ?? []).length === 0 ? (
         <div className="grid gap-4 md:grid-cols-2">
