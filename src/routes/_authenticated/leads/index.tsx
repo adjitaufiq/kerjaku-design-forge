@@ -104,6 +104,23 @@ function LeadsPage() {
 
       {leadsQuery.isLoading || !workspaceId ? (
         <Skeleton className="h-64 rounded-2xl" />
+      ) : (leadsQuery.data ?? []).length === 0 ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          <EmptyStateCard
+            icon={UserPlus}
+            title="No leads yet"
+            description="Start your first client consultation by adding a lead."
+            actionLabel="Create Lead"
+            to="/leads"
+          />
+          <EmptyStateCard
+            icon={ClipboardList}
+            title="Create first consultation"
+            description="Capture the client brief, budget and style preference."
+            actionLabel="Go to Consultation"
+            to="/consultation"
+          />
+        </div>
       ) : (
         <DataTable
           columns={columns}
