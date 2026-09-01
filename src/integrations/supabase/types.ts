@@ -51,39 +51,75 @@ export type Database = {
       }
       ai_generations: {
         Row: {
+          approved: boolean
+          color_preference: string | null
           cost: number
           created_at: string
+          created_by: string | null
+          error_message: string | null
+          generation_type: string
           id: string
           image_url: string | null
+          input_image_url: string | null
+          instruction: string | null
           model: string
+          output_image_url: string | null
           project_id: string | null
           prompt: string | null
+          prompt_used: string | null
+          reference_image_url: string | null
           status: Database["public"]["Enums"]["generation_status"]
+          style: string | null
           user_id: string | null
+          version: number
           workspace_id: string
         }
         Insert: {
+          approved?: boolean
+          color_preference?: string | null
           cost?: number
           created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          generation_type?: string
           id?: string
           image_url?: string | null
+          input_image_url?: string | null
+          instruction?: string | null
           model?: string
+          output_image_url?: string | null
           project_id?: string | null
           prompt?: string | null
+          prompt_used?: string | null
+          reference_image_url?: string | null
           status?: Database["public"]["Enums"]["generation_status"]
+          style?: string | null
           user_id?: string | null
+          version?: number
           workspace_id: string
         }
         Update: {
+          approved?: boolean
+          color_preference?: string | null
           cost?: number
           created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          generation_type?: string
           id?: string
           image_url?: string | null
+          input_image_url?: string | null
+          instruction?: string | null
           model?: string
+          output_image_url?: string | null
           project_id?: string | null
           prompt?: string | null
+          prompt_used?: string | null
+          reference_image_url?: string | null
           status?: Database["public"]["Enums"]["generation_status"]
+          style?: string | null
           user_id?: string | null
+          version?: number
           workspace_id?: string
         }
         Relationships: [
@@ -96,6 +132,149 @@ export type Database = {
           },
           {
             foreignKeyName: "ai_generations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_revisions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          generation_id: string
+          id: string
+          instruction: string
+          new_image_url: string | null
+          previous_image_url: string | null
+          version: number
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          generation_id: string
+          id?: string
+          instruction: string
+          new_image_url?: string | null
+          previous_image_url?: string | null
+          version?: number
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          generation_id?: string
+          id?: string
+          instruction?: string
+          new_image_url?: string | null
+          previous_image_url?: string | null
+          version?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_revisions_generation_id_fkey"
+            columns: ["generation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_generations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_revisions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_settings: {
+        Row: {
+          cost_high: number
+          cost_preview: number
+          cost_revision: number
+          cost_standard: number
+          created_at: string
+          daily_limit: number
+          default_model: string
+          id: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          cost_high?: number
+          cost_preview?: number
+          cost_revision?: number
+          cost_standard?: number
+          created_at?: string
+          daily_limit?: number
+          default_model?: string
+          id?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          cost_high?: number
+          cost_preview?: number
+          cost_revision?: number
+          cost_standard?: number
+          created_at?: string
+          daily_limit?: number
+          default_model?: string
+          id?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_settings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_transactions: {
+        Row: {
+          created_at: string
+          credit_used: number
+          generation_id: string | null
+          id: string
+          status: string
+          transaction_type: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          credit_used?: number
+          generation_id?: string | null
+          id?: string
+          status?: string
+          transaction_type?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          credit_used?: number
+          generation_id?: string | null
+          id?: string
+          status?: string
+          transaction_type?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_transactions_generation_id_fkey"
+            columns: ["generation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_generations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_transactions_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
