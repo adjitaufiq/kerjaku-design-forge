@@ -59,9 +59,15 @@ function Dashboard() {
     enabled: !!workspaceId,
   });
 
-  const leads = leadsQuery.data ?? [];
-  const projects = projectsQuery.data ?? [];
-  const loading = leadsQuery.isLoading || projectsQuery.isLoading || !workspaceId;
+  const [demoMode, setDemoMode] = useState(false);
+  const useDemo = isDemoAvailable && demoMode;
+
+  const realLeads = leadsQuery.data ?? [];
+  const realProjects = projectsQuery.data ?? [];
+  const leads = useDemo ? demoLeads : realLeads;
+  const projects = useDemo ? demoProjects : realProjects;
+  const loading = !useDemo && (leadsQuery.isLoading || projectsQuery.isLoading || !workspaceId);
+  const isEmpty = !loading && leads.length === 0 && projects.length === 0;
 
   const activeLeads = leads.filter((l) => l.status !== "COMPLETED").length;
   const deals = leads.filter((l) => l.status === "DEAL" || l.status === "COMPLETED").length;
@@ -74,17 +80,52 @@ function Dashboard() {
     .sort((a, b) => (a.nextFollowUp! < b.nextFollowUp! ? -1 : 1))
     .slice(0, 6);
 
+  const recentActivity = [
+    ...leads.map((l) => ({
+      id: `lead-${l.id}`,
+      at: l.updatedAt ?? l.createdAt,
+      title: l.clientName,
+      detail: `Lead · ${LEAD_STATUS_LABEL[l.status]}`,
+      to: { to: "/leads/$leadId" as const, params: { leadId: l.id } },
+    })),
+    ...projects.map((p) => ({
+      id: `project-${p.id}`,
+      at: p.createdAt,
+      title: p.projectName,
+      detail: `Project · ${formatIDR(p.estimatedValue)}`,
+      to: { to: "/projects" as const, params: {} },
+    })),
+  ]
+    .sort((a, b) => (a.at < b.at ? 1 : -1))
+    .slice(0, 6);
+
   return (
     <>
       <PageHeader
         title="Dashboard"
         subtitle="Your workshop pipeline at a glance"
         actions={
-          <Button asChild className="bg-cta text-cta-foreground hover:bg-cta/90">
-            <Link to="/leads">Manage leads</Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {isDemoAvailable ? (
+              <Button variant="outline" onClick={() => setDemoMode((v) => !v)}>
+                {demoMode ? "Exit sample data" : "Preview sample data"}
+              </Button>
+            ) : null}
+            <Button asChild className="bg-cta text-cta-foreground hover:bg-cta/90">
+              <Link to="/leads">Manage leads</Link>
+            </Button>
+          </div>
         }
       />
+
+      {useDemo ? (
+        <div className="mb-4">
+          <StatusBadge tone="info">
+            Preview mode — sample data, nothing is saved to your workspace
+          </StatusBadge>
+        </div>
+      ) : null}
+
 
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
