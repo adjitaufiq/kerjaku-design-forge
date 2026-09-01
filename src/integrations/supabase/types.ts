@@ -707,6 +707,7 @@ export type Database = {
         | "BEDROOM_INTERIOR"
         | "OFFICE_INTERIOR"
         | "OTHER"
+        | "LIVING_ROOM"
       proposal_status: "DRAFT" | "SENT" | "APPROVED" | "REJECTED"
     }
     CompositeTypes: {
@@ -871,6 +872,7 @@ export const Constants = {
         "BEDROOM_INTERIOR",
         "OFFICE_INTERIOR",
         "OTHER",
+        "LIVING_ROOM",
       ],
       proposal_status: ["DRAFT", "SENT", "APPROVED", "REJECTED"],
     },
