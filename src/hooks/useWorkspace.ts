@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { ensureWorkspace } from "@/lib/workspace.functions";
 import { data } from "@/services/data";
-import type { Membership } from "@/services/domain/repositories";
+import type { Membership } from "@/services/domain/models";
 
 /** Current user's workspace membership (workspace id + role). */
 export function useWorkspace() {
