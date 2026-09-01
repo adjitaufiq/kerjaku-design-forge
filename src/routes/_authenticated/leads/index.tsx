@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Plus } from "lucide-react";
+import { ClipboardList, Plus, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { DataTable, type Column } from "@/components/kerjaku/data-table";
+import { EmptyStateCard } from "@/components/kerjaku/empty-state";
 import { SelectField, TextField } from "@/components/kerjaku/form-fields";
 import { Modal } from "@/components/kerjaku/modal";
 import { PageHeader } from "@/components/kerjaku/page-header";
@@ -13,7 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { data } from "@/services/data";
-import { LEAD_STAGES, LEAD_STATUS_LABEL, type Lead } from "@/services/domain/models";
+import { type Lead } from "@/services/domain/models";
+
 
 export const Route = createFileRoute("/_authenticated/leads/")({
   head: () => ({
