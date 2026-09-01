@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Plus } from "lucide-react";
+import { ClipboardList, Plus, UserPlus } from "lucide-react";
 
 import { DataTable, type Column } from "@/components/kerjaku/data-table";
+import { EmptyStateCard } from "@/components/kerjaku/empty-state";
 import { PageHeader } from "@/components/kerjaku/page-header";
 import { ProjectStatusBadge } from "@/components/kerjaku/status-badge";
 import { Button } from "@/components/ui/button";
