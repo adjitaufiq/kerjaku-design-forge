@@ -104,7 +104,7 @@ function LeadsPage() {
         }
       />
 
-      {leadsQuery.isLoading || !workspaceId ? (
+      {workspaceLoading || (!!workspaceId && leadsQuery.isLoading) ? (
         <Skeleton className="h-64 rounded-2xl" />
       ) : (leadsQuery.data ?? []).length === 0 ? (
         <div className="grid gap-4 md:grid-cols-2">
