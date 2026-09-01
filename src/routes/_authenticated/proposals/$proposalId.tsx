@@ -339,7 +339,12 @@ function ProposalEditor() {
                   onChange={(e) => setDraft({ ...draft, title: e.target.value })}
                 />
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <TextField label="Client" name="client" value={lead?.clientName ?? "—"} readOnly />
+                  <TextField
+                    label="Client"
+                    name="client"
+                    value={lead?.clientName ?? "—"}
+                    readOnly
+                  />
                   <TextField
                     label="Project"
                     name="project"
@@ -351,9 +356,9 @@ function ProposalEditor() {
                   label="Status"
                   value={proposal.status}
                   onValueChange={(v) => setStatus.mutate(v as ProposalStatus)}
-                  options={(
-                    ["DRAFT", "SENT", "APPROVED", "REJECTED"] as ProposalStatus[]
-                  ).map((s) => ({ value: s, label: PROPOSAL_STATUS_LABEL[s] }))}
+                  options={(["DRAFT", "SENT", "APPROVED", "REJECTED"] as ProposalStatus[]).map(
+                    (s) => ({ value: s, label: PROPOSAL_STATUS_LABEL[s] }),
+                  )}
                 />
               </div>
             </SectionCard>
@@ -384,7 +389,10 @@ function ProposalEditor() {
           ) : null}
 
           {page === "Material Specification" ? (
-            <SectionCard title="Page 4 — Material specification" description="Boards, finishes, hardware.">
+            <SectionCard
+              title="Page 4 — Material specification"
+              description="Boards, finishes, hardware."
+            >
               <TextAreaField
                 label="Material specification"
                 name="material"
@@ -420,7 +428,10 @@ function ProposalEditor() {
                       defaultValue={item.quantity}
                       className="bg-surface/60"
                       onBlur={(e) =>
-                        updateItem.mutate({ id: item.id, patch: { quantity: Number(e.target.value) || 0 } })
+                        updateItem.mutate({
+                          id: item.id,
+                          patch: { quantity: Number(e.target.value) || 0 },
+                        })
                       }
                     />
                     <Input
@@ -429,7 +440,10 @@ function ProposalEditor() {
                       defaultValue={item.price}
                       className="bg-surface/60"
                       onBlur={(e) =>
-                        updateItem.mutate({ id: item.id, patch: { price: Number(e.target.value) || 0 } })
+                        updateItem.mutate({
+                          id: item.id,
+                          patch: { price: Number(e.target.value) || 0 },
+                        })
                       }
                     />
                     <span className="text-right text-sm text-foreground">
@@ -485,7 +499,10 @@ function ProposalEditor() {
           ) : null}
 
           {page === "Terms & Agreement" ? (
-            <SectionCard title="Page 6 — Terms & agreement" description="Payment, timeline, warranty.">
+            <SectionCard
+              title="Page 6 — Terms & agreement"
+              description="Payment, timeline, warranty."
+            >
               <TextAreaField
                 label="Terms"
                 name="terms"
@@ -558,9 +575,7 @@ function ProposalEditor() {
               ].map(([label, value]) => (
                 <div key={label}>
                   <p className="text-xs tracking-widest text-muted-foreground uppercase">{label}</p>
-                  <p className="mt-1 text-sm whitespace-pre-line text-foreground">
-                    {value || "—"}
-                  </p>
+                  <p className="mt-1 text-sm whitespace-pre-line text-foreground">{value || "—"}</p>
                 </div>
               ))}
 

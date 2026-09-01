@@ -27,7 +27,11 @@ export const Route = createFileRoute("/")({
 });
 
 const FEATURES = [
-  { icon: Palette, title: "Consultation", body: "Capture every client brief with photos and references." },
+  {
+    icon: Palette,
+    title: "Consultation",
+    body: "Capture every client brief with photos and references.",
+  },
   { icon: Bot, title: "AI concepts", body: "Turn a room photo into a realistic design direction." },
   { icon: LineChart, title: "Pipeline", body: "Follow each lead from inquiry to signed deal." },
 ];

@@ -3,11 +3,7 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 export function KanbanBoard({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex gap-4 overflow-x-auto pb-3">
-      {children}
-    </div>
-  );
+  return <div className="flex gap-4 overflow-x-auto pb-3">{children}</div>;
 }
 
 export function KanbanColumn({

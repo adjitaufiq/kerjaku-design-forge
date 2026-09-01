@@ -9,12 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { data } from "@/services/data";
-import {
-  formatDate,
-  formatIDR,
-  PROJECT_TYPE_LABEL,
-  type Project,
-} from "@/services/domain/models";
+import { formatDate, formatIDR, PROJECT_TYPE_LABEL, type Project } from "@/services/domain/models";
 
 export const Route = createFileRoute("/_authenticated/projects")({
   head: () => ({
@@ -97,9 +92,7 @@ function ProjectsPage() {
           rows={projectsQuery.data ?? []}
           getRowId={(p) => p.id}
           onRowClick={(p) =>
-            p.leadId
-              ? navigate({ to: "/leads/$leadId", params: { leadId: p.leadId } })
-              : undefined
+            p.leadId ? navigate({ to: "/leads/$leadId", params: { leadId: p.leadId } }) : undefined
           }
           emptyMessage="No projects yet. Start one from a consultation."
         />

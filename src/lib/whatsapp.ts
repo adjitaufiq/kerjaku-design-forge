@@ -41,3 +41,20 @@ export function buildWhatsAppUrl(phone: string | null | undefined, message: stri
   const text = encodeURIComponent(message);
   return number ? `https://wa.me/${number}?text=${text}` : `https://wa.me/?text=${text}`;
 }
+
+/** Short, polite follow-up nudge for a lead. */
+export function buildFollowUpMessage(input: {
+  clientName: string | null;
+  workshopName: string | null;
+  projectName?: string | null;
+}): string {
+  return [
+    `Halo ${input.clientName ?? "Bapak/Ibu"},`,
+    "",
+    `Izin menindaklanjuti rencana ${input.projectName ?? "proyek interior"} yang kemarin kita diskusikan.`,
+    "Apakah ada hal yang ingin ditanyakan atau disesuaikan?",
+    "",
+    `Salam hangat,`,
+    `${input.workshopName ?? "KERJAKU Interior"}`,
+  ].join("\n");
+}

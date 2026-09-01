@@ -1,10 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 
-import {
-  getPublicProposal,
-  getPublicProposalItems,
-} from "@/lib/public-proposal.functions";
+import { getPublicProposal, getPublicProposalItems } from "@/lib/public-proposal.functions";
 import { formatDate, formatIDR, PROJECT_TYPE_LABEL } from "@/services/domain/models";
 import type { ProjectType } from "@/services/domain/models";
 

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, CalendarClock, MessageCircle, Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWorkspace } from "@/hooks/useWorkspace";
+import { buildFollowUpMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { data } from "@/services/data";
 import {
   ACTIVITY_TYPE_LABEL,
@@ -74,6 +75,7 @@ function LeadDetailPage() {
   const queryClient = useQueryClient();
   const [noteOpen, setNoteOpen] = useState(false);
   const [note, setNote] = useState({ type: "NOTE" as ActivityType, title: "", body: "" });
+  const [followUpDraft, setFollowUpDraft] = useState<string | null>(null);
 
   const leadQuery = useQuery({
     queryKey: ["lead", leadId],
@@ -139,6 +141,53 @@ function LeadDetailPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not add note"),
   });
 
+  const setFollowUp = useMutation({
+    mutationFn: async (date: string | null) => {
+      await data.leads.update(leadId, { nextFollowUp: date });
+      if (workspaceId && date) {
+        await data.activities.log(workspaceId, {
+          leadId,
+          type: "FOLLOW_UP",
+          title: `Follow up scheduled for ${formatDate(date)}`,
+          dueAt: new Date(date).toISOString(),
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lead", leadId] });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["activities", leadId] });
+      toast.success("Reminder updated");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not set reminder"),
+  });
+
+  const sendFollowUp = useMutation({
+    mutationFn: async () => {
+      const current = leadQuery.data;
+      if (!current) return;
+      const message = buildFollowUpMessage({
+        clientName: current.clientName,
+        workshopName: null,
+        projectName: projects[0]?.projectName ?? null,
+      });
+      window.open(buildWhatsAppUrl(current.phone, message), "_blank", "noopener");
+      if (workspaceId) {
+        await data.activities.log(workspaceId, {
+          leadId,
+          type: "WHATSAPP",
+          title: "Follow up sent via WhatsApp",
+          body: message,
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["activities", leadId] });
+      toast.success("Follow up logged");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not log follow up"),
+  });
+
   if (leadQuery.isLoading) {
     return <Skeleton className="h-72 rounded-2xl" />;
   }
@@ -154,6 +203,9 @@ function LeadDetailPage() {
       </GlassCard>
     );
   }
+
+  const followUpDate = followUpDraft ?? (lead.nextFollowUp ? lead.nextFollowUp.slice(0, 10) : "");
+  const followUpDue = !!lead.nextFollowUp && new Date(lead.nextFollowUp) <= new Date();
 
   const activities = activitiesQuery.data ?? [];
   const proposals = proposalsQuery.data ?? [];
@@ -225,9 +277,7 @@ function LeadDetailPage() {
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-sm text-foreground">
-                        {formatIDR(p.estimatedValue)}
-                      </span>
+                      <span className="text-sm text-foreground">{formatIDR(p.estimatedValue)}</span>
                       <ProjectStatusBadge status={p.status} />
                     </div>
                   </li>
@@ -290,7 +340,58 @@ function LeadDetailPage() {
                 onValueChange={(v) => updateStatus.mutate(v)}
                 options={LEAD_STAGES.map((s) => ({ value: s, label: LEAD_STATUS_LABEL[s] }))}
               />
+            </div>
+          </SectionCard>
+
+          <SectionCard
+            title="Follow up reminder"
+            description="Schedule the next touchpoint and nudge the client."
+            action={
+              followUpDue ? (
+                <StatusBadge tone="warning">Due</StatusBadge>
+              ) : lead.nextFollowUp ? (
+                <StatusBadge tone="info">Scheduled</StatusBadge>
+              ) : undefined
+            }
+          >
+            <div className="space-y-3">
               <InfoRow label="Next follow up" value={formatDate(lead.nextFollowUp)} />
+              <TextField
+                label="Reminder date"
+                name="nextFollowUp"
+                type="date"
+                value={followUpDate}
+                onChange={(e) => setFollowUpDraft(e.target.value)}
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!followUpDate || setFollowUp.isPending}
+                  onClick={() => setFollowUp.mutate(followUpDate)}
+                >
+                  <CalendarClock className="size-4" />
+                  {setFollowUp.isPending ? "Saving…" : "Set reminder"}
+                </Button>
+                {lead.nextFollowUp ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={setFollowUp.isPending}
+                    onClick={() => setFollowUp.mutate(null)}
+                  >
+                    Clear
+                  </Button>
+                ) : null}
+                <Button
+                  size="sm"
+                  className="bg-cta text-cta-foreground hover:bg-cta/90"
+                  disabled={sendFollowUp.isPending}
+                  onClick={() => sendFollowUp.mutate()}
+                >
+                  <MessageCircle className="size-4" /> WhatsApp follow up
+                </Button>
+              </div>
             </div>
           </SectionCard>
 

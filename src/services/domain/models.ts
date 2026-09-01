@@ -13,11 +13,7 @@ export type LeadStatus =
   | "COMPLETED";
 
 export type ProjectType =
-  | "KITCHEN_SET"
-  | "WARDROBE"
-  | "BEDROOM_INTERIOR"
-  | "OFFICE_INTERIOR"
-  | "OTHER";
+  "KITCHEN_SET" | "WARDROBE" | "BEDROOM_INTERIOR" | "OFFICE_INTERIOR" | "OTHER";
 
 export type ProjectStatus = "DRAFT" | "DESIGN" | "PROPOSAL" | "PRODUCTION" | "COMPLETED";
 
@@ -200,7 +196,6 @@ export interface ProposalVersion {
   totalAmount: number;
   createdAt: string;
 }
-
 
 export const PROPOSAL_STATUS_LABEL: Record<ProposalStatus, string> = {
   DRAFT: "Draft",
