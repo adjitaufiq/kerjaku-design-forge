@@ -111,9 +111,9 @@ function LeadsPage() {
           <EmptyStateCard
             icon={UserPlus}
             title="No leads yet"
-            description="Start your first client consultation by adding a lead."
+            description="Start your first client consultation."
             actionLabel="Create Lead"
-            to="/leads"
+            onAction={() => setOpen(true)}
           />
           <EmptyStateCard
             icon={ClipboardList}
