@@ -13,6 +13,7 @@ export function EmptyStateCard({
   description,
   actionLabel,
   to,
+  onAction,
   disabled = false,
   badge,
   className,
@@ -22,6 +23,7 @@ export function EmptyStateCard({
   description: string;
   actionLabel: string;
   to?: string;
+  onAction?: () => void;
   disabled?: boolean;
   badge?: ReactNode;
   className?: string;
@@ -38,13 +40,21 @@ export function EmptyStateCard({
         <h3 className="text-sm font-semibold text-foreground">{title}</h3>
         <p className="mt-1 text-sm text-muted-foreground">{description}</p>
       </div>
-      {disabled || !to ? (
+      {disabled || (!to && !onAction) ? (
         <Button variant="outline" size="sm" disabled className="w-full">
+          {actionLabel}
+        </Button>
+      ) : onAction ? (
+        <Button
+          size="sm"
+          className="w-full bg-cta text-cta-foreground hover:bg-cta/90"
+          onClick={onAction}
+        >
           {actionLabel}
         </Button>
       ) : (
         <Button asChild size="sm" className="w-full bg-cta text-cta-foreground hover:bg-cta/90">
-          <Link to={to}>{actionLabel}</Link>
+          <Link to={to!}>{actionLabel}</Link>
         </Button>
       )}
     </GlassCard>

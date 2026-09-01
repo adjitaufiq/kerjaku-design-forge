@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Plus } from "lucide-react";
+import { ClipboardList, Plus, UserPlus } from "lucide-react";
 
 import { DataTable, type Column } from "@/components/kerjaku/data-table";
+import { EmptyStateCard } from "@/components/kerjaku/empty-state";
 import { PageHeader } from "@/components/kerjaku/page-header";
 import { ProjectStatusBadge } from "@/components/kerjaku/status-badge";
 import { Button } from "@/components/ui/button";
@@ -86,6 +87,23 @@ function ProjectsPage() {
 
       {projectsQuery.isLoading || !workspaceId ? (
         <Skeleton className="h-64 rounded-2xl" />
+      ) : (projectsQuery.data ?? []).length === 0 ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          <EmptyStateCard
+            icon={ClipboardList}
+            title="Create first consultation"
+            description="Projects are created from a client consultation brief."
+            actionLabel="Go to Consultation"
+            to="/consultation"
+          />
+          <EmptyStateCard
+            icon={UserPlus}
+            title="No leads yet"
+            description="Start your first client consultation."
+            actionLabel="Create Lead"
+            to="/leads"
+          />
+        </div>
       ) : (
         <DataTable
           columns={columns}
