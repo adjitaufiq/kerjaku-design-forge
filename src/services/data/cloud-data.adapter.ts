@@ -440,6 +440,20 @@ export const cloudDataLayer: DataLayer = {
       const { error } = await supabase.from("proposal_items").delete().eq("id", id);
       if (error) throw new Error(error.message);
     },
+    async uploadPdf(workspaceId, proposalId, file) {
+      const path = `${workspaceId}/proposals/${proposalId}/${Date.now()}.pdf`;
+      const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
+        upsert: false,
+        contentType: "application/pdf",
+      });
+      if (error) throw new Error(error.message);
+      return path;
+    },
+    async getPdfUrl(path) {
+      const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, 3600);
+      if (error) return null;
+      return data?.signedUrl ?? null;
+    },
     async listVersions(proposalId) {
       const { data, error } = await supabase
         .from("proposal_versions")

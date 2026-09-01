@@ -132,6 +132,10 @@ export interface ProposalRepository {
     patch: Partial<{ description: string; quantity: number; price: number; position: number }>,
   ): Promise<void>;
   removeItem(id: string): Promise<void>;
+  /** Store a generated PDF and return its storage path. */
+  uploadPdf(workspaceId: string, proposalId: string, file: Blob): Promise<string>;
+  /** Resolve a temporary viewable URL for a stored PDF path. */
+  getPdfUrl(path: string): Promise<string | null>;
   listVersions(proposalId: string): Promise<ProposalVersion[]>;
   addVersion(
     workspaceId: string,
