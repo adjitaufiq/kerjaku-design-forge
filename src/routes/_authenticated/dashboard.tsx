@@ -2,15 +2,16 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { FolderKanban, HandCoins, Target, Users } from "lucide-react";
 
-import { GlassCard } from "@/components/kerjaku/glass-card";
+import { GlassCard, SectionCard } from "@/components/kerjaku/glass-card";
 import { KanbanBoard, KanbanCard, KanbanColumn } from "@/components/kerjaku/kanban";
 import { PageHeader } from "@/components/kerjaku/page-header";
 import { StatCard } from "@/components/kerjaku/stat-card";
+import { StatusBadge } from "@/components/kerjaku/status-badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { data } from "@/services/data";
-import { formatIDR, LEAD_STAGES, LEAD_STATUS_LABEL } from "@/services/domain/models";
+import { formatDate, formatIDR, LEAD_STAGES, LEAD_STATUS_LABEL } from "@/services/domain/models";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -55,6 +56,11 @@ function Dashboard() {
   const pipelineValue = projects
     .filter((p) => p.status !== "COMPLETED")
     .reduce((sum, p) => sum + p.estimatedValue, 0);
+
+  const followUps = leads
+    .filter((l) => !!l.nextFollowUp && l.status !== "COMPLETED")
+    .sort((a, b) => (a.nextFollowUp! < b.nextFollowUp! ? -1 : 1))
+    .slice(0, 6);
 
   return (
     <>
