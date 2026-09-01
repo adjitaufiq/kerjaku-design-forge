@@ -290,7 +290,58 @@ function LeadDetailPage() {
                 onValueChange={(v) => updateStatus.mutate(v)}
                 options={LEAD_STAGES.map((s) => ({ value: s, label: LEAD_STATUS_LABEL[s] }))}
               />
+            </div>
+          </SectionCard>
+
+          <SectionCard
+            title="Follow up reminder"
+            description="Schedule the next touchpoint and nudge the client."
+            action={
+              followUpDue ? (
+                <StatusBadge tone="warning">Due</StatusBadge>
+              ) : lead.nextFollowUp ? (
+                <StatusBadge tone="info">Scheduled</StatusBadge>
+              ) : undefined
+            }
+          >
+            <div className="space-y-3">
               <InfoRow label="Next follow up" value={formatDate(lead.nextFollowUp)} />
+              <TextField
+                label="Reminder date"
+                name="nextFollowUp"
+                type="date"
+                value={followUpDate}
+                onChange={(e) => setFollowUpDate(e.target.value)}
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!followUpDate || setFollowUp.isPending}
+                  onClick={() => setFollowUp.mutate(followUpDate)}
+                >
+                  <CalendarClock className="size-4" />
+                  {setFollowUp.isPending ? "Saving…" : "Set reminder"}
+                </Button>
+                {lead.nextFollowUp ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={setFollowUp.isPending}
+                    onClick={() => setFollowUp.mutate(null)}
+                  >
+                    Clear
+                  </Button>
+                ) : null}
+                <Button
+                  size="sm"
+                  className="bg-cta text-cta-foreground hover:bg-cta/90"
+                  disabled={sendFollowUp.isPending}
+                  onClick={() => sendFollowUp.mutate()}
+                >
+                  <MessageCircle className="size-4" /> WhatsApp follow up
+                </Button>
+              </div>
             </div>
           </SectionCard>
 
