@@ -150,7 +150,9 @@ function AuthPage() {
         <button
           type="button"
           className="mt-5 w-full text-center text-sm text-muted-foreground transition-colors hover:text-foreground"
-          onClick={() => navigate({ to: "/auth", search: { mode: isSignUp ? "signin" : "signup" } })}
+          onClick={() =>
+            navigate({ to: "/auth", search: { mode: isSignUp ? "signin" : "signup" } })
+          }
         >
           {isSignUp ? "Already have an account? Sign in" : "New workshop? Create an account"}
         </button>

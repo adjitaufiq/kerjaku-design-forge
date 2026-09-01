@@ -277,9 +277,7 @@ function LeadDetailPage() {
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-sm text-foreground">
-                        {formatIDR(p.estimatedValue)}
-                      </span>
+                      <span className="text-sm text-foreground">{formatIDR(p.estimatedValue)}</span>
                       <ProjectStatusBadge status={p.status} />
                     </div>
                   </li>

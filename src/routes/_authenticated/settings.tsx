@@ -86,10 +86,7 @@ function SettingsPage() {
 
   return (
     <>
-      <PageHeader
-        title="Workshop Settings"
-        subtitle="These details appear on client proposals"
-      />
+      <PageHeader title="Workshop Settings" subtitle="These details appear on client proposals" />
 
       {workshopQuery.isLoading || !workspaceId ? (
         <Skeleton className="h-80 rounded-2xl" />

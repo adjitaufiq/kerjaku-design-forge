@@ -3,12 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import {
-  FileField,
-  SelectField,
-  TextAreaField,
-  TextField,
-} from "@/components/kerjaku/form-fields";
+import { FileField, SelectField, TextAreaField, TextField } from "@/components/kerjaku/form-fields";
 import { SectionCard } from "@/components/kerjaku/glass-card";
 import { PageHeader } from "@/components/kerjaku/page-header";
 import { Button } from "@/components/ui/button";
@@ -129,10 +124,7 @@ function ConsultationPage() {
 
   return (
     <>
-      <PageHeader
-        title="Consultation"
-        subtitle="Capture the client briefing and open a project"
-      />
+      <PageHeader title="Consultation" subtitle="Capture the client briefing and open a project" />
 
       {!workspaceId ? (
         <Skeleton className="h-96 rounded-2xl" />
@@ -224,11 +216,7 @@ function ConsultationPage() {
                   file={roomPhoto}
                   onFileChange={setRoomPhoto}
                 />
-                <FileField
-                  label="Reference image"
-                  file={reference}
-                  onFileChange={setReference}
-                />
+                <FileField label="Reference image" file={reference} onFileChange={setReference} />
                 <FileField
                   label="Render (optional)"
                   hint="SketchUp or 3D render if you already have one."

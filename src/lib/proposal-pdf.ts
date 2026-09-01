@@ -119,11 +119,7 @@ export function buildProposalPdf(input: ProposalPdfInput): Blob {
   doc.setTextColor(220, 224, 232);
   doc.text(`Prepared for : ${clientName ?? "—"}`, M, 320);
   doc.text(`Project      : ${project?.projectName ?? "—"}`, M, 340);
-  doc.text(
-    `Type         : ${project ? PROJECT_TYPE_LABEL[project.projectType] : "—"}`,
-    M,
-    360,
-  );
+  doc.text(`Type         : ${project ? PROJECT_TYPE_LABEL[project.projectType] : "—"}`, M, 360);
   doc.text(`Date         : ${formatDate(proposal.createdAt)}`, M, 380);
   doc.setFillColor(ORANGE.r, ORANGE.g, ORANGE.b);
   doc.rect(M, H - 150, 160, 4, "F");
