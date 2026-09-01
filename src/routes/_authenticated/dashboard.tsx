@@ -88,6 +88,40 @@ function Dashboard() {
         </div>
       )}
 
+      {!loading && followUps.length > 0 ? (
+        <div className="mt-8">
+          <SectionCard
+            title="Follow up reminders"
+            description="Clients waiting for your next touchpoint."
+          >
+            <ul className="space-y-2">
+              {followUps.map((lead) => {
+                const due = new Date(lead.nextFollowUp!) <= new Date();
+                return (
+                  <li key={lead.id}>
+                    <Link
+                      to="/leads/$leadId"
+                      params={{ leadId: lead.id }}
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface/40 px-4 py-3 transition-colors hover:bg-surface/70"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{lead.clientName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {LEAD_STATUS_LABEL[lead.status]} · {formatDate(lead.nextFollowUp)}
+                        </p>
+                      </div>
+                      <StatusBadge tone={due ? "warning" : "info"}>
+                        {due ? "Due now" : "Upcoming"}
+                      </StatusBadge>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </SectionCard>
+        </div>
+      ) : null}
+
       <div className="mt-8">
         <h2 className="mb-3 text-sm font-semibold tracking-wide text-foreground uppercase">
           Sales pipeline
