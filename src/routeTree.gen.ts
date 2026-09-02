@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedAiInteriorRouteImport } from './routes/_authenticated/ai-interior'
 import { Route as AuthenticatedConsultationRouteImport } from './routes/_authenticated/consultation'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedProjectsRouteImport } from './routes/_authenticated/projects'
@@ -35,6 +36,11 @@ const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAiInteriorRoute = AuthenticatedAiInteriorRouteImport.update({
+  id: '/ai-interior',
+  path: '/ai-interior',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedConsultationRoute =
   AuthenticatedConsultationRouteImport.update({
@@ -89,6 +95,7 @@ const AuthenticatedProposalsProposalIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/ai-interior': typeof AuthenticatedAiInteriorRoute
   '/consultation': typeof AuthenticatedConsultationRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/projects': typeof AuthenticatedProjectsRoute
@@ -102,6 +109,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/ai-interior': typeof AuthenticatedAiInteriorRoute
   '/consultation': typeof AuthenticatedConsultationRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/projects': typeof AuthenticatedProjectsRoute
@@ -117,6 +125,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/ai-interior': typeof AuthenticatedAiInteriorRoute
   '/_authenticated/consultation': typeof AuthenticatedConsultationRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/projects': typeof AuthenticatedProjectsRoute
@@ -132,6 +141,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/ai-interior'
     | '/consultation'
     | '/dashboard'
     | '/projects'
@@ -145,6 +155,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/ai-interior'
     | '/consultation'
     | '/dashboard'
     | '/projects'
@@ -159,6 +170,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/ai-interior'
     | '/_authenticated/consultation'
     | '/_authenticated/dashboard'
     | '/_authenticated/projects'
@@ -199,6 +211,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/ai-interior': {
+      id: '/_authenticated/ai-interior'
+      path: '/ai-interior'
+      fullPath: '/ai-interior'
+      preLoaderRoute: typeof AuthenticatedAiInteriorRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/consultation': {
       id: '/_authenticated/consultation'
@@ -267,6 +286,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAiInteriorRoute: typeof AuthenticatedAiInteriorRoute
   AuthenticatedConsultationRoute: typeof AuthenticatedConsultationRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedProjectsRoute: typeof AuthenticatedProjectsRoute
@@ -278,6 +298,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAiInteriorRoute: AuthenticatedAiInteriorRoute,
   AuthenticatedConsultationRoute: AuthenticatedConsultationRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedProjectsRoute: AuthenticatedProjectsRoute,
