@@ -4,6 +4,7 @@ import { ArrowLeft, CalendarClock, MessageCircle, Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { ApprovedConcepts } from "@/components/kerjaku/ai-concepts";
 import { SelectField, TextAreaField, TextField } from "@/components/kerjaku/form-fields";
 import { GlassCard, SectionCard } from "@/components/kerjaku/glass-card";
 import { Modal } from "@/components/kerjaku/modal";
@@ -416,6 +417,10 @@ function LeadDetailPage() {
                 ))}
               </ul>
             )}
+          </SectionCard>
+
+          <SectionCard title="Approved AI concepts" description="Designs signed off for this client.">
+            <ApprovedConcepts workspaceId={workspaceId} projectIds={projectIds} />
           </SectionCard>
         </div>
       </div>

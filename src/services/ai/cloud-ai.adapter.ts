@@ -90,11 +90,8 @@ export const cloudAiRepository: AiRepository = {
   },
 
   async setApproved(generationId, approved) {
-    const { error } = await supabase
-      .from("ai_generations")
-      .update({ approved })
-      .eq("id", generationId);
-    if (error) throw new Error(error.message);
+    const { setGenerationApproval } = await import("@/lib/ai-interior.functions");
+    await setGenerationApproval({ data: { generationId, approved } });
   },
 
   async getImageUrl(path) {
