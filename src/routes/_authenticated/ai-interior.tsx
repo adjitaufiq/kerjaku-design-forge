@@ -63,7 +63,11 @@ function BeforeAfter({ before, after }: { before: string | null; after: string |
           ref={boxRef}
           className="relative aspect-4/3 w-full overflow-hidden rounded-2xl border border-border bg-surface"
         >
-          <img src={after} alt="AI interior concept" className="absolute inset-0 size-full object-cover" />
+          <img
+            src={after}
+            alt="AI interior concept"
+            className="absolute inset-0 size-full object-cover"
+          />
           {before ? (
             <div className="absolute inset-0 overflow-hidden" style={{ width: `${pos}%` }}>
               <img
@@ -169,11 +173,13 @@ function AiInteriorPage() {
     };
   }, [selected]);
 
-  const localPreview = useMemo(
-    () => (roomFile ? URL.createObjectURL(roomFile) : null),
-    [roomFile],
+  const localPreview = useMemo(() => (roomFile ? URL.createObjectURL(roomFile) : null), [roomFile]);
+  useEffect(
+    () => () => {
+      if (localPreview) URL.revokeObjectURL(localPreview);
+    },
+    [localPreview],
   );
-  useEffect(() => () => { if (localPreview) URL.revokeObjectURL(localPreview); }, [localPreview]);
 
   const cost = (() => {
     const s = settingsQuery.data;
@@ -256,7 +262,8 @@ function AiInteriorPage() {
         subtitle="Photorealistic concepts from real room photos — geometry preserved"
         actions={
           <span className="rounded-xl border border-border bg-surface/60 px-3 py-2 text-sm text-muted-foreground">
-            AI credits: <strong className="text-foreground">{creditsQuery.data?.balance ?? 0}</strong>
+            AI credits:{" "}
+            <strong className="text-foreground">{creditsQuery.data?.balance ?? 0}</strong>
           </span>
         }
       />
@@ -281,7 +288,9 @@ function AiInteriorPage() {
               />
               <FileField
                 label="Existing room photo"
-                hint={selected && !roomFile ? "Leave empty to revise the selected concept" : undefined}
+                hint={
+                  selected && !roomFile ? "Leave empty to revise the selected concept" : undefined
+                }
                 file={roomFile}
                 onFileChange={setRoomFile}
               />
@@ -357,7 +366,11 @@ function AiInteriorPage() {
                 onClick={() => generate.mutate()}
               >
                 <Wand2 className="size-4" />
-                {generate.isPending ? "Generating…" : selected && !roomFile ? "Generate revision" : "Generate concept"}
+                {generate.isPending
+                  ? "Generating…"
+                  : selected && !roomFile
+                    ? "Generate revision"
+                    : "Generate concept"}
               </Button>
               {!canGenerate ? (
                 <p className="text-xs text-muted-foreground">
@@ -366,7 +379,9 @@ function AiInteriorPage() {
               ) : null}
 
               <div className="border-t border-border pt-4">
-                <p className="mb-2 text-xs tracking-wide text-muted-foreground uppercase">History</p>
+                <p className="mb-2 text-xs tracking-wide text-muted-foreground uppercase">
+                  History
+                </p>
                 {history.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No concepts generated yet.</p>
                 ) : (

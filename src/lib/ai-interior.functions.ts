@@ -46,7 +46,13 @@ function buildPrompt(input: GenerateInput, projectType: string): string {
 }
 
 async function toDataUrl(
-  admin: { storage: { from: (b: string) => { download: (p: string) => Promise<{ data: Blob | null; error: unknown }> } } },
+  admin: {
+    storage: {
+      from: (b: string) => {
+        download: (p: string) => Promise<{ data: Blob | null; error: unknown }>;
+      };
+    };
+  },
   path: string,
 ): Promise<string | null> {
   if (!path) return null;
@@ -123,7 +129,9 @@ export const generateInterior = createServerFn({ method: "POST" })
       .eq("workspace_id", workspaceId)
       .gte("created_at", since.toISOString());
     if ((count ?? 0) >= settings.daily_limit) {
-      throw new Error(`Daily generation limit reached (${settings.daily_limit}). Try again tomorrow.`);
+      throw new Error(
+        `Daily generation limit reached (${settings.daily_limit}). Try again tomorrow.`,
+      );
     }
 
     let { data: credits } = await supabase
@@ -197,7 +205,10 @@ export const generateInterior = createServerFn({ method: "POST" })
       const content: Array<Record<string, unknown>> = [{ type: "text", text: prompt }];
       content.push({ type: "image_url", image_url: { url: roomImage } });
       if (referenceImage) {
-        content.push({ type: "text", text: "Style reference image (mood only, do not copy geometry):" });
+        content.push({
+          type: "text",
+          text: "Style reference image (mood only, do not copy geometry):",
+        });
         content.push({ type: "image_url", image_url: { url: referenceImage } });
       }
 
@@ -219,11 +230,11 @@ export const generateInterior = createServerFn({ method: "POST" })
 
       if (!response.ok) {
         const body = await response.text();
-        if (response.status === 429) return await fail("AI is busy right now — please retry shortly.");
+        if (response.status === 429)
+          return await fail("AI is busy right now — please retry shortly.");
         if (response.status === 402)
           return await fail("AI credits for this app are exhausted. Add credits to continue.");
-        if (response.status === 403)
-          return await fail("AI access is blocked for this workspace.");
+        if (response.status === 403) return await fail("AI access is blocked for this workspace.");
         return await fail(`AI generation failed (${response.status}): ${body.slice(0, 200)}`);
       }
 
@@ -231,7 +242,8 @@ export const generateInterior = createServerFn({ method: "POST" })
         choices?: { message?: { images?: { image_url?: { url?: string } }[] } }[];
       };
       const dataUrl = payload.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-      if (!dataUrl) return await fail("The AI returned no image. Try a different photo or instruction.");
+      if (!dataUrl)
+        return await fail("The AI returned no image. Try a different photo or instruction.");
 
       const base64 = dataUrl.split(",")[1] ?? "";
       const bytes = Buffer.from(base64, "base64");

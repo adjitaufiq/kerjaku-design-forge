@@ -24,7 +24,6 @@ import { data } from "@/services/data";
 import { demoLeads, demoProjects, isDemoAvailable } from "@/services/demo/demo-data";
 import { formatDate, formatIDR, LEAD_STAGES, LEAD_STATUS_LABEL } from "@/services/domain/models";
 
-
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
@@ -127,7 +126,6 @@ function Dashboard() {
           </StatusBadge>
         </div>
       ) : null}
-
 
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
