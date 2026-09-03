@@ -419,7 +419,10 @@ function LeadDetailPage() {
             )}
           </SectionCard>
 
-          <SectionCard title="Approved AI concepts" description="Designs signed off for this client.">
+          <SectionCard
+            title="Approved AI concepts"
+            description="Designs signed off for this client."
+          >
             <ApprovedConcepts workspaceId={workspaceId} projectIds={projectIds} />
           </SectionCard>
         </div>

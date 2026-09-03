@@ -57,7 +57,10 @@ export function ApprovedConcepts({
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {concepts.map((c) => (
-            <figure key={c.id} className="overflow-hidden rounded-xl border border-border bg-surface/40">
+            <figure
+              key={c.id}
+              className="overflow-hidden rounded-xl border border-border bg-surface/40"
+            >
               {c.url ? (
                 <img
                   src={c.url}

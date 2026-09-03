@@ -16,7 +16,6 @@ import { useWorkspace } from "@/hooks/useWorkspace";
 import { data } from "@/services/data";
 import { type Lead } from "@/services/domain/models";
 
-
 export const Route = createFileRoute("/_authenticated/leads/")({
   head: () => ({
     meta: [

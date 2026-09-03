@@ -62,10 +62,7 @@ export interface AiRepository {
   listGenerations(workspaceId: string, projectId?: string | null): Promise<AiGeneration[]>;
   getCredits(workspaceId: string): Promise<AiCredits | null>;
   getSettings(workspaceId: string): Promise<AiSettings | null>;
-  updateSettings(
-    id: string,
-    patch: Partial<Omit<AiSettings, "id" | "workspaceId">>,
-  ): Promise<void>;
+  updateSettings(id: string, patch: Partial<Omit<AiSettings, "id" | "workspaceId">>): Promise<void>;
   setApproved(generationId: string, approved: boolean): Promise<void>;
   getImageUrl(path: string): Promise<string | null>;
 }
