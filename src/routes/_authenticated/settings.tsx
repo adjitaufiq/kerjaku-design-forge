@@ -162,6 +162,8 @@ function SettingsPage() {
                 ) : null}
               </div>
             </SectionCard>
+
+            <AiSettingsCard workspaceId={workspaceId!} isAdmin={isAdmin} />
           </div>
 
           <SectionCard title="Preview" description="How it appears on a proposal header.">
