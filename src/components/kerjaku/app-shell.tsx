@@ -10,6 +10,7 @@ import {
   Menu,
   Sparkles,
   Users,
+  Wand2,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
