@@ -126,11 +126,19 @@ export const generateInterior = createServerFn({ method: "POST" })
       throw new Error(`Daily generation limit reached (${settings.daily_limit}). Try again tomorrow.`);
     }
 
-    const { data: credits } = await supabase
+    let { data: credits } = await supabase
       .from("ai_credits")
       .select("balance")
       .eq("workspace_id", workspaceId)
       .maybeSingle();
+    if (!credits) {
+      const createdCredits = await supabaseAdmin
+        .from("ai_credits")
+        .insert({ workspace_id: workspaceId })
+        .select("balance")
+        .single();
+      credits = createdCredits.data;
+    }
     const balance = credits?.balance ?? 0;
     if (balance < cost) {
       throw new Error(`Not enough AI credits: this generation needs ${cost}, you have ${balance}.`);
