@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/kerjaku/page-header";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWorkspace } from "@/hooks/useWorkspace";
+import { aiData } from "@/services/ai";
 import { data } from "@/services/data";
 
 export const Route = createFileRoute("/_authenticated/settings")({
@@ -186,5 +187,126 @@ function SettingsPage() {
         </div>
       )}
     </>
+  );
+}
+
+function AiSettingsCard({ workspaceId, isAdmin }: { workspaceId: string; isAdmin: boolean }) {
+  const queryClient = useQueryClient();
+  const settingsQuery = useQuery({
+    queryKey: ["ai-settings", workspaceId],
+    queryFn: () => aiData.getSettings(workspaceId),
+    enabled: !!workspaceId,
+  });
+  const creditsQuery = useQuery({
+    queryKey: ["ai-credits", workspaceId],
+    queryFn: () => aiData.getCredits(workspaceId),
+    enabled: !!workspaceId,
+  });
+
+  const [form, setForm] = useState({
+    defaultModel: "",
+    costPreview: 1,
+    costStandard: 2,
+    costHigh: 3,
+    costRevision: 2,
+    dailyLimit: 20,
+  });
+
+  useEffect(() => {
+    const s = settingsQuery.data;
+    if (!s) return;
+    setForm({
+      defaultModel: s.defaultModel,
+      costPreview: s.costPreview,
+      costStandard: s.costStandard,
+      costHigh: s.costHigh,
+      costRevision: s.costRevision,
+      dailyLimit: s.dailyLimit,
+    });
+  }, [settingsQuery.data]);
+
+  const save = useMutation({
+    mutationFn: () => aiData.updateSettings(settingsQuery.data!.id, form),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ai-settings"] });
+      toast.success("AI settings saved");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not save AI settings"),
+  });
+
+  const num = (v: string) => Math.max(0, Number(v) || 0);
+
+  return (
+    <SectionCard
+      title="AI Interior"
+      description={`Credit balance: ${creditsQuery.data?.balance ?? 0}`}
+    >
+      {settingsQuery.isLoading ? (
+        <Skeleton className="h-56 rounded-xl" />
+      ) : !settingsQuery.data ? (
+        <p className="text-sm text-muted-foreground">
+          AI settings are created automatically with your first generation.
+        </p>
+      ) : (
+        <div className="space-y-4">
+          <TextField
+            label="Default image model"
+            name="defaultModel"
+            value={form.defaultModel}
+            disabled={!isAdmin}
+            onChange={(e) => setForm({ ...form, defaultModel: e.target.value })}
+          />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TextField
+              label="Preview cost"
+              name="costPreview"
+              type="number"
+              value={String(form.costPreview)}
+              disabled={!isAdmin}
+              onChange={(e) => setForm({ ...form, costPreview: num(e.target.value) })}
+            />
+            <TextField
+              label="Standard cost"
+              name="costStandard"
+              type="number"
+              value={String(form.costStandard)}
+              disabled={!isAdmin}
+              onChange={(e) => setForm({ ...form, costStandard: num(e.target.value) })}
+            />
+            <TextField
+              label="High quality cost"
+              name="costHigh"
+              type="number"
+              value={String(form.costHigh)}
+              disabled={!isAdmin}
+              onChange={(e) => setForm({ ...form, costHigh: num(e.target.value) })}
+            />
+            <TextField
+              label="Revision cost"
+              name="costRevision"
+              type="number"
+              value={String(form.costRevision)}
+              disabled={!isAdmin}
+              onChange={(e) => setForm({ ...form, costRevision: num(e.target.value) })}
+            />
+          </div>
+          <TextField
+            label="Daily generation limit"
+            name="dailyLimit"
+            type="number"
+            value={String(form.dailyLimit)}
+            disabled={!isAdmin}
+            onChange={(e) => setForm({ ...form, dailyLimit: num(e.target.value) })}
+          />
+          <Button
+            className="bg-cta text-cta-foreground hover:bg-cta/90"
+            disabled={!isAdmin || save.isPending}
+            onClick={() => save.mutate()}
+          >
+            {save.isPending ? "Saving…" : "Save AI settings"}
+          </Button>
+        </div>
+      )}
+    </SectionCard>
   );
 }
