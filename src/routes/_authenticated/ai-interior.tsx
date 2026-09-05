@@ -148,7 +148,7 @@ function AiInteriorPage() {
     enabled: !!workspaceId,
   });
 
-  const projects = projectsQuery.data ?? [];
+  const projects = useMemo(() => projectsQuery.data ?? [], [projectsQuery.data]);
   const history = historyQuery.data ?? [];
 
   useEffect(() => {
