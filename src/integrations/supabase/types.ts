@@ -14,6 +14,127 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_chat_messages: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string | null
+          id: string
+          mode: string
+          project_id: string
+          role: string
+          workspace_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          mode?: string
+          project_id: string
+          role: string
+          workspace_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          mode?: string
+          project_id?: string
+          role?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_chat_messages_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_chat_messages_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_consultations: {
+        Row: {
+          alternatives: Json | null
+          brief_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          input_image_url: string | null
+          opportunity: Json | null
+          project_id: string
+          recommendation: Json | null
+          room_analysis: Json | null
+          sales_insight: Json | null
+          selected_concept: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          alternatives?: Json | null
+          brief_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          input_image_url?: string | null
+          opportunity?: Json | null
+          project_id: string
+          recommendation?: Json | null
+          room_analysis?: Json | null
+          sales_insight?: Json | null
+          selected_concept?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          alternatives?: Json | null
+          brief_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          input_image_url?: string | null
+          opportunity?: Json | null
+          project_id?: string
+          recommendation?: Json | null
+          room_analysis?: Json | null
+          sales_insight?: Json | null
+          selected_concept?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_consultations_brief_id_fkey"
+            columns: ["brief_id"]
+            isOneToOne: false
+            referencedRelation: "design_briefs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_consultations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_consultations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_credits: {
         Row: {
           balance: number
@@ -332,6 +453,69 @@ export type Database = {
           },
           {
             foreignKeyName: "consultations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      design_briefs: {
+        Row: {
+          budget_range: string | null
+          created_at: string
+          created_by: string | null
+          customer_priority: string | null
+          id: string
+          notes: string | null
+          preferred_style: string | null
+          project_id: string
+          purpose: string | null
+          room_type: string | null
+          space_category: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          budget_range?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_priority?: string | null
+          id?: string
+          notes?: string | null
+          preferred_style?: string | null
+          project_id: string
+          purpose?: string | null
+          room_type?: string | null
+          space_category?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          budget_range?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_priority?: string | null
+          id?: string
+          notes?: string | null
+          preferred_style?: string | null
+          project_id?: string
+          purpose?: string | null
+          room_type?: string | null
+          space_category?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "design_briefs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "design_briefs_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
