@@ -4,6 +4,7 @@ import { Check, Maximize2, Sparkles, Wand2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { AiConsultantPanel } from "@/components/kerjaku/ai-consultant";
 import { EmptyStateCard } from "@/components/kerjaku/empty-state";
 import { FileField, SelectField, TextAreaField } from "@/components/kerjaku/form-fields";
 import { GlassCard, SectionCard } from "@/components/kerjaku/glass-card";
