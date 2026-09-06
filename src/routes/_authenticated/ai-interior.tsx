@@ -413,6 +413,17 @@ function AiInteriorPage() {
           </SectionCard>
         </div>
       )}
+
+      {projects.length > 0 && projectId ? (
+        <div className="mt-5">
+          <AiConsultantPanel
+            workspaceId={workspaceId}
+            projectId={projectId}
+            roomImagePath={selected?.inputImageUrl ?? selected?.outputImageUrl ?? null}
+            canRun={canGenerate}
+          />
+        </div>
+      ) : null}
     </>
   );
 }
