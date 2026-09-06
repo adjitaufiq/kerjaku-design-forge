@@ -196,7 +196,10 @@ export function AiConsultantPanel({
       </SectionCard>
 
       <div className="space-y-5">
-        <SectionCard title="AI consultation" description="Room analysis, opportunity, recommendation">
+        <SectionCard
+          title="AI consultation"
+          description="Room analysis, opportunity, recommendation"
+        >
           {consultationQuery.isLoading ? (
             <Skeleton className="h-40 rounded-xl" />
           ) : !consultation ? (
@@ -220,7 +223,10 @@ export function AiConsultantPanel({
                         ["Space use", consultation.roomAnalysis.spaceUtilization],
                       ] as const
                     ).map(([label, value]) => (
-                      <div key={label} className="rounded-xl border border-border bg-surface/40 p-3">
+                      <div
+                        key={label}
+                        className="rounded-xl border border-border bg-surface/40 p-3"
+                      >
                         <dt className="text-xs text-muted-foreground">{label}</dt>
                         <dd className="mt-1 text-foreground">{value || "—"}</dd>
                       </div>
@@ -324,7 +330,10 @@ export function AiConsultantPanel({
                       </p>
                     </div>
                   ) : (
-                    <p key={m.id} className="max-w-[95%] text-sm whitespace-pre-wrap text-foreground">
+                    <p
+                      key={m.id}
+                      className="max-w-[95%] text-sm whitespace-pre-wrap text-foreground"
+                    >
                       {m.content}
                     </p>
                   ),

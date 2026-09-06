@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Json } from "@/integrations/supabase/types";
 
 const BUCKET = "kerjaku-assets";
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
@@ -28,7 +29,7 @@ interface AskInput {
   question: string;
 }
 
-type Admin = typeof import("@/integrations/supabase/client.server")["supabaseAdmin"];
+type Admin = (typeof import("@/integrations/supabase/client.server"))["supabaseAdmin"];
 
 async function toDataUrl(admin: Admin, path: string): Promise<string | null> {
   if (!path) return null;
@@ -41,7 +42,8 @@ async function toDataUrl(admin: Admin, path: string): Promise<string | null> {
 
 function gatewayError(status: number, body: string): Error {
   if (status === 429) return new Error("AI is busy right now — please retry shortly.");
-  if (status === 402) return new Error("AI credits for this app are exhausted. Add credits to continue.");
+  if (status === 402)
+    return new Error("AI credits for this app are exhausted. Add credits to continue.");
   if (status === 403) return new Error("AI access is blocked for this workspace.");
   return new Error(`AI request failed (${status}): ${body.slice(0, 200)}`);
 }
@@ -153,7 +155,7 @@ export const analyzeRoom = createServerFn({ method: "POST" })
       true,
     );
 
-    const parsed = parseJson(raw);
+    const parsed = parseJson(raw) as Record<string, Json>;
 
     const { data: brief } = await supabase
       .from("design_briefs")
