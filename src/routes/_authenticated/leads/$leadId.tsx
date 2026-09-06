@@ -5,6 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { ApprovedConcepts } from "@/components/kerjaku/ai-concepts";
+import { ConsultationSummary } from "@/components/kerjaku/consultation-summary";
 import { SelectField, TextAreaField, TextField } from "@/components/kerjaku/form-fields";
 import { GlassCard, SectionCard } from "@/components/kerjaku/glass-card";
 import { Modal } from "@/components/kerjaku/modal";
@@ -417,6 +418,13 @@ function LeadDetailPage() {
                 ))}
               </ul>
             )}
+          </SectionCard>
+
+          <SectionCard
+            title="AI consultation"
+            description="Latest recommendation from the AI interior consultant."
+          >
+            <ConsultationSummary projectId={projectIds[0] ?? null} />
           </SectionCard>
 
           <SectionCard

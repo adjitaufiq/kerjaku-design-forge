@@ -9,21 +9,9 @@ export const SPACE_CATEGORIES = [
   "Commercial",
 ];
 
-export const ROOM_TYPES = [
-  "Living Room",
-  "Bedroom",
-  "Kitchen",
-  "Bathroom",
-  "Office Room",
-  "Other",
-];
+export const ROOM_TYPES = ["Living Room", "Bedroom", "Kitchen", "Bathroom", "Office Room", "Other"];
 
-export const BRIEF_PURPOSES = [
-  "Renovation",
-  "New Interior",
-  "Makeover",
-  "Furniture Improvement",
-];
+export const BRIEF_PURPOSES = ["Renovation", "New Interior", "Makeover", "Furniture Improvement"];
 
 export const BRIEF_BUDGETS = ["Budget", "Medium", "Premium", "Luxury"];
 
