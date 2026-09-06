@@ -420,6 +420,13 @@ function LeadDetailPage() {
           </SectionCard>
 
           <SectionCard
+            title="AI consultation"
+            description="Latest recommendation from the AI interior consultant."
+          >
+            <ConsultationSummary projectId={projectIds[0] ?? null} />
+          </SectionCard>
+
+          <SectionCard
             title="Approved AI concepts"
             description="Designs signed off for this client."
           >
