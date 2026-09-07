@@ -170,6 +170,127 @@ export type Database = {
           },
         ]
       }
+      ai_design_concepts: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          color_palette: string | null
+          consultation_id: string | null
+          created_at: string
+          created_by: string | null
+          customer_interest: string | null
+          customer_notes: string | null
+          furniture_recommendation: string | null
+          generation_id: string | null
+          id: string
+          image_url: string | null
+          lighting_recommendation: string | null
+          material_direction: string | null
+          materials: Json
+          name: string
+          next_action: string | null
+          opportunity: Json | null
+          philosophy: string | null
+          project_id: string
+          proposal_id: string | null
+          reason: string | null
+          revision_request: string | null
+          room_analysis: Json | null
+          scope_of_work: Json
+          status: string
+          style: string | null
+          timeline_estimate: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          color_palette?: string | null
+          consultation_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_interest?: string | null
+          customer_notes?: string | null
+          furniture_recommendation?: string | null
+          generation_id?: string | null
+          id?: string
+          image_url?: string | null
+          lighting_recommendation?: string | null
+          material_direction?: string | null
+          materials?: Json
+          name: string
+          next_action?: string | null
+          opportunity?: Json | null
+          philosophy?: string | null
+          project_id: string
+          proposal_id?: string | null
+          reason?: string | null
+          revision_request?: string | null
+          room_analysis?: Json | null
+          scope_of_work?: Json
+          status?: string
+          style?: string | null
+          timeline_estimate?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          color_palette?: string | null
+          consultation_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_interest?: string | null
+          customer_notes?: string | null
+          furniture_recommendation?: string | null
+          generation_id?: string | null
+          id?: string
+          image_url?: string | null
+          lighting_recommendation?: string | null
+          material_direction?: string | null
+          materials?: Json
+          name?: string
+          next_action?: string | null
+          opportunity?: Json | null
+          philosophy?: string | null
+          project_id?: string
+          proposal_id?: string | null
+          reason?: string | null
+          revision_request?: string | null
+          room_analysis?: Json | null
+          scope_of_work?: Json
+          status?: string
+          style?: string | null
+          timeline_estimate?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_design_concepts_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_consultations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_design_concepts_generation_id_fkey"
+            columns: ["generation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_generations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_design_concepts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_generations: {
         Row: {
           approved: boolean
@@ -259,6 +380,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      ai_libraries: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          kind: string
+          name: string
+          position: number
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          kind: string
+          name: string
+          position?: number
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          kind?: string
+          name?: string
+          position?: number
+          workspace_id?: string
+        }
+        Relationships: []
       }
       ai_revisions: {
         Row: {
