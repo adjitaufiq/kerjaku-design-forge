@@ -733,12 +733,40 @@ function ReskinCard({
 }) {
   const [target, setTarget] = useState<ReskinTarget>("ALL");
   const [swatch, setSwatch] = useState<File | null>(null);
-  const swatchUrl = useFileUrl(swatch);
+  const fileUrl = useFileUrl(swatch);
   const [colorText, setColorText] = useState("");
+  const [tacoQuery, setTacoQuery] = useState("");
+  const [tacoResults, setTacoResults] = useState<TacoSwatch[]>([]);
+  const [tacoPick, setTacoPick] = useState<{ code: string; dataUrl: string } | null>(null);
+  const swatchUrl = fileUrl ?? tacoPick?.dataUrl ?? null;
+
+  const search = useMutation({
+    mutationFn: async () => (await searchTaco({ data: { query: tacoQuery } })).results,
+    onSuccess: (r) => {
+      setTacoResults(r);
+      if (!r.length) toast.error("Kode tidak ditemukan di katalog Taco");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const pick = useMutation({
+    mutationFn: async (s: TacoSwatch) => {
+      const { dataUrl } = await fetchTacoSwatch({ data: { image: s.image } });
+      return { s, dataUrl };
+    },
+    onSuccess: ({ s, dataUrl }) => {
+      setSwatch(null);
+      setTacoPick({ code: s.code, dataUrl });
+      setColorText(`TACO ${s.code}${s.name ? ` ${s.name}` : ""}`);
+      setTacoResults([]);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const run = useMutation({
     mutationFn: async () => {
-      const swatchImage = swatch ? await toCompressedDataUrl(swatch, 1024) : null;
+      const swatchImage = swatch
+        ? await toCompressedDataUrl(swatch, 1024)
+        : (tacoPick?.dataUrl ?? null);
       const res = await quickReskin({
         data: { baseImage: option.image, target, swatchImage, colorText: colorText || null },
       });
@@ -771,6 +799,54 @@ function ReskinCard({
               {t.label}
             </Button>
           ))}
+        </div>
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <input
+              value={tacoQuery}
+              onChange={(e) => setTacoQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && tacoQuery.trim()) search.mutate();
+              }}
+              placeholder="Kode HPL Taco, contoh: 887 jg"
+              className="h-10 min-w-0 flex-1 rounded-md border border-border bg-background px-3 text-sm"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!tacoQuery.trim() || search.isPending}
+              onClick={() => search.mutate()}
+            >
+              {search.isPending ? "Cari…" : "Cari Taco"}
+            </Button>
+          </div>
+          {tacoResults.length > 0 && (
+            <div className="grid grid-cols-3 gap-2">
+              {tacoResults.map((s) => (
+                <button
+                  key={s.link}
+                  type="button"
+                  disabled={pick.isPending}
+                  onClick={() => pick.mutate(s)}
+                  className="overflow-hidden rounded-lg border border-border text-left"
+                >
+                  <img
+                    src={s.image.replace("/uploads/", "/uploads/thumbnail_")}
+                    alt={s.code}
+                    className="aspect-square w-full object-cover"
+                  />
+                  <div className="p-1 text-[10px] leading-tight">
+                    <div className="font-semibold">{s.code}</div>
+                    <div className="text-muted-foreground">{s.name}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+          {pick.isPending && <p className="text-xs text-muted-foreground">Mengambil motif…</p>}
+          {tacoPick && !swatch && (
+            <p className="text-xs text-muted-foreground">Motif dipilih: TACO {tacoPick.code}</p>
+          )}
         </div>
         <div className="grid grid-cols-[96px_1fr] items-start gap-3">
           <label className="block cursor-pointer">
