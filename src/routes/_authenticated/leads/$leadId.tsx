@@ -428,11 +428,12 @@ function LeadDetailPage() {
             <ConsultationSummary projectId={projectIds[0] ?? null} />
           </SectionCard>
 
+          <LeadConceptCard projectIds={projectIds} leadId={leadId} />
+
           <SectionCard
             title="Approved AI concepts"
             description="Designs signed off for this client."
           >
-            <LeadConceptCard projectIds={projectIds} leadId={leadId} />
             <ApprovedConcepts workspaceId={workspaceId} projectIds={projectIds} />
           </SectionCard>
         </div>
