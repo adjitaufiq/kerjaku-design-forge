@@ -7,3 +7,5 @@ export const aiData: AiRepository = cloudAiRepository;
 export { consultantData } from "./cloud-consultant.adapter";
 
 export type * from "../domain/ai";
+export { conceptData } from "./cloud-concept.adapter";
+export type * from "../domain/concept";

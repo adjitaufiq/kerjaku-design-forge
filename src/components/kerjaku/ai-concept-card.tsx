@@ -72,9 +72,9 @@ function useConceptActions(onDone?: () => void) {
       const created = await data.projects.create(concept.workspaceId, {
         leadId,
         projectName: concept.name,
-        projectType: "CUSTOM",
-        status: "IN_PROGRESS" as never,
-      } as never);
+        projectType: "OTHER",
+        status: "DESIGN",
+      });
       await data.consultations
         .create(concept.workspaceId, {
           projectId: created.id,

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { AiConsultantPanel } from "@/components/kerjaku/ai-consultant";
+import { DesignConceptsPanel } from "@/components/kerjaku/ai-concept-card";
 import { EmptyStateCard } from "@/components/kerjaku/empty-state";
 import { FileField, SelectField, TextAreaField } from "@/components/kerjaku/form-fields";
 import { GlassCard, SectionCard } from "@/components/kerjaku/glass-card";
@@ -423,6 +424,14 @@ function AiInteriorPage() {
             roomImagePath={selected?.inputImageUrl ?? selected?.outputImageUrl ?? null}
             canRun={canGenerate}
           />
+          <div className="mt-5">
+            <DesignConceptsPanel
+              projectId={projectId}
+              generationId={selected?.id ?? null}
+              imagePath={selected?.outputImageUrl ?? selected?.inputImageUrl ?? null}
+              canRun={canGenerate}
+            />
+          </div>
         </div>
       ) : null}
     </>
