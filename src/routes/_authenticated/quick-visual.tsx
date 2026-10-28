@@ -1379,6 +1379,7 @@ function WatermarkDialog({
             </label>
           ))}
         </div>
+        {busy && <p className="text-center text-xs text-muted-foreground">{busy}</p>}
         <div className="grid grid-cols-2 gap-2">
           <Button variant="outline" onClick={download} disabled={!!busy || !count}>
             <Download className="size-4" />
