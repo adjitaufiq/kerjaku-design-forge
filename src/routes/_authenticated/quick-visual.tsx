@@ -984,6 +984,7 @@ function WatermarkDialog({
   const boxRef = useRef<HTMLDivElement>(null);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const pinch = useRef<{ dist: number; size: number } | null>(null);
+  const [wmLocked, setWmLocked] = useState(false);
   const update = (p: Partial<WatermarkPrefs>) =>
     setPrefs((cur) => {
       const next = { ...cur, ...p };
