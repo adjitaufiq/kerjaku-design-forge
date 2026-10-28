@@ -62,6 +62,7 @@ import {
   type WatermarkPrefs,
 } from "@/lib/quick-visual-store";
 import { toWhatsAppNumber } from "@/lib/whatsapp";
+import { renderGrid, renderVideo } from "@/lib/quick-visual-export";
 import { cn } from "@/lib/utils";
 import { data } from "@/services/data";
 import type { ProjectType } from "@/services/domain/models";
@@ -650,6 +651,7 @@ function QuickVisualPage() {
           open={wmOpen}
           onOpenChange={setWmOpen}
           option={active}
+          before={session.roomImage}
           brand={brand}
           workshopId={workshopQuery.data?.id ?? null}
           onBrandSaved={() => void workshopQuery.refetch()}
@@ -967,6 +969,7 @@ function WatermarkDialog({
   open,
   onOpenChange,
   option,
+  before,
   brand,
   workshopId,
   onBrandSaved,
@@ -974,6 +977,7 @@ function WatermarkDialog({
   open: boolean;
   onOpenChange: (o: boolean) => void;
   option: VisualOption;
+  before: string | null;
   brand: { name: string | null; logo: string | null };
   workshopId: string | null;
   onBrandSaved: () => void;
@@ -1010,38 +1014,79 @@ function WatermarkDialog({
   const showLogo = prefs.showLogo && hasLogo;
   const showName = prefs.showName && hasName;
 
-  const exportBlob = () =>
-    renderWithWatermark(option.image, { ...prefs, showLogo, showName }, brand);
-  const fileName = `${option.name.replace(/[^\w-]+/g, "-")}.png`;
+  const [pick, setPick] = useState({ after: true, grid: false, video: false });
+  const [busy, setBusy] = useState<string | null>(null);
+  const beforeSrc = option.before ?? before;
+  const base = option.name.replace(/[^\w-]+/g, "-");
+  const count = Number(pick.after) + Number(pick.grid) + Number(pick.video);
+
+  const buildFiles = async (): Promise<File[]> => {
+    const p = { ...prefs, showLogo, showName };
+    const files: File[] = [];
+    if (pick.after) {
+      setBusy("Menyiapkan foto…");
+      const b = await renderWithWatermark(option.image, p, brand);
+      files.push(new File([b], `${base}.png`, { type: "image/png" }));
+    }
+    if (pick.grid && beforeSrc) {
+      setBusy("Menyusun foto grid…");
+      const b = await renderGrid(beforeSrc, option.image, p, brand);
+      files.push(new File([b], `${base}-before-after.png`, { type: "image/png" }));
+    }
+    if (pick.video && beforeSrc) {
+      setBusy("Merekam video (±9 detik)…");
+      const { blob, ext } = await renderVideo(beforeSrc, option.image, p, brand);
+      files.push(new File([blob], `${base}-before-after.${ext}`, { type: blob.type }));
+    }
+    return files;
+  };
+
+  const saveFiles = (files: File[]) =>
+    files.forEach((f, i) =>
+      setTimeout(() => {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(f);
+        a.download = f.name;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 30_000);
+      }, i * 400),
+    );
 
   const download = async () => {
+    if (!count) {
+      toast.error("Pilih minimal 1 file");
+      return;
+    }
     try {
-      const blob = await exportBlob();
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = fileName;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      saveFiles(await buildFiles());
     } catch (e) {
       toast.error((e as Error).message);
+    } finally {
+      setBusy(null);
     }
   };
 
   const share = async () => {
+    if (!count) {
+      toast.error("Pilih minimal 1 file");
+      return;
+    }
     const text = `Halo, berikut preview konsep ${option.name}${option.spec ? ` (${option.spec})` : ""} dari ${brand.name ?? "workshop kami"}.`;
     try {
-      const blob = await exportBlob();
-      const file = new File([blob], fileName, { type: "image/png" });
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], text });
+      const files = await buildFiles();
+      setBusy(null);
+      if (navigator.canShare?.({ files })) {
+        await navigator.share({ files, text });
         return;
       }
-      await download();
+      saveFiles(files);
       const num = toWhatsAppNumber(phone);
       window.open(`https://wa.me/${num ?? ""}?text=${encodeURIComponent(text)}`, "_blank");
-      toast.info("Gambar sudah terunduh — lampirkan di chat WhatsApp");
+      toast.info("File sudah terunduh — lampirkan di chat WhatsApp");
     } catch (e) {
       if ((e as Error).name !== "AbortError") toast.error((e as Error).message);
+    } finally {
+      setBusy(null);
     }
   };
 
@@ -1314,14 +1359,38 @@ function WatermarkDialog({
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
         />
+        <div className="space-y-2 rounded-xl border border-border p-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            File yang dikirim
+          </p>
+          {(
+            [
+              ["after", "Foto hasil (After)", false],
+              ["grid", "Foto grid — Before + After dalam 1 foto", !beforeSrc],
+              ["video", "Video slowmo Before → After (±9 detik)", !beforeSrc],
+            ] as const
+          ).map(([k, l, dis]) => (
+            <label key={k} className={cn("flex items-center gap-2 text-sm", dis && "opacity-50")}>
+              <input
+                type="checkbox"
+                disabled={dis}
+                checked={pick[k] && !dis}
+                onChange={(e) => setPick((s) => ({ ...s, [k]: e.target.checked }))}
+                className="size-4 accent-primary"
+              />
+              {l}
+            </label>
+          ))}
+        </div>
+        {busy && <p className="text-center text-xs text-muted-foreground">{busy}</p>}
         <div className="grid grid-cols-2 gap-2">
-          <Button variant="outline" onClick={download}>
+          <Button variant="outline" onClick={download} disabled={!!busy || !count}>
             <Download className="size-4" />
-            Download
+            Download ({count})
           </Button>
-          <Button onClick={share}>
+          <Button onClick={share} disabled={!!busy || !count}>
             <Share2 className="size-4" />
-            Share WA
+            Share WA ({count})
           </Button>
         </div>
       </DialogContent>
