@@ -64,6 +64,31 @@ export interface WatermarkPrefs {
   y: number;
   size: number; // % of image width
   opacity: number; // 0.1-1
+  font: string; // CSS font-family stack
+  color: string; // hex
+}
+
+export const WATERMARK_FONTS: { label: string; family: string; weight: number }[] = [
+  { label: "Modern Sans", family: "system-ui, sans-serif", weight: 600 },
+  { label: "Classic Serif", family: "Georgia, 'Times New Roman', serif", weight: 600 },
+  { label: "Elegant", family: "'Playfair Display', Georgia, serif", weight: 500 },
+  { label: "Bold Display", family: "Impact, 'Arial Black', sans-serif", weight: 400 },
+  { label: "Geometric", family: "'Montserrat', 'Century Gothic', sans-serif", weight: 700 },
+  { label: "Slab", family: "'Roboto Slab', 'Rockwell', serif", weight: 700 },
+  { label: "Condensed", family: "'Oswald', 'Arial Narrow', sans-serif", weight: 600 },
+  { label: "Signature", family: "'Great Vibes', 'Brush Script MT', cursive", weight: 400 },
+  { label: "Script", family: "'Dancing Script', 'Segoe Script', cursive", weight: 700 },
+  { label: "Monospace", family: "'Courier New', monospace", weight: 700 },
+  { label: "Minimal Light", family: "'Helvetica Neue', Arial, sans-serif", weight: 300 },
+];
+
+export const WATERMARK_COLORS = [
+  "#ffffff", "#000000", "#d4af37", "#f5e6c8", "#9ca3af", "#ef4444",
+  "#f97316", "#facc15", "#22c55e", "#3b82f6", "#8b5cf6", "#ec4899",
+];
+
+export function fontWeightOf(family: string) {
+  return WATERMARK_FONTS.find((f) => f.family === family)?.weight ?? 600;
 }
 
 export const DEFAULT_WATERMARK: WatermarkPrefs = {
@@ -74,6 +99,8 @@ export const DEFAULT_WATERMARK: WatermarkPrefs = {
   y: 92,
   size: 22,
   opacity: 0.7,
+  font: "system-ui, sans-serif",
+  color: "#ffffff",
 };
 
 const WM_KEY = "kerjaku-watermark";
@@ -113,6 +140,7 @@ export async function renderWithWatermark(
   prefs: WatermarkPrefs,
   brand: { name: string | null; logo: string | null },
 ): Promise<Blob> {
+  if (prefs.enabled && prefs.showName) await document.fonts?.ready;
   const base = await loadImg(image);
   const canvas = document.createElement("canvas");
   canvas.width = base.naturalWidth;
@@ -147,12 +175,12 @@ export async function renderWithWatermark(
         top += logoH + gap;
       }
       if (name) {
-        ctx.font = `600 ${fontPx}px system-ui, sans-serif`;
+        ctx.font = `${fontWeightOf(prefs.font)} ${fontPx}px ${prefs.font}`;
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
         ctx.shadowColor = "rgba(0,0,0,0.55)";
         ctx.shadowBlur = fontPx * 0.3;
-        ctx.fillStyle = "#ffffff";
+        ctx.fillStyle = prefs.color;
         ctx.fillText(name, cx, top);
       }
       ctx.globalAlpha = 1;
@@ -208,4 +236,29 @@ export async function putHistory(entry: SavedSession): Promise<SavedSession[]> {
     /* ignore */
   }
   return list;
+}
+
+/** Read a logo file, optionally removing a solid background, and return a compact PNG data URL. */
+export async function processLogo(file: File, removeBg: boolean, max = 512): Promise<string> {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
+  const c = document.createElement("canvas");
+  c.width = Math.max(1, Math.round(bitmap.width * scale));
+  c.height = Math.max(1, Math.round(bitmap.height * scale));
+  const ctx = c.getContext("2d")!;
+  ctx.drawImage(bitmap, 0, 0, c.width, c.height);
+  if (removeBg) {
+    const img = ctx.getImageData(0, 0, c.width, c.height);
+    const d = img.data;
+    // Background colour = average of the four corners.
+    const corners = [0, c.width - 1, (c.height - 1) * c.width, c.height * c.width - 1];
+    const bg = [0, 1, 2].map((k) => corners.reduce((a, i) => a + d[i * 4 + k]!, 0) / 4);
+    for (let i = 0; i < d.length; i += 4) {
+      const dist = Math.hypot(d[i]! - bg[0]!, d[i + 1]! - bg[1]!, d[i + 2]! - bg[2]!);
+      if (dist < 40) d[i + 3] = 0;
+      else if (dist < 80) d[i + 3] = Math.round((d[i + 3]! * (dist - 40)) / 40);
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+  return c.toDataURL("image/png");
 }
