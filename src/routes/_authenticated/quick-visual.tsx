@@ -2,6 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Check,
+  ChevronDown,
   Download,
   ImagePlus,
   Palette,
@@ -53,6 +54,9 @@ import {
   renderWithWatermark,
   saveSession,
   saveWatermark,
+  loadHistory,
+  putHistory,
+  type SavedSession,
   type QuickSession,
   type VisualOption,
   type WatermarkPrefs,
@@ -250,16 +254,20 @@ function QuickVisualPage() {
   const [roomId, setRoomId] = useState(ROOMS[0]!.id);
   const [items, setItems] = useState<string[]>(["KITCHEN_SET"]);
   const [note, setNote] = useState("");
-  const [pendingRoom, setPendingRoom] = useState<File | null>(null);
+  const [pendingRoomId, setPendingRoomId] = useState<string | null>(null);
+  const [history, setHistory] = useState<SavedSession[]>([]);
+  const [currentId, setCurrentId] = useState<string | null>(null);
+  const [surveyOpen, setSurveyOpen] = useState(false);
   const [wmOpen, setWmOpen] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
 
-  // Restore the last session after hydration.
+  // Restore the last session and saved clients after hydration.
   useEffect(() => {
     void loadSession().then((s) => {
       if (s) setSession(s);
       setLoaded(true);
     });
+    void loadHistory().then(setHistory);
   }, []);
   useEffect(() => {
     if (loaded) void saveSession(session);
@@ -276,14 +284,37 @@ function QuickVisualPage() {
   const room = ROOMS.find((r) => r.id === roomId)!;
   const active = session.options.find((o) => o.id === session.activeId) ?? null;
 
-  const applyRoom = async (file: File) => {
+  // Changing the client photo keeps earlier visuals (each keeps its own Before photo).
+  const pickRoom = async (file: File) => {
     const img = await toCompressedDataUrl(file);
-    setSession({ roomImage: img, options: [], activeId: null, saved: true });
+    setSession((s) => ({ ...s, roomImage: img }));
   };
 
-  const pickRoom = (file: File) => {
-    if (session.options.length && !session.saved) setPendingRoom(file);
-    else void applyRoom(file);
+  const switchRoom = (id: string) => {
+    const r = ROOMS.find((x) => x.id === id)!;
+    setRoomId(id);
+    setItems([r.items[0]!.id]);
+    setNote("");
+    setReference(null);
+    setCurrentId(null);
+    setSession(EMPTY_SESSION);
+  };
+
+  const pickCategory = (id: string) => {
+    if (id === roomId) return;
+    if (session.options.length && !session.saved) setPendingRoomId(id);
+    else switchRoom(id);
+  };
+
+  const openSaved = (h: SavedSession) => {
+    const r = ROOMS.find((x) => x.id === h.roomId) ?? ROOMS[0]!;
+    setRoomId(r.id);
+    setItems([r.items[0]!.id]);
+    setNote("");
+    setReference(null);
+    setCurrentId(h.id);
+    setSession({ ...h.session, saved: true });
+    toast.success(`Data ${h.clientName} dibuka`);
   };
 
   const toggleItem = (id: string) =>
@@ -298,17 +329,22 @@ function QuickVisualPage() {
     setNote(next.join(", "));
   };
   const noteParts = note.split(",").map((p) => p.trim());
+  const pickedTags = room.tags.filter((t) => noteParts.includes(t)).length;
+  const pickedExtras = EXTRAS.filter((e) => items.includes(e.id)).length;
 
-  const addOption = (image: string, spec: string, prefix?: string) => {
-    const n = session.options.length + 1;
-    const opt: VisualOption = {
-      id: crypto.randomUUID(),
-      name: prefix ? `Visual ${n} · ${prefix}` : `Visual ${n}`,
-      image,
-      spec,
-      createdAt: Date.now(),
-    };
-    setSession((s) => ({ ...s, options: [...s.options, opt], activeId: opt.id, saved: false }));
+  const addOption = (image: string, spec: string, label: string) => {
+    setSession((s) => {
+      const n = s.options.filter((o) => o.name.startsWith(`Visual ${label} `)).length + 1;
+      const opt: VisualOption = {
+        id: crypto.randomUUID(),
+        name: `Visual ${label} ${n}`,
+        image,
+        ...(s.roomImage ? { before: s.roomImage } : {}),
+        spec,
+        createdAt: Date.now(),
+      };
+      return { ...s, options: [...s.options, opt], activeId: opt.id, saved: false };
+    });
   };
 
   const updateOption = (id: string, patch: Partial<VisualOption>) =>
@@ -337,62 +373,78 @@ function QuickVisualPage() {
     },
     onSuccess: async (image) => {
       const labels = ALL_ITEMS.filter((i) => items.includes(i.id)).map((i) => i.label);
-      addOption(await ensureDataUrl(image), [labels.join(" + "), note].filter(Boolean).join(" — "));
-      toast.success("Tersimpan sebagai visual baru — geser untuk membandingkan");
+      addOption(
+        await ensureDataUrl(image),
+        [labels.join(" + "), note].filter(Boolean).join(" — "),
+        labels[0] ?? "Visual",
+      );
+      toast.success("Tersimpan otomatis — geser untuk membandingkan");
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const roomName = (id: string) =>
+    ROOMS.find((r) => r.id === id)?.label.replace(/^\S+\s/, "") ?? id;
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Quick Visual"
-        subtitle="Tanpa isi data klien. Upload foto ruangan + referensi, AI hanya memasang furniturnya — tembok, lampu, lantai tetap."
+        subtitle="Pilih ruangan → upload foto → konfirmasi. Tembok, lampu, lantai tetap."
       />
 
+      {history.length > 0 && (
+        <Fold title={`📂 Klien tersimpan (${history.length})`}>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {history.map((h) => (
+              <button
+                key={h.id}
+                type="button"
+                onClick={() => openSaved(h)}
+                className={cn(
+                  "flex shrink-0 items-center gap-2 rounded-xl border p-1 pr-3 text-left text-xs",
+                  h.id === currentId
+                    ? "border-primary bg-primary/15 text-foreground"
+                    : "border-border text-muted-foreground",
+                )}
+              >
+                {h.session.options[0] && (
+                  <img
+                    src={h.session.options[0].image}
+                    alt=""
+                    className="size-10 rounded-lg object-cover"
+                  />
+                )}
+                <span>
+                  <span className="block font-medium text-foreground">{h.clientName}</span>
+                  {roomName(h.roomId)} · {h.location} · {h.session.options.length} visual
+                </span>
+              </button>
+            ))}
+          </div>
+        </Fold>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
-        <SectionCard title="1. Upload foto" description="Foto asli klien dan contoh produk">
+        <SectionCard title="1. Pilih ruangan" description="Lalu upload foto dan konfirmasi">
           <div className="space-y-5">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <PhotoPicker
-                label="Foto ruangan klien"
-                hint="Foto ruangan asli (Before)"
-                src={session.roomImage}
-                onPick={pickRoom}
-              />
-              <PhotoPicker
-                label="Foto referensi"
-                hint="Contoh model (Pinterest)"
-                src={referenceUrl}
-                onPick={setReference}
-              />
+            <div className="flex flex-wrap gap-2">
+              {ROOMS.map((r) => (
+                <Button
+                  key={r.id}
+                  type="button"
+                  size="sm"
+                  variant={r.id === roomId ? "default" : "outline"}
+                  onClick={() => pickCategory(r.id)}
+                >
+                  {r.label}
+                </Button>
+              ))}
             </div>
 
             <div className="space-y-2">
               <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                Ruangan
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {ROOMS.map((r) => (
-                  <Button
-                    key={r.id}
-                    type="button"
-                    size="sm"
-                    variant={r.id === roomId ? "default" : "outline"}
-                    onClick={() => {
-                      setRoomId(r.id);
-                      setItems([r.items[0]!.id]);
-                    }}
-                  >
-                    {r.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                Yang dipasang (boleh lebih dari satu)
+                Yang dipasang
               </p>
               <div className="flex flex-wrap gap-2">
                 {room.items.map((i) => (
@@ -401,48 +453,63 @@ function QuickVisualPage() {
                   </Chip>
                 ))}
               </div>
-              <p className="pt-1 text-xs text-muted-foreground">Pintu & plafon (opsional)</p>
-              <div className="flex flex-wrap gap-2">
-                {EXTRAS.map((i) => (
-                  <Chip key={i.id} active={items.includes(i.id)} onClick={() => toggleItem(i.id)}>
-                    {i.label}
-                  </Chip>
-                ))}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {items.includes("CEILING")
-                  ? "Plafon akan diganti baru. Tembok, lantai, jendela tetap dikunci."
-                  : "🔒 Plafon & lampu asli dikunci. Selain yang dicentang, semua bagian ruangan dikunci."}
-              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <PhotoPicker
+                label="Foto klien"
+                hint="Foto ruangan asli"
+                src={session.roomImage}
+                onPick={(f) => void pickRoom(f)}
+              />
+              <PhotoPicker
+                label="Foto referensi"
+                hint="Contoh model"
+                src={referenceUrl}
+                onPick={setReference}
+              />
             </div>
 
             <div className="space-y-2">
-              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                Catatan cepat (klik)
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {room.tags.map((t) => (
-                  <Chip key={t} active={noteParts.includes(t)} onClick={() => toggleTag(t)}>
-                    {t}
-                  </Chip>
-                ))}
-              </div>
+              <Fold title={`🚪 Pintu & plafon${pickedExtras ? ` (${pickedExtras})` : ""}`}>
+                <div className="flex flex-wrap gap-2">
+                  {EXTRAS.map((i) => (
+                    <Chip key={i.id} active={items.includes(i.id)} onClick={() => toggleItem(i.id)}>
+                      {i.label}
+                    </Chip>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {items.includes("CEILING")
+                    ? "Plafon akan diganti baru. Tembok, lantai, jendela tetap dikunci."
+                    : "🔒 Plafon & lampu asli dikunci."}
+                </p>
+              </Fold>
+              <Fold title={`📝 Catatan${pickedTags ? ` (${pickedTags})` : ""}`}>
+                <div className="flex flex-wrap gap-2">
+                  {room.tags.map((t) => (
+                    <Chip key={t} active={noteParts.includes(t)} onClick={() => toggleTag(t)}>
+                      {t}
+                    </Chip>
+                  ))}
+                </div>
+                <TextAreaField
+                  label="Ketik tambahan"
+                  name="note"
+                  placeholder="contoh: sisakan space kulkas 2 pintu di kiri"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                />
+              </Fold>
             </div>
 
-            <TextAreaField
-              label="Catatan (bisa ketik tambahan)"
-              name="note"
-              placeholder="contoh: sisakan space kulkas 2 pintu di kiri"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-            />
             <Button
               className="w-full bg-cta text-cta-foreground hover:bg-cta/90"
               disabled={!session.roomImage || !reference || !items.length || run.isPending}
               onClick={() => run.mutate()}
             >
               <Wand2 className="size-4" />
-              {run.isPending ? "AI sedang memasang… (±30 detik)" : "Pasang dengan AI"}
+              {run.isPending ? "AI sedang memasang… (±30 detik)" : "Konfirmasi & pasang dengan AI"}
             </Button>
           </div>
         </SectionCard>
@@ -469,23 +536,28 @@ function QuickVisualPage() {
                 ))}
               </div>
             )}
-            {session.roomImage && active ? (
+            {active && (active.before ?? session.roomImage) ? (
               <div className="space-y-3">
-                <CompareSlider before={session.roomImage} after={active.image} />
-                <div className="grid gap-2 sm:grid-cols-[1fr_2fr]">
-                  <TextField
-                    label="Nama visual"
-                    name="optName"
-                    value={active.name}
-                    onChange={(e) => updateOption(active.id, { name: e.target.value })}
-                  />
-                  <TextField
-                    label="Spesifikasi"
-                    name="optSpec"
-                    value={active.spec}
-                    onChange={(e) => updateOption(active.id, { spec: e.target.value })}
-                  />
-                </div>
+                <CompareSlider
+                  before={(active.before ?? session.roomImage)!}
+                  after={active.image}
+                />
+                <Fold title="✏️ Nama & spesifikasi">
+                  <div className="grid gap-2 sm:grid-cols-[1fr_2fr]">
+                    <TextField
+                      label="Nama visual"
+                      name="optName"
+                      value={active.name}
+                      onChange={(e) => updateOption(active.id, { name: e.target.value })}
+                    />
+                    <TextField
+                      label="Spesifikasi"
+                      name="optSpec"
+                      value={active.spec}
+                      onChange={(e) => updateOption(active.id, { spec: e.target.value })}
+                    />
+                  </div>
+                </Fold>
                 <div className="flex flex-wrap justify-end gap-2">
                   <Button variant="ghost" size="sm" onClick={() => removeOption(active.id)}>
                     <Trash2 className="size-4" />
@@ -506,16 +578,60 @@ function QuickVisualPage() {
             )}
           </GlassCard>
 
-          {active && <ReskinCard option={active} onResult={addOption} />}
+          {active && (
+            <Fold title="🎨 Ganti warna / motif HPL">
+              <ReskinCard
+                option={active}
+                onResult={(img, spec) =>
+                  addOption(
+                    img,
+                    spec,
+                    active.name.replace(/^Visual\s+/, "").replace(/\s+\d+$/, "") + " HPL",
+                  )
+                }
+              />
+            </Fold>
+          )}
 
-          <div ref={formRef}>
-            <SurveyForm
-              session={session}
-              roomId={roomId}
-              workspaceId={workspaceId}
-              onSaved={() => setSession((s) => ({ ...s, saved: true }))}
-            />
-          </div>
+          {session.options.length > 0 && (
+            <div ref={formRef}>
+              <Fold
+                title={
+                  session.saved && currentId ? "💾 Data klien tersimpan" : "💾 Simpan data klien"
+                }
+                open={surveyOpen}
+                onOpenChange={setSurveyOpen}
+              >
+                <SurveyForm
+                  session={session}
+                  roomId={roomId}
+                  workspaceId={workspaceId}
+                  onSaved={async (info) => {
+                    const id = currentId ?? crypto.randomUUID();
+                    const saved = { ...session, saved: true };
+                    setSession(saved);
+                    setCurrentId(id);
+                    setHistory(
+                      await putHistory({
+                        id,
+                        clientName: info.name,
+                        location: info.location,
+                        roomId,
+                        leadId: info.leadId,
+                        savedAt: Date.now(),
+                        session: saved,
+                      }),
+                    );
+                    if (pendingRoomId) {
+                      const next = pendingRoomId;
+                      setPendingRoomId(null);
+                      switchRoom(next);
+                    }
+                  }}
+                />
+              </Fold>
+            </div>
+          )}
         </div>
       </div>
 
@@ -523,36 +639,68 @@ function QuickVisualPage() {
         <WatermarkDialog open={wmOpen} onOpenChange={setWmOpen} option={active} brand={brand} />
       )}
 
-      <AlertDialog open={!!pendingRoom} onOpenChange={(o) => !o && setPendingRoom(null)}>
+      <AlertDialog
+        open={!!pendingRoomId && !surveyOpen}
+        onOpenChange={(o) => !o && setPendingRoomId(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Visual belum disimpan</AlertDialogTitle>
+            <AlertDialogTitle>Simpan dulu sebelum ganti ruangan</AlertDialogTitle>
             <AlertDialogDescription>
-              Ada {session.options.length} visual yang belum disimpan ke data klien. Kalau ganti
-              foto ruangan, visual ini akan hilang. Isi nama & lokasi klien untuk simpan dulu?
+              Ada {session.options.length} visual {roomName(roomId)} yang belum disimpan. Isi nama &
+              lokasi klien dulu supaya tidak hilang.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel
               onClick={() => {
-                const f = pendingRoom;
-                setPendingRoom(null);
-                if (f) void applyRoom(f);
+                const id = pendingRoomId;
+                setPendingRoomId(null);
+                if (id) switchRoom(id);
               }}
             >
               Ganti tanpa simpan
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                setPendingRoom(null);
-                formRef.current?.scrollIntoView({ behavior: "smooth" });
+                setSurveyOpen(true);
+                setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
               }}
             >
-              Simpan dulu
+              Isi data klien
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+function Fold({
+  title,
+  children,
+  open: openProp,
+  onOpenChange,
+}: {
+  title: string;
+  children: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (o: boolean) => void;
+}) {
+  const [inner, setInner] = useState(false);
+  const open = openProp ?? inner;
+  const toggle = () => (onOpenChange ? onOpenChange(!open) : setInner(!open));
+  return (
+    <div className="rounded-2xl border border-border bg-surface/30">
+      <button
+        type="button"
+        onClick={toggle}
+        className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-foreground"
+      >
+        {title}
+        <ChevronDown className={cn("size-4 transition-transform", open && "rotate-180")} />
+      </button>
+      {open && <div className="space-y-3 px-4 pb-4">{children}</div>}
     </div>
   );
 }
@@ -655,7 +803,7 @@ function SurveyForm({
   session: QuickSession;
   roomId: string;
   workspaceId: string | null;
-  onSaved: () => void;
+  onSaved: (info: { leadId: string; name: string; location: string }) => void;
 }) {
   const [f, setF] = useState({ name: "", location: "", phone: "", p: "", l: "", t: "" });
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -709,8 +857,8 @@ function SurveyForm({
       });
       return lead.id;
     },
-    onSuccess: () => {
-      onSaved();
+    onSuccess: (leadId) => {
+      onSaved({ leadId, name: f.name.trim(), location: f.location.trim() });
       toast.success("Data klien & semua visual tersimpan");
     },
     onError: (e: Error) => toast.error(e.message),
@@ -748,29 +896,31 @@ function SurveyForm({
           value={f.phone}
           onChange={set("phone")}
         />
-        <div className="grid grid-cols-3 gap-2">
-          <TextField
-            label="Panjang (m)"
-            name="p"
-            inputMode="decimal"
-            value={f.p}
-            onChange={set("p")}
-          />
-          <TextField
-            label="Lebar (m)"
-            name="l"
-            inputMode="decimal"
-            value={f.l}
-            onChange={set("l")}
-          />
-          <TextField
-            label="Tinggi (m)"
-            name="t"
-            inputMode="decimal"
-            value={f.t}
-            onChange={set("t")}
-          />
-        </div>
+        <Fold title="📏 Ukuran survei (opsional)">
+          <div className="grid grid-cols-3 gap-2">
+            <TextField
+              label="Panjang (m)"
+              name="p"
+              inputMode="decimal"
+              value={f.p}
+              onChange={set("p")}
+            />
+            <TextField
+              label="Lebar (m)"
+              name="l"
+              inputMode="decimal"
+              value={f.l}
+              onChange={set("l")}
+            />
+            <TextField
+              label="Tinggi (m)"
+              name="t"
+              inputMode="decimal"
+              value={f.t}
+              onChange={set("t")}
+            />
+          </div>
+        </Fold>
         <Button
           className="w-full"
           disabled={

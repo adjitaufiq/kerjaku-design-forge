@@ -4,6 +4,7 @@ export interface VisualOption {
   id: string;
   name: string;
   image: string; // data URL
+  before?: string; // client photo this visual was made from
   spec: string; // short description of design / finish
   createdAt: number;
 }
@@ -165,4 +166,46 @@ export async function renderWithWatermark(
       reject(new Error("Logo tidak bisa dipakai (link diblokir). Matikan logo atau ganti link."));
     }
   });
+}
+
+/** Saved client sessions — reopen from the Quick Visual list without regenerating. */
+export interface SavedSession {
+  id: string;
+  clientName: string;
+  location: string;
+  roomId: string;
+  leadId: string | null;
+  savedAt: number;
+  session: QuickSession;
+}
+
+const HISTORY_KEY = "history";
+
+export async function loadHistory(): Promise<SavedSession[]> {
+  try {
+    const db = await open();
+    return await new Promise((resolve) => {
+      const req = db.transaction(STORE).objectStore(STORE).get(HISTORY_KEY);
+      req.onsuccess = () => resolve((req.result as SavedSession[]) ?? []);
+      req.onerror = () => resolve([]);
+    });
+  } catch {
+    return [];
+  }
+}
+
+export async function putHistory(entry: SavedSession): Promise<SavedSession[]> {
+  const list = [entry, ...(await loadHistory()).filter((h) => h.id !== entry.id)].slice(0, 30);
+  try {
+    const db = await open();
+    await new Promise<void>((resolve) => {
+      const tx = db.transaction(STORE, "readwrite");
+      tx.objectStore(STORE).put(list, HISTORY_KEY);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    });
+  } catch {
+    /* ignore */
+  }
+  return list;
 }
