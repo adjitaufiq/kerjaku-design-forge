@@ -21,6 +21,7 @@ import { useWorkspace } from "@/hooks/useWorkspace";
 import { cn } from "@/lib/utils";
 
 const NAV = [
+  { to: "/quick-visual", label: "Quick Visual", icon: Sparkles },
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/leads", label: "Leads", icon: Users },
   { to: "/consultation", label: "Consultation", icon: ClipboardList },
