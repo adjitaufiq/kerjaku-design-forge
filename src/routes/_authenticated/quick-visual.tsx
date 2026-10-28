@@ -1173,8 +1173,11 @@ function WatermarkDialog({
                     <img
                       src={brand.logo!}
                       alt="Logo"
-                      className="w-full object-contain"
-                      style={{ aspectRatio: "1 / 0.45" }}
+                      className="max-w-none object-contain"
+                      style={{
+                        width: `${prefs.logoScale ?? 100}%`,
+                        aspectRatio: "1 / 0.45",
+                      }}
                     />
                   )}
                   {showName && <WatermarkText name={brand.name!} prefs={prefs} />}
@@ -1215,6 +1218,34 @@ function WatermarkDialog({
                 value={[prefs.size]}
                 onValueChange={([v]) => update({ size: v! })}
               />
+              {showLogo && (
+                <>
+                  <p className="text-xs text-muted-foreground">
+                    Ukuran logo ({prefs.logoScale ?? 100}%)
+                  </p>
+                  <Slider
+                    min={20}
+                    max={300}
+                    step={5}
+                    value={[prefs.logoScale ?? 100]}
+                    onValueChange={([v]) => update({ logoScale: v! })}
+                  />
+                </>
+              )}
+              {showName && (
+                <>
+                  <p className="text-xs text-muted-foreground">
+                    Ukuran teks ({prefs.textScale ?? 100}%)
+                  </p>
+                  <Slider
+                    min={20}
+                    max={300}
+                    step={5}
+                    value={[prefs.textScale ?? 100]}
+                    onValueChange={([v]) => update({ textScale: v! })}
+                  />
+                </>
+              )}
               <p className="text-xs text-muted-foreground">
                 Transparansi ({Math.round(prefs.opacity * 100)}%)
               </p>
@@ -1307,22 +1338,24 @@ function WatermarkDialog({
 
 function WatermarkText({ name, prefs }: { name: string; prefs: WatermarkPrefs }) {
   const ref = useRef<HTMLSpanElement>(null);
-  const [px, setPx] = useState(10);
+  const [w, setW] = useState(80);
   useEffect(() => {
     const el = ref.current?.parentElement;
     if (!el) return;
-    const ro = new ResizeObserver(() => setPx(Math.max(6, el.clientWidth * 0.12)));
+    const ro = new ResizeObserver(() => setW(el.clientWidth));
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+  const px = Math.max(5, w * 0.12 * ((prefs.textScale ?? 100) / 100));
   return (
     <span
       ref={ref}
-      className="text-center whitespace-nowrap"
+      className="text-center whitespace-pre"
       style={{
         fontFamily: prefs.font,
         fontWeight: fontWeightOf(prefs.font),
         fontSize: px,
+        lineHeight: 1.2,
         color: prefs.color,
         textShadow: `0 0 ${px * 0.3}px rgba(0,0,0,0.55)`,
       }}
