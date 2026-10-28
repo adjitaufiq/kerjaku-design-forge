@@ -18,6 +18,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedProjectsRouteImport } from './routes/_authenticated/projects'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as ProposalTokenRouteImport } from './routes/proposal.$token'
+import { Route as AuthenticatedConceptsConceptIdRouteImport } from './routes/_authenticated/concepts.$conceptId'
 import { Route as AuthenticatedLeadsIndexRouteImport } from './routes/_authenticated/leads/index'
 import { Route as AuthenticatedLeadsLeadIdRouteImport } from './routes/_authenticated/leads/$leadId'
 import { Route as AuthenticatedProposalsIndexRouteImport } from './routes/_authenticated/proposals/index'
@@ -68,6 +69,12 @@ const ProposalTokenRoute = ProposalTokenRouteImport.update({
   path: '/proposal/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedConceptsConceptIdRoute =
+  AuthenticatedConceptsConceptIdRouteImport.update({
+    id: '/concepts/$conceptId',
+    path: '/concepts/$conceptId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedLeadsIndexRoute = AuthenticatedLeadsIndexRouteImport.update({
   id: '/leads/',
   path: '/leads/',
@@ -101,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/projects': typeof AuthenticatedProjectsRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/proposal/$token': typeof ProposalTokenRoute
+  '/concepts/$conceptId': typeof AuthenticatedConceptsConceptIdRoute
   '/leads/$leadId': typeof AuthenticatedLeadsLeadIdRoute
   '/proposals/$proposalId': typeof AuthenticatedProposalsProposalIdRoute
   '/leads/': typeof AuthenticatedLeadsIndexRoute
@@ -115,6 +123,7 @@ export interface FileRoutesByTo {
   '/projects': typeof AuthenticatedProjectsRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/proposal/$token': typeof ProposalTokenRoute
+  '/concepts/$conceptId': typeof AuthenticatedConceptsConceptIdRoute
   '/leads/$leadId': typeof AuthenticatedLeadsLeadIdRoute
   '/proposals/$proposalId': typeof AuthenticatedProposalsProposalIdRoute
   '/leads': typeof AuthenticatedLeadsIndexRoute
@@ -131,6 +140,7 @@ export interface FileRoutesById {
   '/_authenticated/projects': typeof AuthenticatedProjectsRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/proposal/$token': typeof ProposalTokenRoute
+  '/_authenticated/concepts/$conceptId': typeof AuthenticatedConceptsConceptIdRoute
   '/_authenticated/leads/$leadId': typeof AuthenticatedLeadsLeadIdRoute
   '/_authenticated/proposals/$proposalId': typeof AuthenticatedProposalsProposalIdRoute
   '/_authenticated/leads/': typeof AuthenticatedLeadsIndexRoute
@@ -147,6 +157,7 @@ export interface FileRouteTypes {
     | '/projects'
     | '/settings'
     | '/proposal/$token'
+    | '/concepts/$conceptId'
     | '/leads/$leadId'
     | '/proposals/$proposalId'
     | '/leads/'
@@ -161,6 +172,7 @@ export interface FileRouteTypes {
     | '/projects'
     | '/settings'
     | '/proposal/$token'
+    | '/concepts/$conceptId'
     | '/leads/$leadId'
     | '/proposals/$proposalId'
     | '/leads'
@@ -176,6 +188,7 @@ export interface FileRouteTypes {
     | '/_authenticated/projects'
     | '/_authenticated/settings'
     | '/proposal/$token'
+    | '/_authenticated/concepts/$conceptId'
     | '/_authenticated/leads/$leadId'
     | '/_authenticated/proposals/$proposalId'
     | '/_authenticated/leads/'
@@ -254,6 +267,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProposalTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/concepts/$conceptId': {
+      id: '/_authenticated/concepts/$conceptId'
+      path: '/concepts/$conceptId'
+      fullPath: '/concepts/$conceptId'
+      preLoaderRoute: typeof AuthenticatedConceptsConceptIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/leads/': {
       id: '/_authenticated/leads/'
       path: '/leads'
@@ -291,6 +311,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedProjectsRoute: typeof AuthenticatedProjectsRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedConceptsConceptIdRoute: typeof AuthenticatedConceptsConceptIdRoute
   AuthenticatedLeadsLeadIdRoute: typeof AuthenticatedLeadsLeadIdRoute
   AuthenticatedProposalsProposalIdRoute: typeof AuthenticatedProposalsProposalIdRoute
   AuthenticatedLeadsIndexRoute: typeof AuthenticatedLeadsIndexRoute
@@ -303,6 +324,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedProjectsRoute: AuthenticatedProjectsRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedConceptsConceptIdRoute: AuthenticatedConceptsConceptIdRoute,
   AuthenticatedLeadsLeadIdRoute: AuthenticatedLeadsLeadIdRoute,
   AuthenticatedProposalsProposalIdRoute: AuthenticatedProposalsProposalIdRoute,
   AuthenticatedLeadsIndexRoute: AuthenticatedLeadsIndexRoute,
