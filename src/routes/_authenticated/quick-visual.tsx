@@ -1,6 +1,16 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Check, Download, ImagePlus, Palette, Plus, Save, Share2, Trash2, Wand2 } from "lucide-react";
+import {
+  Check,
+  Download,
+  ImagePlus,
+  Palette,
+  Plus,
+  Save,
+  Share2,
+  Trash2,
+  Wand2,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -489,7 +499,9 @@ function QuickVisualPage() {
               </div>
             ) : (
               <div className="grid aspect-4/3 place-items-center rounded-2xl border border-dashed border-border bg-surface/40 p-6 text-center text-sm text-muted-foreground">
-                {run.isPending ? "AI sedang memproses…" : "Hasil Before / After akan muncul di sini"}
+                {run.isPending
+                  ? "AI sedang memproses…"
+                  : "Hasil Before / After akan muncul di sini"}
               </div>
             )}
           </GlassCard>
@@ -508,12 +520,7 @@ function QuickVisualPage() {
       </div>
 
       {active && (
-        <WatermarkDialog
-          open={wmOpen}
-          onOpenChange={setWmOpen}
-          option={active}
-          brand={brand}
-        />
+        <WatermarkDialog open={wmOpen} onOpenChange={setWmOpen} option={active} brand={brand} />
       )}
 
       <AlertDialog open={!!pendingRoom} onOpenChange={(o) => !o && setPendingRoom(null)}>
@@ -602,7 +609,11 @@ function ReskinCard({
           <label className="block cursor-pointer">
             <div className="relative grid aspect-square place-items-center overflow-hidden rounded-xl border border-dashed border-border bg-surface/40 text-center text-[11px] text-muted-foreground">
               {swatchUrl ? (
-                <img src={swatchUrl} alt="Sampel HPL" className="absolute inset-0 size-full object-cover" />
+                <img
+                  src={swatchUrl}
+                  alt="Sampel HPL"
+                  className="absolute inset-0 size-full object-cover"
+                />
               ) : (
                 <span className="p-2">Foto HPL</span>
               )}
@@ -714,18 +725,60 @@ function SurveyForm({
     >
       <div className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
-          <TextField label="Nama klien *" name="name" placeholder="Ibu Malla" value={f.name} onChange={set("name")} />
-          <TextField label="Lokasi proyek *" name="location" placeholder="Cibubur" value={f.location} onChange={set("location")} />
+          <TextField
+            label="Nama klien *"
+            name="name"
+            placeholder="Ibu Malla"
+            value={f.name}
+            onChange={set("name")}
+          />
+          <TextField
+            label="Lokasi proyek *"
+            name="location"
+            placeholder="Cibubur"
+            value={f.location}
+            onChange={set("location")}
+          />
         </div>
-        <TextField label="No. WhatsApp (opsional)" name="phone" inputMode="tel" placeholder="0812…" value={f.phone} onChange={set("phone")} />
+        <TextField
+          label="No. WhatsApp (opsional)"
+          name="phone"
+          inputMode="tel"
+          placeholder="0812…"
+          value={f.phone}
+          onChange={set("phone")}
+        />
         <div className="grid grid-cols-3 gap-2">
-          <TextField label="Panjang (m)" name="p" inputMode="decimal" value={f.p} onChange={set("p")} />
-          <TextField label="Lebar (m)" name="l" inputMode="decimal" value={f.l} onChange={set("l")} />
-          <TextField label="Tinggi (m)" name="t" inputMode="decimal" value={f.t} onChange={set("t")} />
+          <TextField
+            label="Panjang (m)"
+            name="p"
+            inputMode="decimal"
+            value={f.p}
+            onChange={set("p")}
+          />
+          <TextField
+            label="Lebar (m)"
+            name="l"
+            inputMode="decimal"
+            value={f.l}
+            onChange={set("l")}
+          />
+          <TextField
+            label="Tinggi (m)"
+            name="t"
+            inputMode="decimal"
+            value={f.t}
+            onChange={set("t")}
+          />
         </div>
         <Button
           className="w-full"
-          disabled={!f.name.trim() || !f.location.trim() || save.isPending || session.saved && !!savedLeadId}
+          disabled={
+            !f.name.trim() ||
+            !f.location.trim() ||
+            save.isPending ||
+            (session.saved && !!savedLeadId)
+          }
           onClick={() => save.mutate()}
         >
           <Save className="size-4" />
@@ -893,12 +946,26 @@ function WatermarkDialog({
                 </div>
               )}
             </div>
-            <p className="text-xs text-muted-foreground">Sentuh / geser di gambar untuk pindah posisi.</p>
+            <p className="text-xs text-muted-foreground">
+              Sentuh / geser di gambar untuk pindah posisi.
+            </p>
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground">Ukuran</p>
-              <Slider min={8} max={50} step={1} value={[prefs.size]} onValueChange={([v]) => update({ size: v! })} />
+              <Slider
+                min={8}
+                max={50}
+                step={1}
+                value={[prefs.size]}
+                onValueChange={([v]) => update({ size: v! })}
+              />
               <p className="text-xs text-muted-foreground">Transparansi</p>
-              <Slider min={10} max={100} step={5} value={[Math.round(prefs.opacity * 100)]} onValueChange={([v]) => update({ opacity: v! / 100 })} />
+              <Slider
+                min={10}
+                max={100}
+                step={5}
+                value={[Math.round(prefs.opacity * 100)]}
+                onValueChange={([v]) => update({ opacity: v! / 100 })}
+              />
             </div>
           </div>
         )}
