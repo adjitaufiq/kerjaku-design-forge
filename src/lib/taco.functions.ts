@@ -61,7 +61,7 @@ export const fetchTacoSwatch = createServerFn({ method: "POST" })
     return input;
   })
   .handler(async ({ data }) => {
-    const proxied = `https://taco.co.id/_next/image?url=${encodeURIComponent(data.image)}&w=1080&q=80`;
+    const proxied = `https://taco.co.id/_next/image?url=${encodeURIComponent(data.image)}&w=1080&q=75`;
     let res = await fetch(proxied, { headers: { "User-Agent": UA, Accept: "image/jpeg,image/png" } });
     if (!res.ok) res = await fetch(data.image, { headers: { "User-Agent": UA } });
     if (!res.ok) throw new Error(`Gagal ambil motif Taco (${res.status})`);
