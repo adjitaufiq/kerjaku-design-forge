@@ -984,6 +984,7 @@ function WatermarkDialog({
   const boxRef = useRef<HTMLDivElement>(null);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const pinch = useRef<{ dist: number; size: number } | null>(null);
+  const [wmLocked, setWmLocked] = useState(false);
   const update = (p: Partial<WatermarkPrefs>) =>
     setPrefs((cur) => {
       const next = { ...cur, ...p };
@@ -1104,8 +1105,12 @@ function WatermarkDialog({
 
             <div
               ref={boxRef}
-              className="relative touch-none overflow-hidden rounded-xl border border-border"
+              className={cn(
+                "relative select-none overflow-hidden rounded-xl border border-border",
+                !wmLocked && "touch-none",
+              )}
               onPointerDown={(e) => {
+                if (wmLocked) return;
                 e.currentTarget.setPointerCapture(e.pointerId);
                 pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
                 if (pointers.current.size === 2)
@@ -1113,7 +1118,7 @@ function WatermarkDialog({
                 else moveTo(e.clientX, e.clientY);
               }}
               onPointerMove={(e) => {
-                if (!pointers.current.has(e.pointerId)) return;
+                if (wmLocked || !pointers.current.has(e.pointerId)) return;
                 pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
                 if (pinch.current && pointers.current.size >= 2) {
                   const d = pinchDist();
@@ -1135,6 +1140,24 @@ function WatermarkDialog({
                 if (pointers.current.size === 0) pinch.current = null;
               }}
             >
+              <button
+                type="button"
+                aria-label={wmLocked ? "Buka kunci watermark" : "Kunci watermark"}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => {
+                  pointers.current.clear();
+                  pinch.current = null;
+                  setWmLocked((v) => !v);
+                }}
+                className={cn(
+                  "absolute top-3 left-1/2 z-10 grid size-9 -translate-x-1/2 place-items-center rounded-full border",
+                  wmLocked
+                    ? "border-cta bg-cta text-cta-foreground"
+                    : "border-border bg-background/70 text-foreground",
+                )}
+              >
+                {wmLocked ? <Lock size={16} /> : <LockOpen size={16} />}
+              </button>
               <img src={option.image} alt="Preview" className="block w-full" draggable={false} />
               {(showLogo || showName) && (
                 <div
@@ -1159,7 +1182,8 @@ function WatermarkDialog({
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              Geser 1 jari untuk pindah posisi · cubit 2 jari untuk perbesar / perkecil.
+              Geser 1 jari untuk pindah posisi · cubit 2 jari untuk perbesar / perkecil · kunci
+              gembok di atas biar touchscreen aman.
             </p>
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
