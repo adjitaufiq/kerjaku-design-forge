@@ -1423,9 +1423,10 @@ function BrandDialog({
           <DialogTitle>Nama & logo workshop</DialogTitle>
           <DialogDescription>Otomatis tersimpan juga di Settings.</DialogDescription>
         </DialogHeader>
-        <TextField
-          label="Nama workshop"
+        <TextAreaField
+          label="Nama workshop (Enter untuk baris baru)"
           name="wsName"
+          rows={2}
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
