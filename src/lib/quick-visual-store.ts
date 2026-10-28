@@ -83,8 +83,18 @@ export const WATERMARK_FONTS: { label: string; family: string; weight: number }[
 ];
 
 export const WATERMARK_COLORS = [
-  "#ffffff", "#000000", "#d4af37", "#f5e6c8", "#9ca3af", "#ef4444",
-  "#f97316", "#facc15", "#22c55e", "#3b82f6", "#8b5cf6", "#ec4899",
+  "#ffffff",
+  "#000000",
+  "#d4af37",
+  "#f5e6c8",
+  "#9ca3af",
+  "#ef4444",
+  "#f97316",
+  "#facc15",
+  "#22c55e",
+  "#3b82f6",
+  "#8b5cf6",
+  "#ec4899",
 ];
 
 export function fontWeightOf(family: string) {

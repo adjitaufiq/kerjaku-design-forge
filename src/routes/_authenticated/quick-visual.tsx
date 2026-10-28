@@ -40,17 +40,16 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { useWorkspace } from "@/hooks/useWorkspace";
-import {
-  ALL_ITEMS,
-  RESKIN_TARGETS,
-  ROOMS,
-  type ReskinTarget,
-} from "@/lib/quick-visual-catalog";
+import { ALL_ITEMS, RESKIN_TARGETS, ROOMS, type ReskinTarget } from "@/lib/quick-visual-catalog";
 import { quickReskin, quickVisualize } from "@/lib/quick-visual.functions";
 import {
   loadSession,
   loadWatermark,
   renderWithWatermark,
+  processLogo,
+  fontWeightOf,
+  WATERMARK_COLORS,
+  WATERMARK_FONTS,
   saveSession,
   saveWatermark,
   loadHistory,
@@ -445,15 +444,15 @@ function QuickVisualPage() {
             </div>
 
             {showItems && (
-            <div className="space-y-2">
-              <div className="flex flex-wrap gap-2">
-                {room.items.map((i) => (
-                  <Chip key={i.id} active={items.includes(i.id)} onClick={() => toggleItem(i.id)}>
-                    {i.label}
-                  </Chip>
-                ))}
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  {room.items.map((i) => (
+                    <Chip key={i.id} active={items.includes(i.id)} onClick={() => toggleItem(i.id)}>
+                      {i.label}
+                    </Chip>
+                  ))}
+                </div>
               </div>
-            </div>
             )}
 
             <div className="grid grid-cols-2 gap-3">
@@ -623,7 +622,14 @@ function QuickVisualPage() {
       </div>
 
       {active && (
-        <WatermarkDialog open={wmOpen} onOpenChange={setWmOpen} option={active} brand={brand} />
+        <WatermarkDialog
+          open={wmOpen}
+          onOpenChange={setWmOpen}
+          option={active}
+          brand={brand}
+          workshopId={workshopQuery.data?.id ?? null}
+          onBrandSaved={() => void workshopQuery.refetch()}
+        />
       )}
 
       <AlertDialog
@@ -938,16 +944,22 @@ function WatermarkDialog({
   onOpenChange,
   option,
   brand,
+  workshopId,
+  onBrandSaved,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   option: VisualOption;
   brand: { name: string | null; logo: string | null };
+  workshopId: string | null;
+  onBrandSaved: () => void;
 }) {
   const [prefs, setPrefs] = useState<WatermarkPrefs>(loadWatermark);
   const [phone, setPhone] = useState("");
+  const [brandOpen, setBrandOpen] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
-  const dragging = useRef(false);
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const pinch = useRef<{ dist: number; size: number } | null>(null);
   const update = (p: Partial<WatermarkPrefs>) =>
     setPrefs((cur) => {
       const next = { ...cur, ...p };
@@ -962,6 +974,10 @@ function WatermarkDialog({
       x: Math.min(100, Math.max(0, ((x - b.left) / b.width) * 100)),
       y: Math.min(100, Math.max(0, ((y - b.top) / b.height) * 100)),
     });
+  };
+  const pinchDist = () => {
+    const [a, b] = [...pointers.current.values()];
+    return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
   };
 
   const hasLogo = !!brand.logo;
@@ -1019,7 +1035,7 @@ function WatermarkDialog({
 
         {prefs.enabled && (
           <div className="space-y-3">
-            <div className="flex flex-wrap gap-4 text-sm">
+            <div className="flex flex-wrap items-center gap-4 text-sm">
               <label className="flex items-center gap-2">
                 <Checkbox
                   checked={showLogo}
@@ -1036,6 +1052,14 @@ function WatermarkDialog({
                 />
                 Nama workshop
               </label>
+              <Button
+                size="sm"
+                variant="outline"
+                className="ml-auto"
+                onClick={() => setBrandOpen(true)}
+              >
+                ✏️ Nama & logo
+              </Button>
             </div>
             {(!hasLogo || !hasName) && (
               <p className="rounded-lg bg-surface/60 p-2 text-xs text-muted-foreground">
@@ -1044,9 +1068,13 @@ function WatermarkDialog({
                   : !hasLogo
                     ? "Logo workshop belum ada — watermark hanya nama. Mau tambah logo?"
                     : "Nama workshop belum diisi — watermark hanya logo. Mau lengkapi nama?"}{" "}
-                <Link to="/settings" className="text-primary underline">
-                  Lengkapi di Settings
-                </Link>
+                <button
+                  type="button"
+                  className="text-primary underline"
+                  onClick={() => setBrandOpen(true)}
+                >
+                  Lengkapi di sini
+                </button>
               </p>
             )}
 
@@ -1054,12 +1082,34 @@ function WatermarkDialog({
               ref={boxRef}
               className="relative touch-none overflow-hidden rounded-xl border border-border"
               onPointerDown={(e) => {
-                dragging.current = true;
                 e.currentTarget.setPointerCapture(e.pointerId);
-                moveTo(e.clientX, e.clientY);
+                pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+                if (pointers.current.size === 2)
+                  pinch.current = { dist: pinchDist(), size: prefs.size };
+                else moveTo(e.clientX, e.clientY);
               }}
-              onPointerMove={(e) => dragging.current && moveTo(e.clientX, e.clientY)}
-              onPointerUp={() => (dragging.current = false)}
+              onPointerMove={(e) => {
+                if (!pointers.current.has(e.pointerId)) return;
+                pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+                if (pinch.current && pointers.current.size >= 2) {
+                  const d = pinchDist();
+                  if (pinch.current.dist > 0)
+                    update({
+                      size: Math.min(
+                        80,
+                        Math.max(5, pinch.current.size * (d / pinch.current.dist)),
+                      ),
+                    });
+                } else if (!pinch.current) moveTo(e.clientX, e.clientY);
+              }}
+              onPointerUp={(e) => {
+                pointers.current.delete(e.pointerId);
+                if (pointers.current.size === 0) pinch.current = null;
+              }}
+              onPointerCancel={(e) => {
+                pointers.current.delete(e.pointerId);
+                if (pointers.current.size === 0) pinch.current = null;
+              }}
             >
               <img src={option.image} alt="Preview" className="block w-full" draggable={false} />
               {(showLogo || showName) && (
@@ -1073,29 +1123,53 @@ function WatermarkDialog({
                   }}
                 >
                   {showLogo && (
-                    <img src={brand.logo!} alt="Logo" className="max-h-12 w-auto object-contain" />
+                    <img
+                      src={brand.logo!}
+                      alt="Logo"
+                      className="w-full object-contain"
+                      style={{ aspectRatio: "1 / 0.45" }}
+                    />
                   )}
-                  {showName && (
-                    <span className="text-center text-[10px] font-semibold text-foreground drop-shadow">
-                      {brand.name}
-                    </span>
-                  )}
+                  {showName && <WatermarkText name={brand.name!} prefs={prefs} />}
                 </div>
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              Sentuh / geser di gambar untuk pindah posisi.
+              Geser 1 jari untuk pindah posisi · cubit 2 jari untuk perbesar / perkecil.
             </p>
             <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">Ukuran</p>
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Ukuran</span>
+                <span className="flex items-center gap-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 px-2"
+                    onClick={() => update({ size: Math.max(5, prefs.size - 2) })}
+                  >
+                    −
+                  </Button>
+                  {Math.round(prefs.size)}%
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 px-2"
+                    onClick={() => update({ size: Math.min(80, prefs.size + 2) })}
+                  >
+                    +
+                  </Button>
+                </span>
+              </div>
               <Slider
-                min={8}
-                max={50}
+                min={5}
+                max={80}
                 step={1}
                 value={[prefs.size]}
                 onValueChange={([v]) => update({ size: v! })}
               />
-              <p className="text-xs text-muted-foreground">Transparansi</p>
+              <p className="text-xs text-muted-foreground">
+                Transparansi ({Math.round(prefs.opacity * 100)}%)
+              </p>
               <Slider
                 min={10}
                 max={100}
@@ -1104,6 +1178,53 @@ function WatermarkDialog({
                 onValueChange={([v]) => update({ opacity: v! / 100 })}
               />
             </div>
+
+            {showName && (
+              <Fold title="🔤 Font & warna nama">
+                <div className="grid grid-cols-2 gap-2">
+                  {WATERMARK_FONTS.map((f) => (
+                    <button
+                      key={f.label}
+                      type="button"
+                      onClick={() => update({ font: f.family })}
+                      className={cn(
+                        "truncate rounded-lg border px-2 py-2 text-sm",
+                        prefs.font === f.family
+                          ? "border-primary bg-primary/15 text-foreground"
+                          : "border-border text-muted-foreground",
+                      )}
+                      style={{ fontFamily: f.family, fontWeight: f.weight }}
+                    >
+                      {brand.name || f.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {WATERMARK_COLORS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      aria-label={`Warna ${c}`}
+                      onClick={() => update({ color: c })}
+                      className={cn(
+                        "size-7 rounded-full border-2",
+                        prefs.color === c ? "border-primary" : "border-border",
+                      )}
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <input
+                      type="color"
+                      value={prefs.color}
+                      onChange={(e) => update({ color: e.target.value })}
+                      className="h-8 w-12 cursor-pointer rounded border border-border bg-transparent"
+                    />
+                    Warna bebas
+                  </label>
+                </div>
+              </Fold>
+            )}
           </div>
         )}
 
@@ -1122,6 +1243,166 @@ function WatermarkDialog({
           <Button onClick={share}>
             <Share2 className="size-4" />
             Share WA
+          </Button>
+        </div>
+      </DialogContent>
+      <BrandDialog
+        open={brandOpen}
+        onOpenChange={setBrandOpen}
+        brand={brand}
+        workshopId={workshopId}
+        onSaved={onBrandSaved}
+      />
+    </Dialog>
+  );
+}
+
+function WatermarkText({ name, prefs }: { name: string; prefs: WatermarkPrefs }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [px, setPx] = useState(10);
+  useEffect(() => {
+    const el = ref.current?.parentElement;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setPx(Math.max(6, el.clientWidth * 0.12)));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return (
+    <span
+      ref={ref}
+      className="text-center whitespace-nowrap"
+      style={{
+        fontFamily: prefs.font,
+        fontWeight: fontWeightOf(prefs.font),
+        fontSize: px,
+        color: prefs.color,
+        textShadow: `0 0 ${px * 0.3}px rgba(0,0,0,0.55)`,
+      }}
+    >
+      {name}
+    </span>
+  );
+}
+
+function BrandDialog({
+  open,
+  onOpenChange,
+  brand,
+  workshopId,
+  onSaved,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  brand: { name: string | null; logo: string | null };
+  workshopId: string | null;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState(brand.name ?? "");
+  const [file, setFile] = useState<File | null>(null);
+  const [removeBg, setRemoveBg] = useState(true);
+  const [logo, setLogo] = useState<string | null>(brand.logo);
+
+  useEffect(() => {
+    if (open) {
+      setName(brand.name ?? "");
+      setLogo(brand.logo);
+      setFile(null);
+    }
+  }, [open, brand.name, brand.logo]);
+
+  useEffect(() => {
+    if (!file) return;
+    let alive = true;
+    void processLogo(file, removeBg).then((url) => alive && setLogo(url));
+    return () => {
+      alive = false;
+    };
+  }, [file, removeBg]);
+
+  const save = useMutation({
+    mutationFn: async () => {
+      if (!workshopId) throw new Error("Data workshop belum siap, coba lagi sebentar");
+      await data.workspaces.updateWorkshop(workshopId, {
+        name: name.trim() || brand.name || "",
+        logo: logo || null,
+      });
+    },
+    onSuccess: () => {
+      toast.success("Nama & logo workshop tersimpan");
+      onSaved();
+      onOpenChange(false);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Nama & logo workshop</DialogTitle>
+          <DialogDescription>Otomatis tersimpan juga di Settings.</DialogDescription>
+        </DialogHeader>
+        <TextField
+          label="Nama workshop"
+          name="wsName"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <label className="block cursor-pointer">
+          <span className="mb-1.5 block text-sm font-medium text-foreground">Logo</span>
+          <div
+            className="grid h-36 place-items-center overflow-hidden rounded-2xl border border-dashed border-border text-sm text-muted-foreground"
+            style={{
+              backgroundImage:
+                "repeating-conic-gradient(var(--color-muted) 0% 25%, transparent 0% 50%)",
+              backgroundSize: "16px 16px",
+            }}
+          >
+            {logo ? (
+              <img src={logo} alt="Logo" className="max-h-32 max-w-[90%] object-contain" />
+            ) : (
+              <span className="flex flex-col items-center gap-2">
+                <ImagePlus className="size-6" />
+                Upload logo
+              </span>
+            )}
+          </div>
+          <input
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) setFile(f);
+              e.target.value = "";
+            }}
+          />
+        </label>
+        {file && (
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              variant={removeBg ? "default" : "outline"}
+              size="sm"
+              onClick={() => setRemoveBg(true)}
+            >
+              ✨ Hapus latar
+            </Button>
+            <Button
+              variant={!removeBg ? "default" : "outline"}
+              size="sm"
+              onClick={() => setRemoveBg(false)}
+            >
+              🖼️ Original
+            </Button>
+          </div>
+        )}
+        <div className="grid grid-cols-2 gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            ← Kembali
+          </Button>
+          <Button onClick={() => save.mutate()} disabled={save.isPending}>
+            <Save className="size-4" />
+            {save.isPending ? "Menyimpan…" : "Simpan"}
           </Button>
         </div>
       </DialogContent>
