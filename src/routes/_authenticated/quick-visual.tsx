@@ -1182,7 +1182,8 @@ function WatermarkDialog({
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              Geser 1 jari untuk pindah posisi · cubit 2 jari untuk perbesar / perkecil.
+              Geser 1 jari untuk pindah posisi · cubit 2 jari untuk perbesar / perkecil · kunci
+              gembok di atas biar touchscreen aman.
             </p>
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
