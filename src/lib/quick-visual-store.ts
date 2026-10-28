@@ -4,6 +4,7 @@ export interface VisualOption {
   id: string;
   name: string;
   image: string; // data URL
+  before?: string; // client photo this visual was made from
   spec: string; // short description of design / finish
   createdAt: number;
 }
