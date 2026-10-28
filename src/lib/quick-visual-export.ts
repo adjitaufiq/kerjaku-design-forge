@@ -18,7 +18,14 @@ function blobToImg(blob: Blob): Promise<HTMLImageElement> {
 }
 
 /** Draw `img` covering a w×h box (center crop). */
-function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number) {
+function drawCover(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+) {
   const s = Math.max(w / img.naturalWidth, h / img.naturalHeight);
   const sw = w / s;
   const sh = h / s;
@@ -49,7 +56,12 @@ async function fitBefore(before: string, w: number, h: number): Promise<string> 
 }
 
 /** One image: full Before + full After (side-by-side if landscape, stacked if portrait). */
-export async function renderGrid(before: string, after: string, prefs: WatermarkPrefs, brand: Brand): Promise<Blob> {
+export async function renderGrid(
+  before: string,
+  after: string,
+  prefs: WatermarkPrefs,
+  brand: Brand,
+): Promise<Blob> {
   const a = await loadImg(after);
   const b = await loadImg(before);
   const W = a.naturalWidth;
@@ -103,7 +115,13 @@ export async function renderVideo(
   const W = Math.round((a0.naturalWidth * k) / 2) * 2;
   const H = Math.round((a0.naturalHeight * k) / 2) * 2;
   const afterW = await blobToImg(await renderWithWatermark(after, prefs, brand));
-  const beforeW = await blobToImg(await renderWithWatermark(await fitBefore(before, a0.naturalWidth, a0.naturalHeight), prefs, brand));
+  const beforeW = await blobToImg(
+    await renderWithWatermark(
+      await fitBefore(before, a0.naturalWidth, a0.naturalHeight),
+      prefs,
+      brand,
+    ),
+  );
 
   const c = document.createElement("canvas");
   c.width = W;
@@ -155,6 +173,6 @@ export async function renderVideo(
   rec.stop();
   stream.getTracks().forEach((tr) => tr.stop());
   await done;
-  const type = mime.split(";")[0];
+  const type = mime.split(";")[0] ?? "video/webm";
   return { blob: new Blob(chunks, { type }), ext: type === "video/mp4" ? "mp4" : "webm" };
 }

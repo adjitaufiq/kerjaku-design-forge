@@ -1053,7 +1053,10 @@ function WatermarkDialog({
     );
 
   const download = async () => {
-    if (!count) return toast.error("Pilih minimal 1 file");
+    if (!count) {
+      toast.error("Pilih minimal 1 file");
+      return;
+    }
     try {
       saveFiles(await buildFiles());
     } catch (e) {
@@ -1064,7 +1067,10 @@ function WatermarkDialog({
   };
 
   const share = async () => {
-    if (!count) return toast.error("Pilih minimal 1 file");
+    if (!count) {
+      toast.error("Pilih minimal 1 file");
+      return;
+    }
     const text = `Halo, berikut preview konsep ${option.name}${option.spec ? ` (${option.spec})` : ""} dari ${brand.name ?? "workshop kami"}.`;
     try {
       const files = await buildFiles();
@@ -1364,10 +1370,7 @@ function WatermarkDialog({
               ["video", "Video slowmo Before → After (±9 detik)", !beforeSrc],
             ] as const
           ).map(([k, l, dis]) => (
-            <label
-              key={k}
-              className={cn("flex items-center gap-2 text-sm", dis && "opacity-50")}
-            >
+            <label key={k} className={cn("flex items-center gap-2 text-sm", dis && "opacity-50")}>
               <input
                 type="checkbox"
                 disabled={dis}
