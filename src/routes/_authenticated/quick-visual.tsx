@@ -655,7 +655,7 @@ function SurveyForm({
   session: QuickSession;
   roomId: string;
   workspaceId: string | null;
-  onSaved: () => void;
+  onSaved: (info: { leadId: string; name: string; location: string }) => void;
 }) {
   const [f, setF] = useState({ name: "", location: "", phone: "", p: "", l: "", t: "" });
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -709,8 +709,8 @@ function SurveyForm({
       });
       return lead.id;
     },
-    onSuccess: () => {
-      onSaved();
+    onSuccess: (leadId) => {
+      onSaved({ leadId, name: f.name.trim(), location: f.location.trim() });
       toast.success("Data klien & semua visual tersimpan");
     },
     onError: (e: Error) => toast.error(e.message),
@@ -748,6 +748,7 @@ function SurveyForm({
           value={f.phone}
           onChange={set("phone")}
         />
+        <Fold title="📏 Ukuran survei (opsional)">
         <div className="grid grid-cols-3 gap-2">
           <TextField
             label="Panjang (m)"
@@ -771,6 +772,7 @@ function SurveyForm({
             onChange={set("t")}
           />
         </div>
+        </Fold>
         <Button
           className="w-full"
           disabled={
