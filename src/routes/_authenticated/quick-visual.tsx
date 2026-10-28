@@ -220,9 +220,7 @@ function QuickVisualPage() {
             </div>
           ) : (
             <div className="grid aspect-4/3 place-items-center rounded-2xl border border-dashed border-border bg-surface/40 p-6 text-center text-sm text-muted-foreground">
-              {run.isPending
-                ? "AI sedang memproses…"
-                : "Hasil Before / After akan muncul di sini"}
+              {run.isPending ? "AI sedang memproses…" : "Hasil Before / After akan muncul di sini"}
             </div>
           )}
         </GlassCard>

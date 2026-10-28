@@ -2,8 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const IMAGE_MODEL = "google/gemini-2.5-flash-image";
+const GATEWAY = "https://ai.gateway.lovable.dev/v1/images/edits";
+const IMAGE_MODEL = "openai/gpt-image-2.5-sunburst";
 
 export type QuickItem = "KITCHEN_SET" | "WARDROBE" | "TV_CABINET" | "BACKDROP";
 
@@ -44,7 +44,8 @@ function buildPrompt(input: QuickInput): string {
 export const quickVisualize = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: QuickInput) => {
-    if (!input?.roomImage?.startsWith("data:image")) throw new Error("Upload the client room photo");
+    if (!input?.roomImage?.startsWith("data:image"))
+      throw new Error("Upload the client room photo");
     if (!input.referenceImage?.startsWith("data:image"))
       throw new Error("Upload the reference photo");
     if (!ITEM_LABEL[input.item]) throw new Error("Choose what to install");
@@ -54,25 +55,21 @@ export const quickVisualize = createServerFn({ method: "POST" })
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) throw new Error("AI is not configured.");
 
+    const toBlob = (dataUrl: string) => {
+      const [head, b64 = ""] = dataUrl.split(",");
+      const mime = /data:([^;]+)/.exec(head ?? "")?.[1] ?? "image/jpeg";
+      return new Blob([Buffer.from(b64, "base64")], { type: mime });
+    };
+    const form = new FormData();
+    form.append("model", IMAGE_MODEL);
+    form.append("prompt", buildPrompt(input));
+    form.append("image[]", toBlob(input.roomImage), "room.jpg");
+    form.append("image[]", toBlob(input.referenceImage), "reference.jpg");
+
     const response = await fetch(GATEWAY, {
       method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: IMAGE_MODEL,
-        modalities: ["image", "text"],
-        messages: [
-          {
-            role: "user",
-            content: [
-              { type: "text", text: buildPrompt(input) },
-              { type: "text", text: "IMAGE 1 (client room — keep everything except the install area):" },
-              { type: "image_url", image_url: { url: input.roomImage } },
-              { type: "text", text: "IMAGE 2 (reference product to install):" },
-              { type: "image_url", image_url: { url: input.referenceImage } },
-            ],
-          },
-        ],
-      }),
+      headers: { Authorization: `Bearer ${apiKey}` },
+      body: form,
     });
 
     if (!response.ok) {
@@ -83,10 +80,9 @@ export const quickVisualize = createServerFn({ method: "POST" })
       throw new Error(`AI gagal (${response.status}): ${body.slice(0, 160)}`);
     }
 
-    const payload = (await response.json()) as {
-      choices?: { message?: { images?: { image_url?: { url?: string } }[] } }[];
-    };
-    const image = payload.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    const payload = (await response.json()) as { data?: { b64_json?: string; url?: string }[] };
+    const first = payload.data?.[0];
+    const image = first?.b64_json ? `data:image/png;base64,${first.b64_json}` : first?.url;
     if (!image) throw new Error("AI tidak menghasilkan gambar. Coba foto lain.");
     return { image };
   });
