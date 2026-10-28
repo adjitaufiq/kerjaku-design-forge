@@ -1140,6 +1140,24 @@ function WatermarkDialog({
                 if (pointers.current.size === 0) pinch.current = null;
               }}
             >
+              <button
+                type="button"
+                aria-label={wmLocked ? "Buka kunci watermark" : "Kunci watermark"}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => {
+                  pointers.current.clear();
+                  pinch.current = null;
+                  setWmLocked((v) => !v);
+                }}
+                className={cn(
+                  "absolute top-3 left-1/2 z-10 grid size-9 -translate-x-1/2 place-items-center rounded-full border",
+                  wmLocked
+                    ? "border-cta bg-cta text-cta-foreground"
+                    : "border-border bg-background/70 text-foreground",
+                )}
+              >
+                {wmLocked ? <Lock size={16} /> : <LockOpen size={16} />}
+              </button>
               <img src={option.image} alt="Preview" className="block w-full" draggable={false} />
               {(showLogo || showName) && (
                 <div
