@@ -17,7 +17,7 @@ export interface RoomCategory {
 export const ROOMS: RoomCategory[] = [
   {
     id: "KITCHEN",
-    label: "🍳 Dapur & Makan",
+    label: "🍳 Dapur",
     items: [
       {
         id: "KITCHEN_SET",
@@ -33,7 +33,7 @@ export const ROOMS: RoomCategory[] = [
       "Bentuk letter U",
       "Kabinet atas & bawah",
       "Kabinet bawah saja",
-      "Kabinet atas sampai plafon",
+      "Kabinet atas full plafon / atap",
       "Lampu LED strip bawah kabinet",
       "Backsplash marmer",
       "Pintu kaca + frame",
@@ -43,7 +43,7 @@ export const ROOMS: RoomCategory[] = [
   },
   {
     id: "BEDROOM",
-    label: "🛏️ Kamar Tidur",
+    label: "🛏️ Kamar",
     items: [
       { id: "WARDROBE", label: "Lemari pakaian", prompt: "built-in wardrobe" },
       { id: "BED_DIVAN", label: "Divan / tempat tidur", prompt: "bed divan with headboard" },
@@ -67,7 +67,7 @@ export const ROOMS: RoomCategory[] = [
   },
   {
     id: "LIVING",
-    label: "🛋️ Ruang Tamu / Keluarga",
+    label: "🛋️ Ruang Tamu",
     items: [
       { id: "TV_BACKDROP", label: "Backdrop TV / wall panel", prompt: "TV backdrop wall panel" },
       { id: "TV_CABINET", label: "Buffet / meja TV", prompt: "TV cabinet / buffet console" },
@@ -85,7 +85,7 @@ export const ROOMS: RoomCategory[] = [
   },
   {
     id: "OFFICE",
-    label: "💼 Ruang Kerja / Kantor",
+    label: "💼 Ruang Kerja",
     items: [
       { id: "OFFICE_DESK", label: "Meja kantor", prompt: "office desk" },
       { id: "BOOKSHELF", label: "Rak buku / file cabinet", prompt: "bookshelf / file cabinet" },
@@ -93,26 +93,36 @@ export const ROOMS: RoomCategory[] = [
     ],
     tags: ["Meja L-shape", "Rak buku sampai plafon", "Panel kisi-kisi", "Laci kunci"],
   },
-];
-
-/** Architectural extras available in every room. */
-export const EXTRAS: CatalogItem[] = [
-  { id: "DOOR_SWING", label: "Pintu HPL senada", prompt: "swing door finished in matching HPL" },
-  { id: "DOOR_SLIDING", label: "Pintu sliding", prompt: "sliding door" },
   {
-    id: "DOOR_HIDDEN",
-    label: "Pintu kamuflase (hidden door)",
-    prompt: "hidden flush door blending into the wall panel",
+    id: "DOOR",
+    label: "🚪 Pintu",
+    items: [
+      { id: "DOOR_SWING", label: "Pintu HPL", prompt: "swing door finished in HPL" },
+      { id: "DOOR_SLIDING", label: "Pintu sliding", prompt: "sliding door" },
+      {
+        id: "DOOR_HIDDEN",
+        label: "Pintu kamuflase",
+        prompt: "hidden flush door blending into the wall panel",
+      },
+    ],
+    tags: ["Kusen tipis minimalis", "Handle tanam", "Pintu sampai plafon", "Motif senada dinding"],
   },
   {
-    id: "CEILING",
-    label: "Upgrade plafon",
-    prompt:
-      "new flat gypsum drop ceiling with recessed downlights and indirect warm LED cove lighting",
+    id: "CEILING_ROOM",
+    label: "🏛️ Plafon",
+    items: [
+      {
+        id: "CEILING",
+        label: "Drop ceiling gypsum",
+        prompt:
+          "new flat gypsum drop ceiling with recessed downlights and indirect warm LED cove lighting",
+      },
+    ],
+    tags: ["Lampu downlight", "LED cove hangat", "Plafon bertingkat", "Plafon datar polos"],
   },
 ];
 
-export const ALL_ITEMS: CatalogItem[] = [...ROOMS.flatMap((r) => r.items), ...EXTRAS];
+export const ALL_ITEMS: CatalogItem[] = ROOMS.flatMap((r) => r.items);
 export const CEILING_ITEM_ID = "CEILING";
 
 export type ReskinTarget = "ALL" | "UPPER" | "LOWER" | "TOP";

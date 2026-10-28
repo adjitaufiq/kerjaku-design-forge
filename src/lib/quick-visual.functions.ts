@@ -32,7 +32,7 @@ function buildPrompt(input: QuickInput): string {
     .filter((i) => i.id !== CEILING_ITEM_ID)
     .map((i) => i.prompt)
     .join(", ");
-  const what = item || "furniture";
+  const what = item || (upgradeCeiling ? "ceiling design" : "furniture");
   return [
     `IMAGE 1 is a real photo of a client's room. IMAGE 2 is a product reference photo of a ${what}.`,
     `Task: install the ${what} shown in IMAGE 2 into the room in IMAGE 1, as if a workshop produced and installed it on site.`,

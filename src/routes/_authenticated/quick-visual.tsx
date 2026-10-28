@@ -42,7 +42,6 @@ import { Switch } from "@/components/ui/switch";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import {
   ALL_ITEMS,
-  EXTRAS,
   RESKIN_TARGETS,
   ROOMS,
   type ReskinTarget,
@@ -91,6 +90,8 @@ const ROOM_PROJECT_TYPE: Record<string, ProjectType> = {
   BEDROOM: "BEDROOM_INTERIOR",
   OFFICE: "OFFICE_INTERIOR",
   LIVING: "OTHER",
+  DOOR: "OTHER",
+  CEILING_ROOM: "OTHER",
 };
 
 const EMPTY_SESSION: QuickSession = { roomImage: null, options: [], activeId: null, saved: true };
@@ -301,7 +302,8 @@ function QuickVisualPage() {
   };
 
   const pickCategory = (id: string) => {
-    if (id === roomId) return;
+    if (id === roomId) return setShowItems((v) => !v);
+    setShowItems(true);
     if (session.options.length && !session.saved) setPendingRoomId(id);
     else switchRoom(id);
   };
@@ -330,7 +332,7 @@ function QuickVisualPage() {
   };
   const noteParts = note.split(",").map((p) => p.trim());
   const pickedTags = room.tags.filter((t) => noteParts.includes(t)).length;
-  const pickedExtras = EXTRAS.filter((e) => items.includes(e.id)).length;
+  const [showItems, setShowItems] = useState(false);
 
   const addOption = (image: string, spec: string, label: string) => {
     setSession((s) => {
@@ -390,7 +392,7 @@ function QuickVisualPage() {
     <div className="space-y-6">
       <PageHeader
         title="Quick Visual"
-        subtitle="Pilih ruangan → upload foto → konfirmasi. Tembok, lampu, lantai tetap."
+        subtitle="Pilih project → upload foto → konfirmasi. Tembok, lampu, lantai tetap."
       />
 
       {history.length > 0 && (
@@ -426,7 +428,7 @@ function QuickVisualPage() {
       )}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
-        <SectionCard title="1. Pilih ruangan" description="Lalu upload foto dan konfirmasi">
+        <SectionCard title="1. Pilih project" description="Lalu upload foto dan konfirmasi">
           <div className="space-y-5">
             <div className="flex flex-wrap gap-2">
               {ROOMS.map((r) => (
@@ -442,10 +444,8 @@ function QuickVisualPage() {
               ))}
             </div>
 
+            {showItems && (
             <div className="space-y-2">
-              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                Yang dipasang
-              </p>
               <div className="flex flex-wrap gap-2">
                 {room.items.map((i) => (
                   <Chip key={i.id} active={items.includes(i.id)} onClick={() => toggleItem(i.id)}>
@@ -454,6 +454,7 @@ function QuickVisualPage() {
                 ))}
               </div>
             </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <PhotoPicker
@@ -471,20 +472,6 @@ function QuickVisualPage() {
             </div>
 
             <div className="space-y-2">
-              <Fold title={`🚪 Pintu & plafon${pickedExtras ? ` (${pickedExtras})` : ""}`}>
-                <div className="flex flex-wrap gap-2">
-                  {EXTRAS.map((i) => (
-                    <Chip key={i.id} active={items.includes(i.id)} onClick={() => toggleItem(i.id)}>
-                      {i.label}
-                    </Chip>
-                  ))}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {items.includes("CEILING")
-                    ? "Plafon akan diganti baru. Tembok, lantai, jendela tetap dikunci."
-                    : "🔒 Plafon & lampu asli dikunci."}
-                </p>
-              </Fold>
               <Fold title={`📝 Catatan${pickedTags ? ` (${pickedTags})` : ""}`}>
                 <div className="flex flex-wrap gap-2">
                   {room.tags.map((t) => (
@@ -645,7 +632,7 @@ function QuickVisualPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Simpan dulu sebelum ganti ruangan</AlertDialogTitle>
+            <AlertDialogTitle>Simpan dulu sebelum ganti project</AlertDialogTitle>
             <AlertDialogDescription>
               Ada {session.options.length} visual {roomName(roomId)} yang belum disimpan. Isi nama &
               lokasi klien dulu supaya tidak hilang.
