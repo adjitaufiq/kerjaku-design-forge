@@ -35,7 +35,7 @@ export const searchTaco = createServerFn({ method: "POST" })
       const chunk = part.slice(0, 6000);
       const path = chunk.slice(0, chunk.indexOf('"'));
       const img = /url=(https%3A%2F%2Fmanage\.taco\.co\.id[^&"]+)/.exec(chunk);
-      const ps = [...chunk.matchAll(/<p[^>]*>([^<]*)<\/p>/g)].map((m) => decode(m[1]));
+      const ps = [...chunk.matchAll(/<p[^>]*>([^<]*)<\/p>/g)].map((m) => decode(m[1] ?? ""));
       if (!img || !ps[0]) continue;
       if (seen.has(path)) continue;
       seen.add(path);
@@ -43,7 +43,7 @@ export const searchTaco = createServerFn({ method: "POST" })
         code: ps[0],
         name: ps[1] ?? "",
         link: `https://taco.co.id/en/products/laminates/${path}`,
-        image: decodeURIComponent(img[1]).replace("/thumbnail_", "/"),
+        image: decodeURIComponent(img[1] ?? "").replace("/thumbnail_", "/"),
       });
       if (out.length >= 12) break;
     }
