@@ -339,7 +339,7 @@ function QuickVisualPage() {
         id: crypto.randomUUID(),
         name: `Visual ${label} ${n}`,
         image,
-        before: s.roomImage ?? undefined,
+        ...(s.roomImage ? { before: s.roomImage } : {}),
         spec,
         createdAt: Date.now(),
       };
@@ -409,7 +409,11 @@ function QuickVisualPage() {
                 )}
               >
                 {h.session.options[0] && (
-                  <img src={h.session.options[0].image} alt="" className="size-10 rounded-lg object-cover" />
+                  <img
+                    src={h.session.options[0].image}
+                    alt=""
+                    className="size-10 rounded-lg object-cover"
+                  />
                 )}
                 <span>
                   <span className="block font-medium text-foreground">{h.clientName}</span>
@@ -534,7 +538,10 @@ function QuickVisualPage() {
             )}
             {active && (active.before ?? session.roomImage) ? (
               <div className="space-y-3">
-                <CompareSlider before={(active.before ?? session.roomImage)!} after={active.image} />
+                <CompareSlider
+                  before={(active.before ?? session.roomImage)!}
+                  after={active.image}
+                />
                 <Fold title="✏️ Nama & spesifikasi">
                   <div className="grid gap-2 sm:grid-cols-[1fr_2fr]">
                     <TextField
@@ -575,7 +582,13 @@ function QuickVisualPage() {
             <Fold title="🎨 Ganti warna / motif HPL">
               <ReskinCard
                 option={active}
-                onResult={(img, spec) => addOption(img, spec, active.name.replace(/^Visual\s+/, "").replace(/\s+\d+$/, "") + " HPL")}
+                onResult={(img, spec) =>
+                  addOption(
+                    img,
+                    spec,
+                    active.name.replace(/^Visual\s+/, "").replace(/\s+\d+$/, "") + " HPL",
+                  )
+                }
               />
             </Fold>
           )}
@@ -583,7 +596,9 @@ function QuickVisualPage() {
           {session.options.length > 0 && (
             <div ref={formRef}>
               <Fold
-                title={session.saved && currentId ? "💾 Data klien tersimpan" : "💾 Simpan data klien"}
+                title={
+                  session.saved && currentId ? "💾 Data klien tersimpan" : "💾 Simpan data klien"
+                }
                 open={surveyOpen}
                 onOpenChange={setSurveyOpen}
               >
@@ -624,13 +639,16 @@ function QuickVisualPage() {
         <WatermarkDialog open={wmOpen} onOpenChange={setWmOpen} option={active} brand={brand} />
       )}
 
-      <AlertDialog open={!!pendingRoomId && !surveyOpen} onOpenChange={(o) => !o && setPendingRoomId(null)}>
+      <AlertDialog
+        open={!!pendingRoomId && !surveyOpen}
+        onOpenChange={(o) => !o && setPendingRoomId(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Simpan dulu sebelum ganti ruangan</AlertDialogTitle>
             <AlertDialogDescription>
-              Ada {session.options.length} visual {roomName(roomId)} yang belum disimpan. Isi nama
-              & lokasi klien dulu supaya tidak hilang.
+              Ada {session.options.length} visual {roomName(roomId)} yang belum disimpan. Isi nama &
+              lokasi klien dulu supaya tidak hilang.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -879,29 +897,29 @@ function SurveyForm({
           onChange={set("phone")}
         />
         <Fold title="📏 Ukuran survei (opsional)">
-        <div className="grid grid-cols-3 gap-2">
-          <TextField
-            label="Panjang (m)"
-            name="p"
-            inputMode="decimal"
-            value={f.p}
-            onChange={set("p")}
-          />
-          <TextField
-            label="Lebar (m)"
-            name="l"
-            inputMode="decimal"
-            value={f.l}
-            onChange={set("l")}
-          />
-          <TextField
-            label="Tinggi (m)"
-            name="t"
-            inputMode="decimal"
-            value={f.t}
-            onChange={set("t")}
-          />
-        </div>
+          <div className="grid grid-cols-3 gap-2">
+            <TextField
+              label="Panjang (m)"
+              name="p"
+              inputMode="decimal"
+              value={f.p}
+              onChange={set("p")}
+            />
+            <TextField
+              label="Lebar (m)"
+              name="l"
+              inputMode="decimal"
+              value={f.l}
+              onChange={set("l")}
+            />
+            <TextField
+              label="Tinggi (m)"
+              name="t"
+              inputMode="decimal"
+              value={f.t}
+              onChange={set("t")}
+            />
+          </div>
         </Fold>
         <Button
           className="w-full"
