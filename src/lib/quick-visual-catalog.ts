@@ -17,7 +17,7 @@ export interface RoomCategory {
 export const ROOMS: RoomCategory[] = [
   {
     id: "KITCHEN",
-    label: "🍳 Dapur",
+    label: "Dapur",
     items: [
       {
         id: "KITCHEN_SET",
@@ -43,7 +43,7 @@ export const ROOMS: RoomCategory[] = [
   },
   {
     id: "BEDROOM",
-    label: "🛏️ Kamar",
+    label: "Kamar",
     items: [
       { id: "WARDROBE", label: "Lemari pakaian", prompt: "built-in wardrobe" },
       { id: "BED_DIVAN", label: "Divan / tempat tidur", prompt: "bed divan with headboard" },
@@ -67,7 +67,7 @@ export const ROOMS: RoomCategory[] = [
   },
   {
     id: "LIVING",
-    label: "🛋️ Ruang Tamu",
+    label: "Ruang Tamu",
     items: [
       { id: "TV_BACKDROP", label: "Backdrop TV / wall panel", prompt: "TV backdrop wall panel" },
       { id: "TV_CABINET", label: "Buffet / meja TV", prompt: "TV cabinet / buffet console" },
@@ -85,7 +85,7 @@ export const ROOMS: RoomCategory[] = [
   },
   {
     id: "OFFICE",
-    label: "💼 Ruang Kerja",
+    label: "Ruang Kerja",
     items: [
       { id: "OFFICE_DESK", label: "Meja kantor", prompt: "office desk" },
       { id: "BOOKSHELF", label: "Rak buku / file cabinet", prompt: "bookshelf / file cabinet" },
@@ -95,7 +95,7 @@ export const ROOMS: RoomCategory[] = [
   },
   {
     id: "DOOR",
-    label: "🚪 Pintu",
+    label: "Pintu",
     items: [
       { id: "DOOR_SWING", label: "Pintu HPL", prompt: "swing door finished in HPL" },
       { id: "DOOR_SLIDING", label: "Pintu sliding", prompt: "sliding door" },
@@ -109,7 +109,7 @@ export const ROOMS: RoomCategory[] = [
   },
   {
     id: "CEILING_ROOM",
-    label: "🏛️ Plafon",
+    label: "Plafon",
     items: [
       {
         id: "CEILING",

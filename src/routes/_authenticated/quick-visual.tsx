@@ -1,4 +1,19 @@
 import { fetchTacoSwatch, searchTaco, type TacoSwatch } from "@/lib/taco.functions";
+import icKitchen from "@/assets/qv-kitchen.png";
+import icBedroom from "@/assets/qv-bedroom.png";
+import icLiving from "@/assets/qv-living.png";
+import icOffice from "@/assets/qv-office.png";
+import icDoor from "@/assets/qv-door.png";
+import icCeiling from "@/assets/qv-ceiling.png";
+
+const PROJECT_ICONS: Record<string, string> = {
+  KITCHEN: icKitchen,
+  BEDROOM: icBedroom,
+  LIVING: icLiving,
+  OFFICE: icOffice,
+  DOOR: icDoor,
+  CEILING_ROOM: icCeiling,
+};
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
@@ -456,17 +471,33 @@ function QuickVisualPage() {
         <SectionCard title="1. Pilih project" description="Lalu upload foto dan konfirmasi">
           <div className="space-y-5">
             <div className="flex flex-wrap gap-2">
-              {ROOMS.map((r) => (
-                <Button
-                  key={r.id}
-                  type="button"
-                  size="sm"
-                  variant={r.id === roomId ? "default" : "outline"}
-                  onClick={() => pickCategory(r.id)}
-                >
-                  {r.label}
-                </Button>
-              ))}
+              {ROOMS.map((r) => {
+                const active = r.id === roomId;
+                return (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => pickCategory(r.id)}
+                    className={`flex w-[calc(33.333%-0.34rem)] flex-col items-center gap-1 rounded-2xl border p-2 transition ${
+                      active
+                        ? "border-primary bg-primary/15 shadow-lg"
+                        : "border-border bg-card/40 hover:border-primary/50"
+                    }`}
+                  >
+                    <img
+                      src={PROJECT_ICONS[r.id]}
+                      alt=""
+                      width={816}
+                      height={816}
+                      loading="lazy"
+                      className="aspect-square w-full max-w-20 object-contain drop-shadow-xl"
+                    />
+                    <span className={`text-xs font-medium ${active ? "text-primary" : "text-foreground"}`}>
+                      {r.label}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
             {showItems && (
