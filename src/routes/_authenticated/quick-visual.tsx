@@ -5,6 +5,8 @@ import {
   ChevronDown,
   Download,
   ImagePlus,
+  Lock,
+  LockOpen,
   Palette,
   Plus,
   Save,
@@ -169,6 +171,7 @@ function CompareSlider({ before, after }: { before: string; after: string }) {
   const [pos, setPos] = useState(50);
   const boxRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
+  const [locked, setLocked] = useState(false);
 
   const move = (clientX: number) => {
     const box = boxRef.current?.getBoundingClientRect();
@@ -179,13 +182,17 @@ function CompareSlider({ before, after }: { before: string; after: string }) {
   return (
     <div
       ref={boxRef}
-      className="relative w-full touch-none select-none overflow-hidden rounded-2xl border border-border bg-surface"
+      className={cn(
+        "relative w-full select-none overflow-hidden rounded-2xl border border-border bg-surface",
+        !locked && "touch-none",
+      )}
       onPointerDown={(e) => {
+        if (locked) return;
         dragging.current = true;
         e.currentTarget.setPointerCapture(e.pointerId);
         move(e.clientX);
       }}
-      onPointerMove={(e) => dragging.current && move(e.clientX)}
+      onPointerMove={(e) => !locked && dragging.current && move(e.clientX)}
       onPointerUp={() => (dragging.current = false)}
     >
       <img src={after} alt="Sesudah" className="block w-full" draggable={false} />
@@ -202,6 +209,23 @@ function CompareSlider({ before, after }: { before: string; after: string }) {
       <span className="absolute top-3 left-3 rounded-md bg-background/70 px-2 py-1 text-xs">
         Before
       </span>
+      <button
+        type="button"
+        aria-label={locked ? "Buka kunci slider" : "Kunci slider"}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={() => {
+          dragging.current = false;
+          setLocked((v) => !v);
+        }}
+        className={cn(
+          "absolute top-3 left-1/2 grid size-9 -translate-x-1/2 place-items-center rounded-full border",
+          locked
+            ? "border-cta bg-cta text-cta-foreground"
+            : "border-border bg-background/70 text-foreground",
+        )}
+      >
+        {locked ? <Lock className="size-4" /> : <LockOpen className="size-4" />}
+      </button>
       <span className="absolute top-3 right-3 rounded-md bg-background/70 px-2 py-1 text-xs">
         After
       </span>
