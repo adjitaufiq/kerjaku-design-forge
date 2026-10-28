@@ -287,13 +287,7 @@ function ConceptDetail({ concept }: { concept: DesignConcept }) {
 }
 
 /** CRM card on the lead page summarising AI concept progress. */
-export function LeadConceptCard({
-  projectIds,
-  leadId,
-}: {
-  projectIds: string[];
-  leadId: string;
-}) {
+export function LeadConceptCard({ projectIds, leadId }: { projectIds: string[]; leadId: string }) {
   const query = useQuery({
     queryKey: ["ai-concepts", "projects", projectIds],
     queryFn: () => conceptData.listByProjects(projectIds),
@@ -319,7 +313,11 @@ export function LeadConceptCard({
       ) : (
         <div className="space-y-3 text-sm">
           {image ? (
-            <img src={image} alt={latest.name} className="aspect-video w-full rounded-lg object-cover" />
+            <img
+              src={image}
+              alt={latest.name}
+              className="aspect-video w-full rounded-lg object-cover"
+            />
           ) : null}
           <p>
             AI concept generated: <strong>Yes</strong> · {latest.name}
@@ -394,7 +392,9 @@ export function AiLibraryCard({ workspaceId, isAdmin }: { workspaceId: string; i
                       <span>
                         {e.name}
                         {e.description ? (
-                          <span className="block text-xs text-muted-foreground">{e.description}</span>
+                          <span className="block text-xs text-muted-foreground">
+                            {e.description}
+                          </span>
                         ) : null}
                       </span>
                       {isAdmin ? (
@@ -434,7 +434,9 @@ export function AiLibraryCard({ workspaceId, isAdmin }: { workspaceId: string; i
           </Button>
         </form>
       ) : (
-        <p className="mt-3 text-xs text-muted-foreground">Only workshop admins can edit libraries.</p>
+        <p className="mt-3 text-xs text-muted-foreground">
+          Only workshop admins can edit libraries.
+        </p>
       )}
     </SectionCard>
   );

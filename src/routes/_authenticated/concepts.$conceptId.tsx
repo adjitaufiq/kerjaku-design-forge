@@ -41,7 +41,10 @@ function Slide({ n, title, children }: { n: number; title: string; children: Rea
 
 function PresentationPage() {
   const { conceptId } = Route.useParams();
-  const q = useQuery({ queryKey: ["ai-concepts", conceptId], queryFn: () => conceptData.get(conceptId) });
+  const q = useQuery({
+    queryKey: ["ai-concepts", conceptId],
+    queryFn: () => conceptData.get(conceptId),
+  });
   const c = q.data;
   const image = useConceptImage(c?.imageUrl ?? null);
 
@@ -53,7 +56,9 @@ function PresentationPage() {
 function Deck({ c, image }: { c: DesignConcept; image: string | null }) {
   const ra = c.roomAnalysis ?? {};
   const op = c.opportunity ?? {};
-  const tiers = (["premium", "standard", "budget"] as const).map((k) => c.materials[k]).filter(Boolean);
+  const tiers = (["premium", "standard", "budget"] as const)
+    .map((k) => c.materials[k])
+    .filter(Boolean);
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex items-center justify-between print:hidden">
@@ -75,9 +80,11 @@ function Deck({ c, image }: { c: DesignConcept; image: string | null }) {
       </header>
       <Slide n={1} title="Customer problem">
         <ul className="list-disc pl-5">
-          {(Array.isArray(ra["visualProblems"]) ? (ra["visualProblems"] as string[]) : []).map((p, i) => (
-            <li key={i}>{p}</li>
-          ))}
+          {(Array.isArray(ra["visualProblems"]) ? (ra["visualProblems"] as string[]) : []).map(
+            (p, i) => (
+              <li key={i}>{p}</li>
+            ),
+          )}
         </ul>
         {str(op["improvementArea"]) ? <p>{str(op["improvementArea"])}</p> : null}
       </Slide>
@@ -98,9 +105,15 @@ function Deck({ c, image }: { c: DesignConcept; image: string | null }) {
         </dl>
       </Slide>
       <Slide n={3} title="Design concept">
-        <p><strong>Style:</strong> {c.style}</p>
-        <p><strong>Colour palette:</strong> {c.colorPalette}</p>
-        <p><strong>Why it fits:</strong> {c.reason}</p>
+        <p>
+          <strong>Style:</strong> {c.style}
+        </p>
+        <p>
+          <strong>Colour palette:</strong> {c.colorPalette}
+        </p>
+        <p>
+          <strong>Why it fits:</strong> {c.reason}
+        </p>
       </Slide>
       <Slide n={4} title="AI visualisation">
         {image ? (
@@ -110,13 +123,19 @@ function Deck({ c, image }: { c: DesignConcept; image: string | null }) {
         )}
       </Slide>
       <Slide n={5} title="Recommended solution">
-        <p><strong>Furniture:</strong> {c.furnitureRecommendation}</p>
-        <p><strong>Lighting:</strong> {c.lightingRecommendation}</p>
+        <p>
+          <strong>Furniture:</strong> {c.furnitureRecommendation}
+        </p>
+        <p>
+          <strong>Lighting:</strong> {c.lightingRecommendation}
+        </p>
         <p>{str(op["functionalImprovement"])}</p>
         <p>{str(op["aestheticImprovement"])}</p>
         {c.scopeOfWork.length ? (
           <ol className="list-decimal pl-5">
-            {c.scopeOfWork.map((s, i) => <li key={i}>{s}</li>)}
+            {c.scopeOfWork.map((s, i) => (
+              <li key={i}>{s}</li>
+            ))}
           </ol>
         ) : null}
       </Slide>
@@ -129,7 +148,9 @@ function Deck({ c, image }: { c: DesignConcept; image: string | null }) {
               <p className="text-xs text-muted-foreground">{t!.summary}</p>
               <ul className="mt-2 space-y-1 text-xs">
                 {t!.items.map((i, idx) => (
-                  <li key={idx}>{i.area}: {i.material} · {i.finishing}</li>
+                  <li key={idx}>
+                    {i.area}: {i.material} · {i.finishing}
+                  </li>
                 ))}
               </ul>
             </div>
@@ -138,8 +159,14 @@ function Deck({ c, image }: { c: DesignConcept; image: string | null }) {
       </Slide>
       <Slide n={7} title="Next step">
         <p>{c.nextAction}</p>
-        {c.timelineEstimate ? <p><strong>Estimated timeline:</strong> {c.timelineEstimate}</p> : null}
-        <p className="text-xs text-muted-foreground">Final pricing will be confirmed in the proposal.</p>
+        {c.timelineEstimate ? (
+          <p>
+            <strong>Estimated timeline:</strong> {c.timelineEstimate}
+          </p>
+        ) : null}
+        <p className="text-xs text-muted-foreground">
+          Final pricing will be confirmed in the proposal.
+        </p>
       </Slide>
     </div>
   );
