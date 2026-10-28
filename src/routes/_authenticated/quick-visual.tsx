@@ -1105,8 +1105,12 @@ function WatermarkDialog({
 
             <div
               ref={boxRef}
-              className="relative touch-none overflow-hidden rounded-xl border border-border"
+              className={cn(
+                "relative select-none overflow-hidden rounded-xl border border-border",
+                !wmLocked && "touch-none",
+              )}
               onPointerDown={(e) => {
+                if (wmLocked) return;
                 e.currentTarget.setPointerCapture(e.pointerId);
                 pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
                 if (pointers.current.size === 2)
@@ -1114,7 +1118,7 @@ function WatermarkDialog({
                 else moveTo(e.clientX, e.clientY);
               }}
               onPointerMove={(e) => {
-                if (!pointers.current.has(e.pointerId)) return;
+                if (wmLocked || !pointers.current.has(e.pointerId)) return;
                 pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
                 if (pinch.current && pointers.current.size >= 2) {
                   const d = pinchDist();
