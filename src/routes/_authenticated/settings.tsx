@@ -1,3 +1,4 @@
+import { AiLibraryCard } from "@/components/kerjaku/ai-concept-card";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
@@ -165,6 +166,7 @@ function SettingsPage() {
             </SectionCard>
 
             <AiSettingsCard workspaceId={workspaceId!} isAdmin={isAdmin} />
+            <AiLibraryCard workspaceId={workspaceId!} isAdmin={isAdmin} />
           </div>
 
           <SectionCard title="Preview" description="How it appears on a proposal header.">

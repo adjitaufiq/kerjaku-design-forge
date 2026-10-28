@@ -211,7 +211,7 @@ export const updateConcept = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     if (!concept) throw new Error("Concept not found");
 
-    const patch: Record<string, unknown> = {};
+    const patch: Record<string, string | null> = {};
     if (input.status) {
       patch["status"] = input.status;
       if (input.status === "APPROVED") {
@@ -226,7 +226,7 @@ export const updateConcept = createServerFn({ method: "POST" })
 
     const { error: updateError } = await supabase
       .from("ai_design_concepts")
-      .update(patch)
+      .update(patch as never)
       .eq("id", input.conceptId);
     if (updateError) throw new Error(updateError.message);
 
@@ -255,7 +255,11 @@ export const createProposalFromConcept = createServerFn({ method: "POST" })
     const scope = Array.isArray(concept.scope_of_work) ? (concept.scope_of_work as string[]) : [];
     const materials = (concept.materials ?? {}) as Record<
       string,
-      { label?: string; summary?: string; items?: { area?: string; material?: string; finishing?: string }[] }
+      {
+        label?: string;
+        summary?: string;
+        items?: { area?: string; material?: string; finishing?: string }[];
+      }
     >;
 
     const materialSpec = Object.values(materials)
