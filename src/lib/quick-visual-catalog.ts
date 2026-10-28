@@ -124,6 +124,10 @@ export const RESKIN_TARGETS: { value: ReskinTarget; label: string; prompt: strin
     prompt: "all cabinet door fronts and cabinet carcass surfaces (not the countertop)",
   },
   { value: "UPPER", label: "Kabinet atas", prompt: "only the UPPER / wall cabinet doors and body" },
-  { value: "LOWER", label: "Kabinet bawah", prompt: "only the LOWER / base cabinet doors and body" },
+  {
+    value: "LOWER",
+    label: "Kabinet bawah",
+    prompt: "only the LOWER / base cabinet doors and body",
+  },
   { value: "TOP", label: "Top table", prompt: "only the countertop / top table surface" },
 ];

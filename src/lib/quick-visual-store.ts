@@ -80,7 +80,9 @@ const WM_KEY = "kerjaku-watermark";
 export function loadWatermark(): WatermarkPrefs {
   try {
     const raw = localStorage.getItem(WM_KEY);
-    return raw ? { ...DEFAULT_WATERMARK, ...(JSON.parse(raw) as WatermarkPrefs) } : DEFAULT_WATERMARK;
+    return raw
+      ? { ...DEFAULT_WATERMARK, ...(JSON.parse(raw) as WatermarkPrefs) }
+      : DEFAULT_WATERMARK;
   } catch {
     return DEFAULT_WATERMARK;
   }
