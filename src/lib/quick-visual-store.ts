@@ -66,6 +66,8 @@ export interface WatermarkPrefs {
   opacity: number; // 0.1-1
   font: string; // CSS font-family stack
   color: string; // hex
+  logoScale?: number; // % relative to size
+  textScale?: number; // % relative to size
 }
 
 export const WATERMARK_FONTS: { label: string; family: string; weight: number }[] = [
@@ -171,16 +173,20 @@ export async function renderWithWatermark(
     if (name || logo) {
       const W = canvas.width;
       const boxW = (prefs.size / 100) * W;
-      const logoH = logo ? boxW * 0.45 : 0;
-      const fontPx = Math.max(12, boxW * 0.12);
+      const logoK = (prefs.logoScale ?? 100) / 100;
+      const textK = (prefs.textScale ?? 100) / 100;
+      const logoH = logo ? boxW * 0.45 * logoK : 0;
+      const fontPx = Math.max(8, boxW * 0.12 * textK);
+      const lines = name ? name.split(/\r?\n/) : [];
+      const lineH = fontPx * 1.2;
       const gap = logo && name ? fontPx * 0.4 : 0;
-      const totalH = logoH + gap + (name ? fontPx * 1.2 : 0);
+      const totalH = logoH + gap + lines.length * lineH;
       const cx = (prefs.x / 100) * W;
       const cy = (prefs.y / 100) * canvas.height;
       let top = Math.min(Math.max(cy - totalH / 2, 0), canvas.height - totalH);
       ctx.globalAlpha = prefs.opacity;
       if (logo) {
-        const lw = Math.min(boxW, (logo.naturalWidth / logo.naturalHeight) * logoH);
+        const lw = Math.min(boxW * logoK, (logo.naturalWidth / logo.naturalHeight) * logoH);
         ctx.drawImage(logo, cx - lw / 2, top, lw, logoH);
         top += logoH + gap;
       }
@@ -191,7 +197,7 @@ export async function renderWithWatermark(
         ctx.shadowColor = "rgba(0,0,0,0.55)";
         ctx.shadowBlur = fontPx * 0.3;
         ctx.fillStyle = prefs.color;
-        ctx.fillText(name, cx, top);
+        lines.forEach((l, i) => ctx.fillText(l, cx, top + i * lineH));
       }
       ctx.globalAlpha = 1;
     }
