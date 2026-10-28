@@ -1,3 +1,4 @@
+import { fetchTacoSwatch, searchTaco, type TacoSwatch } from "@/lib/taco.functions";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
@@ -878,7 +879,7 @@ function ReskinCard({
         </div>
         <Button
           className="w-full"
-          disabled={(!swatch && !colorText.trim()) || run.isPending}
+          disabled={(!swatch && !tacoPick && !colorText.trim()) || run.isPending}
           onClick={() => run.mutate()}
         >
           <Palette className="size-4" />
