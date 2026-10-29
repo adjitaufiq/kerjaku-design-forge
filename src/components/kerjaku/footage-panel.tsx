@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import {
   FOOTAGE_MODES,
+  DEFAULT_MIX,
+  type FootageMix,
   drawTake,
   loadImg,
   recordTake,
@@ -17,6 +19,7 @@ export function FootagePanel({ image, name }: { image: string; name: string }) {
   const [seconds, setSeconds] = useState(8);
   const [open, setOpen] = useState<FootageMode | null>(null);
   const [busy, setBusy] = useState<FootageMode | null>(null);
+  const [mix, setMix] = useState<FootageMix>(DEFAULT_MIX);
   const [img, setImg] = useState<HTMLImageElement | null>(null);
 
   useEffect(() => {
@@ -30,8 +33,12 @@ export function FootagePanel({ image, name }: { image: string; name: string }) {
   const download = async (mode: FootageMode) => {
     setBusy(mode);
     try {
-      const { blob, ext } = await recordTake(image, mode, seconds);
-      const file = `${slug(name)}-${mode}-${seconds}s.${ext}`;
+      const { blob, ext } = await recordTake(image, mode, seconds, mix);
+      const tag =
+        mode === "custom"
+          ? `custom-${[mix.pan, mix.tilt, mix.zoom].filter((v) => v !== "none").join("-")}${mix.walk ? "-walk" : ""}`
+          : mode;
+      const file = `${slug(name)}-${tag}-${seconds}s.${ext}`;
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
       a.download = file;
@@ -77,7 +84,7 @@ export function FootagePanel({ image, name }: { image: string; name: string }) {
               onClick={() => setOpen(m.id)}
               aria-label={`Preview ${m.label}`}
             >
-              <TakePreview img={img} mode={m.id} seconds={seconds} />
+              <TakePreview img={img} mode={m.id} seconds={seconds} mix={mix} />
             </button>
             <p className="text-xs font-medium">
               {m.emoji} {m.label}
@@ -95,6 +102,10 @@ export function FootagePanel({ image, name }: { image: string; name: string }) {
           </div>
         ))}
       </div>
+      <div className="space-y-1.5 rounded-xl bg-muted/50 p-2">
+        <p className="text-xs font-semibold">🎛️ Atur Custom mix</p>
+        <MixControls mix={mix} setMix={setMix} />
+      </div>
       {open && (
         <div
           className="fixed inset-0 z-[100] flex flex-col bg-background/95 p-3 backdrop-blur"
@@ -111,9 +122,14 @@ export function FootagePanel({ image, name }: { image: string; name: string }) {
           </div>
           <div className="flex min-h-0 flex-1 items-center justify-center">
             <div className="max-h-full w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-              <TakePreview img={img} mode={open} seconds={seconds} big />
+              <TakePreview img={img} mode={open} seconds={seconds} mix={mix} big />
             </div>
           </div>
+          {open === "custom" && (
+            <div onClick={(e) => e.stopPropagation()}>
+              <MixControls mix={mix} setMix={setMix} />
+            </div>
+          )}
           <div className="space-y-2 pt-3" onClick={(e) => e.stopPropagation()}>
             <div className="flex gap-1.5 overflow-x-auto pb-1">
               {FOOTAGE_MODES.map((m) => (
@@ -149,11 +165,13 @@ function TakePreview({
   img,
   mode,
   seconds,
+  mix,
   big,
 }: {
   img: HTMLImageElement | null;
   mode: FootageMode;
   seconds: number;
+  mix: FootageMix;
   big?: boolean;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -169,11 +187,78 @@ function TakePreview({
     const loop = () => {
       const period = seconds * 1000 + 600;
       const p = ((performance.now() - t0) % period) / (seconds * 1000);
-      drawTake(ctx, img, mode, p);
+      drawTake(ctx, img, mode, p, mix);
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [img, mode, seconds, big]);
-  return <canvas ref={ref} className={big ? "mx-auto max-h-[60vh] w-auto max-w-full rounded-xl bg-muted" : "w-full rounded-lg bg-muted"} />;
+  }, [img, mode, seconds, mix, big]);
+  return (
+    <canvas
+      ref={ref}
+      className={
+        big
+          ? "mx-auto max-h-[60vh] w-auto max-w-full rounded-xl bg-muted"
+          : "w-full rounded-lg bg-muted"
+      }
+    />
+  );
+}
+
+function MixControls({ mix, setMix }: { mix: FootageMix; setMix: (m: FootageMix) => void }) {
+  const Row = <K extends "pan" | "tilt" | "zoom">(
+    k: K,
+    label: string,
+    opts: [FootageMix[K], string][],
+  ) => (
+    <div className="flex items-center gap-1.5">
+      <span className="w-12 shrink-0 text-[11px] text-muted-foreground">{label}</span>
+      <div className="flex flex-wrap gap-1">
+        {opts.map(([v, l]) => (
+          <Button
+            key={v}
+            size="sm"
+            className="h-7 px-2 text-xs"
+            variant={mix[k] === v ? "default" : "outline"}
+            onClick={() => setMix({ ...mix, [k]: v })}
+          >
+            {l}
+          </Button>
+        ))}
+      </div>
+    </div>
+  );
+  const Check = (k: "walk" | "roll", label: string) => (
+    <label className="flex items-center gap-1.5 text-xs">
+      <input
+        type="checkbox"
+        checked={mix[k]}
+        onChange={(e) => setMix({ ...mix, [k]: e.target.checked })}
+      />
+      {label}
+    </label>
+  );
+  return (
+    <div className="space-y-1.5">
+      {Row("pan", "Geser", [
+        ["none", "—"],
+        ["lr", "Kiri→Kanan"],
+        ["rl", "Kanan→Kiri"],
+      ])}
+      {Row("tilt", "Tilt", [
+        ["none", "—"],
+        ["up", "Naik"],
+        ["down", "Turun"],
+      ])}
+      {Row("zoom", "Zoom", [
+        ["none", "—"],
+        ["in", "Maju (in)"],
+        ["out", "Mundur (out)"],
+      ])}
+      <div className="flex gap-4 pt-0.5">
+        {Check("walk", "🚶 Langkah kaki")}
+        {Check("roll", "↻ Miring halus")}
+      </div>
+    </div>
+  );
 }
