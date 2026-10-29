@@ -1175,6 +1175,38 @@ export function WatermarkDialog({
     return files;
   };
 
+  const [previews, setPreviews] = useState<{ file: File; url: string }[] | null>(null);
+  const previewKey = JSON.stringify([prefs, pick, storySec, option.image, brand]);
+  const lastKey = useRef(previewKey);
+  useEffect(() => {
+    if (lastKey.current === previewKey) return;
+    lastKey.current = previewKey;
+    setPreviews((cur) => {
+      cur?.forEach((p) => URL.revokeObjectURL(p.url));
+      return null;
+    });
+  }, [previewKey]);
+  useEffect(() => {
+    if (!open) {
+      setPreviews((cur) => {
+        cur?.forEach((p) => URL.revokeObjectURL(p.url));
+        return null;
+      });
+    }
+  }, [open]);
+  const getFiles = async () => previews?.map((p) => p.file) ?? (await buildFiles());
+  const preview = async () => {
+    try {
+      const files = await buildFiles();
+      previews?.forEach((p) => URL.revokeObjectURL(p.url));
+      setPreviews(files.map((file) => ({ file, url: URL.createObjectURL(file) })));
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const saveFiles = (files: File[]) =>
     files.forEach((f, i) =>
       setTimeout(() => {
@@ -1547,6 +1579,43 @@ export function WatermarkDialog({
           )}
         </div>
         {busy && <p className="text-center text-xs text-muted-foreground">{busy}</p>}
+        {previews && (
+          <div className="space-y-3 rounded-xl border border-primary/40 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Preview sebelum kirim
+            </p>
+            {previews.map((p) => (
+              <div key={p.url} className="space-y-1">
+                <p className="truncate text-xs text-muted-foreground">{p.file.name}</p>
+                {p.file.type.startsWith("video/") ? (
+                  <video
+                    src={p.url}
+                    controls
+                    loop
+                    playsInline
+                    autoPlay
+                    muted
+                    className="block w-full rounded-lg bg-background"
+                  />
+                ) : (
+                  <img src={p.url} alt={p.file.name} className="block w-full rounded-lg" />
+                )}
+              </div>
+            ))}
+            <p className="text-xs text-muted-foreground">
+              Kalau ubah watermark / pilihan file, preview direset dan dibuat ulang.
+            </p>
+          </div>
+        )}
+        <Button
+          variant="secondary"
+          className="w-full"
+          onClick={preview}
+          disabled={!!busy || !count}
+        >
+          <Play className="size-4" />
+          {previews ? "Buat ulang preview" : `Preview dulu (${count})`}
+        </Button>
         <div className="grid grid-cols-2 gap-2">
           <Button variant="outline" onClick={download} disabled={!!busy || !count}>
             <Download className="size-4" />
