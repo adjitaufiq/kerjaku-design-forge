@@ -149,17 +149,20 @@ function TakePreview({
   img,
   mode,
   seconds,
+  big,
 }: {
   img: HTMLImageElement | null;
   mode: FootageMode;
   seconds: number;
+  big?: boolean;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const c = ref.current;
     if (!c || !img) return;
-    c.width = 360;
-    c.height = Math.round((360 * img.height) / img.width);
+    const w = big ? 900 : 360;
+    c.width = w;
+    c.height = Math.round((w * img.height) / img.width);
     const ctx = c.getContext("2d")!;
     let raf = 0;
     const t0 = performance.now();
@@ -171,6 +174,6 @@ function TakePreview({
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [img, mode, seconds]);
-  return <canvas ref={ref} className="w-full rounded-lg bg-muted" />;
+  }, [img, mode, seconds, big]);
+  return <canvas ref={ref} className={big ? "mx-auto max-h-[60vh] w-auto max-w-full rounded-xl bg-muted" : "w-full rounded-lg bg-muted"} />;
 }
