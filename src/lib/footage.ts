@@ -89,26 +89,37 @@ function camera(mode: FootageMode, t: number, mix: FootageMix = DEFAULT_MIX) {
   }
 }
 
+/** Output frame for CapCut / TikTok. */
+export const FRAME_W = 720;
+export const FRAME_H = 1280;
+
 export function drawTake(
   ctx: CanvasRenderingContext2D,
   img: HTMLImageElement,
   mode: FootageMode,
   t: number,
   mix?: FootageMix,
+  zoom = 1.3,
 ) {
   const W = ctx.canvas.width;
   const H = ctx.canvas.height;
-  const { s, x, y, r } = camera(mode, Math.min(1, Math.max(0, t)), mix);
-  // cover-fit, extra 6% so rotation never shows edges
+  const cam = camera(mode, Math.min(1, Math.max(0, t)), mix);
+  // Keep the camera on the rendered object (center), never drift to floor / ceiling.
+  const x = Math.max(-0.7, Math.min(0.7, cam.x * 0.75));
+  const y = Math.max(-0.45, Math.min(0.35, cam.y * 0.45 - 0.05));
+  const r = cam.r;
+  const s = cam.s * zoom;
   const base = Math.max(W / img.width, H / img.height) * s * (r ? 1.06 : 1);
   const dw = img.width * base;
   const dh = img.height * base;
   const slackX = (dw - W) / 2;
   const slackY = (dh - H) / 2;
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, W, H);
   ctx.save();
   ctx.translate(W / 2, H / 2);
   ctx.rotate(r);
-  ctx.drawImage(img, -dw / 2 - x * slackX * 0.9, -dh / 2 - y * slackY * 0.9, dw, dh);
+  ctx.drawImage(img, -dw / 2 - x * slackX, -dh / 2 - y * slackY, dw, dh);
   ctx.restore();
 }
 
@@ -128,18 +139,17 @@ export async function recordTake(
   mode: FootageMode,
   seconds: number,
   mix?: FootageMix,
+  zoom = 1.3,
 ): Promise<{ blob: Blob; ext: string }> {
   const mime = pickVideoMime();
   if (!mime) throw new Error("Browser tidak mendukung rekam video");
   const img = await loadImg(src);
   const c = document.createElement("canvas");
-  const maxW = 1080;
-  const k = Math.min(1, maxW / img.width);
-  c.width = Math.round((img.width * k) / 2) * 2;
-  c.height = Math.round((img.height * k) / 2) * 2;
+  c.width = FRAME_W;
+  c.height = FRAME_H;
   const ctx = c.getContext("2d")!;
   ctx.imageSmoothingQuality = "high";
-  drawTake(ctx, img, mode, 0, mix);
+  drawTake(ctx, img, mode, 0, mix, zoom);
   const stream = c.captureStream(30);
   const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8_000_000 });
   const chunks: Blob[] = [];
@@ -150,7 +160,7 @@ export async function recordTake(
   await new Promise<void>((done) => {
     const tick = () => {
       const t = (performance.now() - t0) / (seconds * 1000);
-      drawTake(ctx, img, mode, t, mix);
+      drawTake(ctx, img, mode, t, mix, zoom);
       if (t >= 1) return done();
       requestAnimationFrame(tick);
     };
