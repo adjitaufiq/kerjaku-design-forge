@@ -843,8 +843,7 @@ function ClientForm({
       });
       return lead.id;
     },
-    onSuccess: (leadId) =>
-      onSaved({ name: f.name.trim(), location: f.location.trim(), leadId }),
+    onSuccess: (leadId) => onSaved({ name: f.name.trim(), location: f.location.trim(), leadId }),
     onError: (e: Error) => toast.error(e.message),
   });
 
