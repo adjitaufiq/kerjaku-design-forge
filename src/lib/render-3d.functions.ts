@@ -9,6 +9,7 @@ interface RenderInput {
   sketch: string; // data URL of the SketchUp / 3D screenshot
   anchor?: string | null; // data URL of the already-rendered master view (Foto 1)
   scene: string; // editable prompt from the user
+  ratio?: string; // output frame, e.g. 4:5
   keepDimensions?: boolean;
 }
 
@@ -29,7 +30,8 @@ function buildPrompt(input: RenderInput): string {
     "Replace the plain grey/empty background with a real environment as described below, at realistic eye level camera height.",
     "NO EXTRA OBJECTS: do not add people, products, decorations, plants, screens or props unless the scene description below explicitly asks for them.",
     `Scene description from the workshop: ${input.scene}`,
-    "Output one single photorealistic photo with the same aspect ratio as IMAGE 1. No watermark, no collage, no added captions.",
+    `FRAME: output exactly ${input.ratio ?? "4:5"} aspect ratio, same as IMAGE 1. IMAGE 1 may have flat grey padding bands around the drawing — they are empty canvas, not part of the design: fill them seamlessly with more of the same environment (ceiling, floor, surroundings) using a slightly wide-angle eye-level camera, keeping the whole object fully visible, centered and unchanged.`,
+    "Output one single photorealistic photo. No watermark, no collage, no added captions, no grey bars.",
   ]
     .filter(Boolean)
     .join(" ");
