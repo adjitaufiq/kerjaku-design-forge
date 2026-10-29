@@ -64,7 +64,39 @@ interface Shot {
   id: string;
   sketch: string;
   result?: string;
+  before?: string;
   busy?: boolean;
+}
+
+const RATIOS = [
+  { id: "4:5", label: "4:5 Feed IG", w: 4, h: 5 },
+  { id: "9:16", label: "9:16 TikTok", w: 9, h: 16 },
+  { id: "16:9", label: "16:9 Landscape", w: 16, h: 9 },
+] as const;
+type RatioId = (typeof RATIOS)[number]["id"];
+
+/** Letterbox the sketch onto a canvas of the chosen ratio so the AI renders that frame. */
+async function frameToRatio(src: string, ratio: RatioId): Promise<string> {
+  const r = RATIOS.find((x) => x.id === ratio)!;
+  const img = await new Promise<HTMLImageElement>((res, rej) => {
+    const i = new Image();
+    i.onload = () => res(i);
+    i.onerror = rej;
+    i.src = src;
+  });
+  const target = r.w / r.h;
+  let W = img.width;
+  let H = img.height;
+  if (W / H > target) H = Math.round(W / target);
+  else W = Math.round(H * target);
+  const c = document.createElement("canvas");
+  c.width = W;
+  c.height = H;
+  const ctx = c.getContext("2d")!;
+  ctx.fillStyle = "#d9d9d9";
+  ctx.fillRect(0, 0, W, H);
+  ctx.drawImage(img, (W - img.width) / 2, (H - img.height) / 2);
+  return c.toDataURL("image/jpeg", 0.9);
 }
 
 async function fileToDataUrl(file: File, max = 1536): Promise<string> {
@@ -170,6 +202,7 @@ function Render3dPage() {
   const [loc, setLoc] = useState<string | null>(null);
   const [prompt, setPrompt] = useState("");
   const [keepDims, setKeepDims] = useState(false);
+  const [ratio, setRatio] = useState<RatioId>("4:5");
   const [active, setActive] = useState(0);
   const [running, setRunning] = useState(false);
 
@@ -206,10 +239,11 @@ function Render3dPage() {
   const renderOne = async (idx: number, anchor: string | null) => {
     setShots((s) => s.map((x, i) => (i === idx ? { ...x, busy: true } : x)));
     try {
+      const framed = await frameToRatio(shots[idx]!.sketch, ratio);
       const { image } = await run({
-        data: { sketch: shots[idx]!.sketch, anchor, scene: prompt, keepDimensions: keepDims },
+        data: { sketch: framed, anchor, scene: prompt, keepDimensions: keepDims, ratio },
       });
-      setShots((s) => s.map((x, i) => (i === idx ? { ...x, result: image, busy: false } : x)));
+      setShots((s) => s.map((x, i) => (i === idx ? { ...x, result: image, before: framed, busy: false } : x)));
       return image;
     } catch (e) {
       setShots((s) => s.map((x, i) => (i === idx ? { ...x, busy: false } : x)));
@@ -347,6 +381,16 @@ function Render3dPage() {
               </span>
               <Switch checked={keepDims} onCheckedChange={setKeepDims} />
             </label>
+            <div className="space-y-1.5">
+              <p className="text-xs text-muted-foreground">Format foto (berlaku juga untuk Render ulang)</p>
+              <div className="flex flex-wrap gap-2">
+                {RATIOS.map((r) => (
+                  <Pill key={r.id} active={ratio === r.id} onClick={() => setRatio(r.id)}>
+                    {r.label}
+                  </Pill>
+                ))}
+              </div>
+            </div>
             <Button className="w-full" disabled={running} onClick={renderAll}>
               <Wand2 className="size-4" />
               {running ? "Merender…" : `Render semua (${shots.length} foto)`}
@@ -366,7 +410,7 @@ function Render3dPage() {
             ))}
           </div>
           {current.result ? (
-            <Compare before={current.sketch} after={current.result} />
+            <Compare before={current.before ?? current.sketch} after={current.result} />
           ) : (
             <div className="grid aspect-video place-items-center rounded-2xl border border-border text-sm text-muted-foreground">
               {current.busy ? "Sedang dirender…" : "Belum dirender"}
