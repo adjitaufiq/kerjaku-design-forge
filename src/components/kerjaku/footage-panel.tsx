@@ -181,7 +181,8 @@ export function FootagePanel({ image, name }: { image: string; name: string }) {
               {busy === open ? `Merekam ${seconds}s…` : `Download ${seconds}s`}
             </Button>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
