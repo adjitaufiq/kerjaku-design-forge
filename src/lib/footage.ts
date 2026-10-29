@@ -22,7 +22,13 @@ export type FootageMix = {
   walk: boolean;
   roll: boolean;
 };
-export const DEFAULT_MIX: FootageMix = { pan: "lr", tilt: "none", zoom: "in", walk: true, roll: false };
+export const DEFAULT_MIX: FootageMix = {
+  pan: "lr",
+  tilt: "none",
+  zoom: "in",
+  walk: true,
+  roll: false,
+};
 
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -57,12 +63,19 @@ function camera(mode: FootageMode, t: number, mix: FootageMix = DEFAULT_MIX) {
     case "uturn": {
       // curve: left far -> close center -> right far
       const k = Math.sin(Math.PI * e);
-      return { s: 1.18 + 0.2 * k, x: lerp(-1, 1, e) * (1 - 0.25 * k), y: -0.15 * k, r: lerp(0.025, -0.025, e) };
+      return {
+        s: 1.18 + 0.2 * k,
+        x: lerp(-1, 1, e) * (1 - 0.25 * k),
+        y: -0.15 * k,
+        r: lerp(0.025, -0.025, e),
+      };
     }
     case "custom": {
-      const zs = mix.zoom === "in" ? lerp(1.12, 1.38, e) : mix.zoom === "out" ? lerp(1.38, 1.12, e) : 1.24;
+      const zs =
+        mix.zoom === "in" ? lerp(1.12, 1.38, e) : mix.zoom === "out" ? lerp(1.38, 1.12, e) : 1.24;
       let x = mix.pan === "lr" ? lerp(-0.85, 0.85, e) : mix.pan === "rl" ? lerp(0.85, -0.85, e) : 0;
-      let y = mix.tilt === "up" ? lerp(0.85, -0.85, e) : mix.tilt === "down" ? lerp(-0.85, 0.85, e) : 0;
+      let y =
+        mix.tilt === "up" ? lerp(0.85, -0.85, e) : mix.tilt === "down" ? lerp(-0.85, 0.85, e) : 0;
       let r = mix.roll ? Math.sin(e * Math.PI * 2) * 0.012 : 0;
       if (mix.walk) {
         // ~1.6 steps per second feel, normalized to progress

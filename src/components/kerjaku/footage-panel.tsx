@@ -34,7 +34,10 @@ export function FootagePanel({ image, name }: { image: string; name: string }) {
     setBusy(mode);
     try {
       const { blob, ext } = await recordTake(image, mode, seconds, mix);
-      const tag = mode === "custom" ? `custom-${[mix.pan, mix.tilt, mix.zoom].filter((v) => v !== "none").join("-")}${mix.walk ? "-walk" : ""}` : mode;
+      const tag =
+        mode === "custom"
+          ? `custom-${[mix.pan, mix.tilt, mix.zoom].filter((v) => v !== "none").join("-")}${mix.walk ? "-walk" : ""}`
+          : mode;
       const file = `${slug(name)}-${tag}-${seconds}s.${ext}`;
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
@@ -127,10 +130,6 @@ export function FootagePanel({ image, name }: { image: string; name: string }) {
               <MixControls mix={mix} setMix={setMix} />
             </div>
           )}
-          <div className="hidden">
-            <div>
-            </div>
-          </div>
           <div className="space-y-2 pt-3" onClick={(e) => e.stopPropagation()}>
             <div className="flex gap-1.5 overflow-x-auto pb-1">
               {FOOTAGE_MODES.map((m) => (
@@ -194,7 +193,16 @@ function TakePreview({
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
   }, [img, mode, seconds, mix, big]);
-  return <canvas ref={ref} className={big ? "mx-auto max-h-[60vh] w-auto max-w-full rounded-xl bg-muted" : "w-full rounded-lg bg-muted"} />;
+  return (
+    <canvas
+      ref={ref}
+      className={
+        big
+          ? "mx-auto max-h-[60vh] w-auto max-w-full rounded-xl bg-muted"
+          : "w-full rounded-lg bg-muted"
+      }
+    />
+  );
 }
 
 function MixControls({ mix, setMix }: { mix: FootageMix; setMix: (m: FootageMix) => void }) {
@@ -222,15 +230,31 @@ function MixControls({ mix, setMix }: { mix: FootageMix; setMix: (m: FootageMix)
   );
   const Check = (k: "walk" | "roll", label: string) => (
     <label className="flex items-center gap-1.5 text-xs">
-      <input type="checkbox" checked={mix[k]} onChange={(e) => setMix({ ...mix, [k]: e.target.checked })} />
+      <input
+        type="checkbox"
+        checked={mix[k]}
+        onChange={(e) => setMix({ ...mix, [k]: e.target.checked })}
+      />
       {label}
     </label>
   );
   return (
     <div className="space-y-1.5">
-      {Row("pan", "Geser", [["none", "—"], ["lr", "Kiri→Kanan"], ["rl", "Kanan→Kiri"]])}
-      {Row("tilt", "Tilt", [["none", "—"], ["up", "Naik"], ["down", "Turun"]])}
-      {Row("zoom", "Zoom", [["none", "—"], ["in", "Maju (in)"], ["out", "Mundur (out)"]])}
+      {Row("pan", "Geser", [
+        ["none", "—"],
+        ["lr", "Kiri→Kanan"],
+        ["rl", "Kanan→Kiri"],
+      ])}
+      {Row("tilt", "Tilt", [
+        ["none", "—"],
+        ["up", "Naik"],
+        ["down", "Turun"],
+      ])}
+      {Row("zoom", "Zoom", [
+        ["none", "—"],
+        ["in", "Maju (in)"],
+        ["out", "Mundur (out)"],
+      ])}
       <div className="flex gap-4 pt-0.5">
         {Check("walk", "🚶 Langkah kaki")}
         {Check("roll", "↻ Miring halus")}
