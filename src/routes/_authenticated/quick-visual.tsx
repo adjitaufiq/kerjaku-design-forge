@@ -1169,10 +1169,15 @@ export function WatermarkDialog({
       files.push(new File([blob], `${base}-before-after.${ext}`, { type: blob.type }));
     }
     if (pick.story && canStory) {
-      const { blob, ext } = await renderCinematicStory(storyImages, storySec, p, brand, (pr) =>
-        setBusy(
-          `Merekam video story ${storyImages.length} foto… ${Math.round(pr * 100)}% (±${storySec} detik, jangan tutup layar)`,
-        ),
+      const { blob, ext } = await renderCinematicStory(
+        storyImages,
+        storySec,
+        p,
+        brand,
+        (pr) =>
+          setBusy(
+            `Merekam video story ${storyImages.length} foto… ${Math.round(pr * 100)}% (±${storySec} detik, jangan tutup layar)`,
+          ),
         music,
       );
       files.push(new File([blob], `${base}-story-${storySec}s.${ext}`, { type: blob.type }));
