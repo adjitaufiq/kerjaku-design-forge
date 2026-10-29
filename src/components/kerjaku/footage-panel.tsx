@@ -20,6 +20,7 @@ export function FootagePanel({ image, name }: { image: string; name: string }) {
   const [open, setOpen] = useState<FootageMode | null>(null);
   const [busy, setBusy] = useState<FootageMode | null>(null);
   const [mix, setMix] = useState<FootageMix>(DEFAULT_MIX);
+  const [zoom, setZoom] = useState(1.3);
   const [img, setImg] = useState<HTMLImageElement | null>(null);
 
   useEffect(() => {
@@ -33,7 +34,7 @@ export function FootagePanel({ image, name }: { image: string; name: string }) {
   const download = async (mode: FootageMode) => {
     setBusy(mode);
     try {
-      const { blob, ext } = await recordTake(image, mode, seconds, mix);
+      const { blob, ext } = await recordTake(image, mode, seconds, mix, zoom);
       const tag =
         mode === "custom"
           ? `custom-${[mix.pan, mix.tilt, mix.zoom].filter((v) => v !== "none").join("-")}${mix.walk ? "-walk" : ""}`
@@ -74,6 +75,21 @@ export function FootagePanel({ image, name }: { image: string; name: string }) {
           <span>Cepat</span>
           <span>Lambat</span>
         </div>
+        <div className="flex justify-between pt-2 text-xs text-muted-foreground">
+          <span>Jarak kamera</span>
+          <span className="font-semibold text-foreground">{zoom.toFixed(2)}x</span>
+        </div>
+        <Slider
+          min={1}
+          max={1.8}
+          step={0.05}
+          value={[zoom]}
+          onValueChange={(v) => setZoom(v[0] ?? 1.3)}
+        />
+        <div className="flex justify-between text-[10px] text-muted-foreground">
+          <span>Wide</span>
+          <span>Close-up objek</span>
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-2">
         {FOOTAGE_MODES.map((m) => (
@@ -84,7 +100,7 @@ export function FootagePanel({ image, name }: { image: string; name: string }) {
               onClick={() => setOpen(m.id)}
               aria-label={`Preview ${m.label}`}
             >
-              <TakePreview img={img} mode={m.id} seconds={seconds} mix={mix} />
+              <TakePreview img={img} mode={m.id} seconds={seconds} mix={mix} zoom={zoom} />
             </button>
             <p className="text-xs font-medium">
               {m.emoji} {m.label}
@@ -122,7 +138,7 @@ export function FootagePanel({ image, name }: { image: string; name: string }) {
           </div>
           <div className="flex min-h-0 flex-1 items-center justify-center">
             <div className="max-h-full w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-              <TakePreview img={img} mode={open} seconds={seconds} mix={mix} big />
+              <TakePreview img={img} mode={open} seconds={seconds} mix={mix} zoom={zoom} big />
             </div>
           </div>
           {open === "custom" && (
@@ -150,6 +166,16 @@ export function FootagePanel({ image, name }: { image: string; name: string }) {
               value={[seconds]}
               onValueChange={(v) => setSeconds(v[0] ?? 8)}
             />
+            <Slider
+              min={1}
+              max={1.8}
+              step={0.05}
+              value={[zoom]}
+              onValueChange={(v) => setZoom(v[0] ?? 1.3)}
+            />
+            <p className="text-center text-[10px] text-muted-foreground">
+              Atas: speed {seconds}s · Bawah: jarak {zoom.toFixed(2)}x
+            </p>
             <Button className="w-full" disabled={!!busy} onClick={() => void download(open)}>
               <Download className="size-4" />
               {busy === open ? `Merekam ${seconds}s…` : `Download ${seconds}s`}
@@ -166,12 +192,14 @@ function TakePreview({
   mode,
   seconds,
   mix,
+  zoom,
   big,
 }: {
   img: HTMLImageElement | null;
   mode: FootageMode;
   seconds: number;
   mix: FootageMix;
+  zoom: number;
   big?: boolean;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -180,26 +208,26 @@ function TakePreview({
     if (!c || !img) return;
     const w = big ? 900 : 360;
     c.width = w;
-    c.height = Math.round((w * img.height) / img.width);
+    c.height = Math.round((w * 16) / 9);
     const ctx = c.getContext("2d")!;
     let raf = 0;
     const t0 = performance.now();
     const loop = () => {
       const period = seconds * 1000 + 600;
       const p = ((performance.now() - t0) % period) / (seconds * 1000);
-      drawTake(ctx, img, mode, p, mix);
+      drawTake(ctx, img, mode, p, mix, zoom);
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [img, mode, seconds, mix, big]);
+  }, [img, mode, seconds, mix, zoom, big]);
   return (
     <canvas
       ref={ref}
       className={
         big
           ? "mx-auto max-h-[60vh] w-auto max-w-full rounded-xl bg-muted"
-          : "w-full rounded-lg bg-muted"
+          : "aspect-[9/16] w-full rounded-lg bg-muted"
       }
     />
   );
