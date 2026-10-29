@@ -133,6 +133,71 @@ export function loadImg(src: string) {
   });
 }
 
+/** Encode a take frame-by-frame into a standard MP4 (faststart) readable by CapCut/gallery. */
+async function encodeMp4(
+  src: string,
+  mode: FootageMode,
+  seconds: number,
+  mix: FootageMix | undefined,
+  zoom: number,
+): Promise<Blob | null> {
+  if (typeof VideoEncoder === "undefined" || typeof VideoFrame === "undefined") return null;
+  const configs = ["avc1.640028", "avc1.4D0028", "avc1.42E028", "avc1.42001f"];
+  let codec: string | null = null;
+  for (const c of configs) {
+    try {
+      const s = await VideoEncoder.isConfigSupported({
+        codec: c,
+        width: FRAME_W,
+        height: FRAME_H,
+        bitrate: 8_000_000,
+        framerate: 30,
+      });
+      if (s.supported) {
+        codec = c;
+        break;
+      }
+    } catch {
+      /* try next */
+    }
+  }
+  if (!codec) return null;
+  const { Muxer, ArrayBufferTarget } = await import("mp4-muxer");
+  const img = await loadImg(src);
+  const c = document.createElement("canvas");
+  c.width = FRAME_W;
+  c.height = FRAME_H;
+  const ctx = c.getContext("2d")!;
+  ctx.imageSmoothingQuality = "high";
+  const target = new ArrayBufferTarget();
+  const muxer = new Muxer({
+    target,
+    video: { codec: "avc", width: FRAME_W, height: FRAME_H, frameRate: 30 },
+    fastStart: "in-memory",
+  });
+  let err: unknown = null;
+  const enc = new VideoEncoder({
+    output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+    error: (e) => (err = e),
+  });
+  enc.configure({ codec, width: FRAME_W, height: FRAME_H, bitrate: 8_000_000, framerate: 30 });
+  const fps = 30;
+  const total = Math.round(seconds * fps);
+  for (let i = 0; i < total; i++) {
+    drawTake(ctx, img, mode, i / (total - 1), mix, zoom);
+    const frame = new VideoFrame(c, { timestamp: Math.round((i * 1e6) / fps), duration: Math.round(1e6 / fps) });
+    enc.encode(frame, { keyFrame: i % 30 === 0 });
+    frame.close();
+    if (enc.encodeQueueSize > 10) await new Promise((r) => setTimeout(r, 0));
+    if (err) throw err;
+  }
+  await enc.flush();
+  enc.close();
+  if (err) throw err;
+  muxer.finalize();
+  return new Blob([target.buffer], { type: "video/mp4" });
+}
+
 /** Record one take to a silent video file. */
 export async function recordTake(
   src: string,
@@ -141,6 +206,12 @@ export async function recordTake(
   mix?: FootageMix,
   zoom = 1.3,
 ): Promise<{ blob: Blob; ext: string }> {
+  try {
+    const mp4 = await encodeMp4(src, mode, seconds, mix, zoom);
+    if (mp4) return { blob: mp4, ext: "mp4" };
+  } catch (e) {
+    console.warn("MP4 encoder failed, fallback to recorder", e);
+  }
   const mime = pickVideoMime();
   if (!mime) throw new Error("Browser tidak mendukung rekam video");
   const img = await loadImg(src);
