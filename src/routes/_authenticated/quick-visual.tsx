@@ -29,6 +29,7 @@ import {
   Share2,
   Trash2,
   Wand2,
+  Play,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
