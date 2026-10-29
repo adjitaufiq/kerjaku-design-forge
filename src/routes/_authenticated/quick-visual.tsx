@@ -78,7 +78,7 @@ import {
   type WatermarkPrefs,
 } from "@/lib/quick-visual-store";
 import { toWhatsAppNumber } from "@/lib/whatsapp";
-import { renderGrid, renderVideo } from "@/lib/quick-visual-export";
+import { renderCinematic, renderGrid, renderVideo } from "@/lib/quick-visual-export";
 import { cn } from "@/lib/utils";
 import { data } from "@/services/data";
 import type { ProjectType } from "@/services/domain/models";
@@ -1073,7 +1073,7 @@ function SurveyForm({
   );
 }
 
-function WatermarkDialog({
+export function WatermarkDialog({
   open,
   onOpenChange,
   option,
@@ -1081,7 +1081,9 @@ function WatermarkDialog({
   brand,
   workshopId,
   onBrandSaved,
+  videoKind = "wipe",
 }: {
+  videoKind?: "wipe" | "cinematic";
   open: boolean;
   onOpenChange: (o: boolean) => void;
   option: VisualOption;
@@ -1141,7 +1143,11 @@ function WatermarkDialog({
       const b = await renderGrid(beforeSrc, option.image, p, brand);
       files.push(new File([b], `${base}-before-after.png`, { type: "image/png" }));
     }
-    if (pick.video && beforeSrc) {
+    if (pick.video && videoKind === "cinematic") {
+      setBusy("Merekam video cinematic (±7 detik)…");
+      const { blob, ext } = await renderCinematic(option.image, p, brand);
+      files.push(new File([blob], `${base}-cinematic.${ext}`, { type: blob.type }));
+    } else if (pick.video && beforeSrc) {
       setBusy("Merekam video (±9 detik)…");
       const { blob, ext } = await renderVideo(beforeSrc, option.image, p, brand);
       files.push(new File([blob], `${base}-before-after.${ext}`, { type: blob.type }));
@@ -1475,7 +1481,9 @@ function WatermarkDialog({
             [
               ["after", "Foto hasil (After)", false],
               ["grid", "Foto grid — Before + After dalam 1 foto", !beforeSrc],
-              ["video", "Video slowmo Before → After (±9 detik)", !beforeSrc],
+              videoKind === "cinematic"
+                ? (["video", "Video cinematic zoom-in pelan (±7 detik)", false] as const)
+                : (["video", "Video slowmo Before → After (±9 detik)", !beforeSrc] as const),
             ] as const
           ).map(([k, l, dis]) => (
             <label key={k} className={cn("flex items-center gap-2 text-sm", dis && "opacity-50")}>
