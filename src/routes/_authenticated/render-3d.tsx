@@ -218,8 +218,8 @@ function Render3dPage() {
   };
 
   const renderAll = async () => {
-    if (!shots.length) return toast.error("Upload gambar 3D dulu");
-    if (!prompt.trim()) return toast.error("Pilih objek atau isi prompt dulu");
+    if (!shots.length) { toast.error("Upload gambar 3D dulu"); return; }
+    if (!prompt.trim()) { toast.error("Pilih objek atau isi prompt dulu"); return; }
     setRunning(true);
     try {
       const master = await renderOne(0, null);
@@ -263,7 +263,7 @@ function Render3dPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 pb-24">
-      <PageHeader title="3D Render AI" description="Gambar SketchUp → foto render realistis. Bentuk & warna dikunci." />
+      <PageHeader title="3D Render AI" subtitle="Gambar SketchUp → foto render realistis. Bentuk & warna dikunci." />
 
       <SectionCard title="1. Upload gambar 3D (1–5)">
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
