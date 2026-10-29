@@ -1204,7 +1204,15 @@ export function WatermarkDialog({
   };
 
   const [previews, setPreviews] = useState<{ file: File; url: string }[] | null>(null);
-  const previewKey = JSON.stringify([prefs, pick, storySec, music, musicFile?.name, option.image, brand]);
+  const previewKey = JSON.stringify([
+    prefs,
+    pick,
+    storySec,
+    music,
+    musicFile?.name,
+    option.image,
+    brand,
+  ]);
   const lastKey = useRef(previewKey);
   useEffect(() => {
     if (lastKey.current === previewKey) return;
@@ -1631,9 +1639,7 @@ export function WatermarkDialog({
                               key={b.id}
                               className={cn(
                                 "flex items-center overflow-hidden rounded-lg border text-xs",
-                                music === b.id
-                                  ? "border-primary bg-primary/10"
-                                  : "border-border",
+                                music === b.id ? "border-primary bg-primary/10" : "border-border",
                               )}
                             >
                               <button
