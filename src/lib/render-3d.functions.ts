@@ -80,7 +80,7 @@ export const render3d = createServerFn({ method: "POST" })
   });
 
 const CHAT_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const SCAN_MODEL = "google/gemini-3.7-flash";
+const SCAN_MODEL = "openai/gpt-6-astra";
 
 export interface ScanResult {
   object: "booth" | "kitchen" | "wardrobe" | "backdrop" | "counter" | "furniture";
@@ -115,7 +115,25 @@ export const scan3d = createServerFn({ method: "POST" })
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: SCAN_MODEL,
-        response_format: { type: "json_object" },
+        reasoning_effort: "low",
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "scan",
+            strict: true,
+            schema: {
+              type: "object",
+              additionalProperties: false,
+              required: ["object", "location", "summary", "ideas"],
+              properties: {
+                object: { type: "string", enum: OBJ_IDS },
+                location: { type: "string", enum: LOC_IDS },
+                summary: { type: "string" },
+                ideas: { type: "array", items: { type: "string" } },
+              },
+            },
+          },
+        },
         messages: [
           {
             role: "user",
