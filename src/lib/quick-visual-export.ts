@@ -176,3 +176,59 @@ export async function renderVideo(
   const type = mime.split(";")[0] ?? "video/webm";
   return { blob: new Blob(chunks, { type }), ext: type === "video/mp4" ? "mp4" : "webm" };
 }
+
+/** ~7s cinematic slow push-in (1.0x → 1.18x) on the render, watermark fixed on top. */
+export async function renderCinematic(
+  after: string,
+  prefs: WatermarkPrefs,
+  brand: Brand,
+): Promise<{ blob: Blob; ext: string }> {
+  const mime = pickVideoMime();
+  if (!mime) throw new Error("Browser ini belum mendukung pembuatan video");
+  const a = await loadImg(after);
+  const k = Math.min(1, 1280 / Math.max(a.naturalWidth, a.naturalHeight));
+  const W = Math.round((a.naturalWidth * k) / 2) * 2;
+  const H = Math.round((a.naturalHeight * k) / 2) * 2;
+  // Transparent overlay holding only the watermark.
+  const blank = document.createElement("canvas");
+  blank.width = a.naturalWidth;
+  blank.height = a.naturalHeight;
+  const overlay = await blobToImg(await renderWithWatermark(blank.toDataURL("image/png"), prefs, brand));
+
+  const c = document.createElement("canvas");
+  c.width = W;
+  c.height = H;
+  const ctx = c.getContext("2d")!;
+  ctx.imageSmoothingQuality = "high";
+  const TOTAL = 7000;
+  const draw = (t: number) => {
+    const p = ease(Math.min(1, t / TOTAL));
+    const s = 1 + 0.18 * p;
+    const dw = W * s;
+    const dh = H * s;
+    ctx.drawImage(a, (W - dw) / 2, (H - dh) / 2 - H * 0.02 * p, dw, dh);
+    ctx.drawImage(overlay, 0, 0, W, H);
+  };
+  draw(0);
+  const stream = c.captureStream(30);
+  const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 5_000_000 });
+  const chunks: Blob[] = [];
+  rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+  const done = new Promise<void>((r) => (rec.onstop = () => r()));
+  rec.start(250);
+  const start = performance.now();
+  await new Promise<void>((resolve) => {
+    const tick = () => {
+      const t = performance.now() - start;
+      draw(Math.min(t, TOTAL));
+      if (t >= TOTAL) return resolve();
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+  rec.stop();
+  stream.getTracks().forEach((tr) => tr.stop());
+  await done;
+  const type = mime.split(";")[0] ?? "video/webm";
+  return { blob: new Blob(chunks, { type }), ext: type === "video/mp4" ? "mp4" : "webm" };
+}
