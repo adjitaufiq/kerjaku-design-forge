@@ -783,6 +783,7 @@ function Render3dPage() {
           workshopId={workshopQuery.data?.id ?? null}
           onBrandSaved={() => void workshopQuery.refetch()}
           videoKind="cinematic"
+          storyImages={done.map((d) => d.result!).slice(0, 5)}
         />
       )}
     </div>

@@ -78,7 +78,12 @@ import {
   type WatermarkPrefs,
 } from "@/lib/quick-visual-store";
 import { toWhatsAppNumber } from "@/lib/whatsapp";
-import { renderCinematic, renderGrid, renderVideo } from "@/lib/quick-visual-export";
+import {
+  renderCinematic,
+  renderCinematicStory,
+  renderGrid,
+  renderVideo,
+} from "@/lib/quick-visual-export";
 import { cn } from "@/lib/utils";
 import { data } from "@/services/data";
 import type { ProjectType } from "@/services/domain/models";
@@ -1084,8 +1089,10 @@ export function WatermarkDialog({
   workshopId,
   onBrandSaved,
   videoKind = "wipe",
+  storyImages = [],
 }: {
   videoKind?: "wipe" | "cinematic";
+  storyImages?: string[];
   open: boolean;
   onOpenChange: (o: boolean) => void;
   option: VisualOption;
@@ -1126,11 +1133,14 @@ export function WatermarkDialog({
   const showLogo = prefs.showLogo && hasLogo;
   const showName = prefs.showName && hasName;
 
-  const [pick, setPick] = useState({ after: true, grid: false, video: false });
+  const [pick, setPick] = useState({ after: true, grid: false, video: false, story: false });
+  const [storySec, setStorySec] = useState<30 | 60>(60);
+  const canStory = storyImages.length >= 2;
   const [busy, setBusy] = useState<string | null>(null);
   const beforeSrc = option.before ?? before;
   const base = option.name.replace(/[^\w-]+/g, "-");
-  const count = Number(pick.after) + Number(pick.grid) + Number(pick.video);
+  const count =
+    Number(pick.after) + Number(pick.grid) + Number(pick.video) + Number(pick.story && canStory);
 
   const buildFiles = async (): Promise<File[]> => {
     const p = { ...prefs, showLogo, showName };
@@ -1153,6 +1163,14 @@ export function WatermarkDialog({
       setBusy("Merekam video (±9 detik)…");
       const { blob, ext } = await renderVideo(beforeSrc, option.image, p, brand);
       files.push(new File([blob], `${base}-before-after.${ext}`, { type: blob.type }));
+    }
+    if (pick.story && canStory) {
+      const { blob, ext } = await renderCinematicStory(storyImages, storySec, p, brand, (pr) =>
+        setBusy(
+          `Merekam video story ${storyImages.length} foto… ${Math.round(pr * 100)}% (±${storySec} detik, jangan tutup layar)`,
+        ),
+      );
+      files.push(new File([blob], `${base}-story-${storySec}s.${ext}`, { type: blob.type }));
     }
     return files;
   };
@@ -1499,6 +1517,34 @@ export function WatermarkDialog({
               {l}
             </label>
           ))}
+          {canStory && (
+            <div className="space-y-2 border-t border-border pt-2">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={pick.story}
+                  onChange={(e) => setPick((s) => ({ ...s, story: e.target.checked }))}
+                  className="size-4 accent-primary"
+                />
+                Video sinematik {storyImages.length} foto (Story / Status WA)
+              </label>
+              {pick.story && (
+                <div className="grid grid-cols-2 gap-2 pl-6">
+                  {([30, 60] as const).map((sec) => (
+                    <Button
+                      key={sec}
+                      type="button"
+                      size="sm"
+                      variant={storySec === sec ? "default" : "outline"}
+                      onClick={() => setStorySec(sec)}
+                    >
+                      {sec} detik
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
         {busy && <p className="text-center text-xs text-muted-foreground">{busy}</p>}
         <div className="grid grid-cols-2 gap-2">
