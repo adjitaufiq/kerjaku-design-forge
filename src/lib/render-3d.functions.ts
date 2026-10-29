@@ -30,7 +30,7 @@ function buildPrompt(input: RenderInput): string {
     "Replace the plain grey/empty background with a real environment as described below, at realistic eye level camera height.",
     "NO EXTRA OBJECTS: do not add people, products, decorations, plants, screens or props unless the scene description below explicitly asks for them.",
     `Scene description from the workshop: ${input.scene}`,
-    "REAL-WORLD SCALE for any added item: a TV must be a real flat-screen with a true 16:9 widescreen ratio and thin bezel, sized like a real 50-65 inch TV relative to the furniture, centered with visible margin around it — never stretched to fill a whole panel and never square. People, products and appliances must also be true real-life scale.",
+    "REAL-WORLD SCALE for any added item: a TV must be a real modern flat-screen with a true 16:9 widescreen ratio and thin bezel, sized like a real 50-65 inch TV relative to the furniture, centered with visible margin around it. TV GEOMETRY IS MANDATORY: the screen is a wide, short horizontal rectangle — its width is 1.78x its height (height ≈ 56% of width). NEVER square, NEVER 4:3, NEVER near-square, NEVER portrait. Do NOT stretch the TV vertically to fill a tall niche or panel; if the niche is taller, keep the TV wide and short and leave the backdrop panel visible above and below it. People, products and appliances must also be true real-life scale.",
     `FRAME: output exactly ${input.ratio ?? "4:5"} aspect ratio, same as IMAGE 1. IMAGE 1 may have flat grey padding bands around the drawing — they are empty canvas, not part of the design: fill them seamlessly with more of the same environment (ceiling, floor, surroundings) using a slightly wide-angle eye-level camera, keeping the whole object fully visible, centered and unchanged.`,
     "Output one single photorealistic photo. No watermark, no collage, no added captions, no grey bars.",
   ]
@@ -108,7 +108,7 @@ export const scan3d = createServerFn({ method: "POST" })
       `Tentukan location paling cocok dari: ${LOC_IDS.join(", ")}.`,
       "summary: 1 kalimat Bahasa Indonesia yang menjelaskan apa yang terlihat (bentuk, warna, material, tulisan/brand jika ada).",
       "ideas: 3-5 ide tambahan singkat (Bahasa Indonesia, maks 20 kata masing-masing) yang realistis dan proporsional untuk membuat render lebih menjual. Jangan ubah bentuk desain.",
-      "Aturan wajib: jika ada area/panel kosong untuk TV, sebutkan ukuran nyata, contoh 'Tambah Smart TV 55 inch rasio 16:9 widescreen bezel tipis, layar menyala, ada margin di sekeliling panel'. Untuk booth makanan: etalase berisi produk realistis, signage menyala, kasir/antrian. Untuk kitchen set: kompor tanam, cooker hood, sink, LED strip. Untuk lemari: LED strip dalam, pakaian tergantung rapi.",
+      "Aturan wajib: jika ada area/panel kosong untuk TV, sebutkan ukuran nyata, contoh 'Tambah Smart TV 55 inch widescreen 16:9 (lebar hampir 2x tinggi, pipih memanjang, tidak kotak), bezel tipis, layar menyala, sisakan panel kosong di atas & bawah TV'. Untuk booth makanan: etalase berisi produk realistis, signage menyala, kasir/antrian. Untuk kitchen set: kompor tanam, cooker hood, sink, LED strip. Untuk lemari: LED strip dalam, pakaian tergantung rapi.",
       'Jawab HANYA JSON: {"object":"...","location":"...","summary":"...","ideas":["..."]}',
     ].join("\n");
     const res = await fetch(CHAT_GATEWAY, {
