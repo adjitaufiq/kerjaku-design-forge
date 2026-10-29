@@ -10,14 +10,25 @@ export const FOOTAGE_MODES = [
   { id: "tiltdown", label: "Tilt turun", emoji: "⬇️" },
   { id: "orbit", label: "Orbit", emoji: "🌀" },
   { id: "drone", label: "Drone turun", emoji: "🚁" },
+  { id: "uturn", label: "Letter U", emoji: "🧲" },
+  { id: "custom", label: "Custom mix", emoji: "🎛️" },
 ] as const;
 export type FootageMode = (typeof FOOTAGE_MODES)[number]["id"];
+
+export type FootageMix = {
+  pan: "none" | "lr" | "rl";
+  tilt: "none" | "up" | "down";
+  zoom: "none" | "in" | "out";
+  walk: boolean;
+  roll: boolean;
+};
+export const DEFAULT_MIX: FootageMix = { pan: "lr", tilt: "none", zoom: "in", walk: true, roll: false };
 
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 /** Camera at progress t (0..1): scale >= 1, offsets in [-1,1] of available slack, rotation rad. */
-function camera(mode: FootageMode, t: number) {
+function camera(mode: FootageMode, t: number, mix: FootageMix = DEFAULT_MIX) {
   const e = ease(t);
   switch (mode) {
     case "push":
@@ -43,6 +54,25 @@ function camera(mode: FootageMode, t: number) {
         y: lerp(-1, 0.2, e),
         r: lerp(0.02, 0, e),
       };
+    case "uturn": {
+      // curve: left far -> close center -> right far
+      const k = Math.sin(Math.PI * e);
+      return { s: 1.18 + 0.2 * k, x: lerp(-1, 1, e) * (1 - 0.25 * k), y: -0.15 * k, r: lerp(0.025, -0.025, e) };
+    }
+    case "custom": {
+      const zs = mix.zoom === "in" ? lerp(1.12, 1.38, e) : mix.zoom === "out" ? lerp(1.38, 1.12, e) : 1.24;
+      let x = mix.pan === "lr" ? lerp(-0.85, 0.85, e) : mix.pan === "rl" ? lerp(0.85, -0.85, e) : 0;
+      let y = mix.tilt === "up" ? lerp(0.85, -0.85, e) : mix.tilt === "down" ? lerp(-0.85, 0.85, e) : 0;
+      let r = mix.roll ? Math.sin(e * Math.PI * 2) * 0.012 : 0;
+      if (mix.walk) {
+        // ~1.6 steps per second feel, normalized to progress
+        const steps = 10;
+        y += Math.abs(Math.sin(t * Math.PI * steps)) * -0.12 + 0.06;
+        x += Math.sin(t * Math.PI * steps * 0.5) * 0.06;
+        r += Math.sin(t * Math.PI * steps * 0.5) * 0.006;
+      }
+      return { s: zs, x, y, r };
+    }
   }
 }
 
@@ -51,10 +81,11 @@ export function drawTake(
   img: HTMLImageElement,
   mode: FootageMode,
   t: number,
+  mix?: FootageMix,
 ) {
   const W = ctx.canvas.width;
   const H = ctx.canvas.height;
-  const { s, x, y, r } = camera(mode, Math.min(1, Math.max(0, t)));
+  const { s, x, y, r } = camera(mode, Math.min(1, Math.max(0, t)), mix);
   // cover-fit, extra 6% so rotation never shows edges
   const base = Math.max(W / img.width, H / img.height) * s * (r ? 1.06 : 1);
   const dw = img.width * base;
@@ -83,6 +114,7 @@ export async function recordTake(
   src: string,
   mode: FootageMode,
   seconds: number,
+  mix?: FootageMix,
 ): Promise<{ blob: Blob; ext: string }> {
   const mime = pickVideoMime();
   if (!mime) throw new Error("Browser tidak mendukung rekam video");
@@ -94,7 +126,7 @@ export async function recordTake(
   c.height = Math.round((img.height * k) / 2) * 2;
   const ctx = c.getContext("2d")!;
   ctx.imageSmoothingQuality = "high";
-  drawTake(ctx, img, mode, 0);
+  drawTake(ctx, img, mode, 0, mix);
   const stream = c.captureStream(30);
   const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8_000_000 });
   const chunks: Blob[] = [];
@@ -105,7 +137,7 @@ export async function recordTake(
   await new Promise<void>((done) => {
     const tick = () => {
       const t = (performance.now() - t0) / (seconds * 1000);
-      drawTake(ctx, img, mode, t);
+      drawTake(ctx, img, mode, t, mix);
       if (t >= 1) return done();
       requestAnimationFrame(tick);
     };
