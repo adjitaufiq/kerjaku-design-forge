@@ -60,7 +60,7 @@ export function FootagePanel({ image, name }: { image: string; name: string }) {
           max={15}
           step={1}
           value={[seconds]}
-          onValueChange={(v) => setSeconds(v[0])}
+          onValueChange={(v) => setSeconds(v[0] ?? 8)}
         />
         <div className="flex justify-between text-[10px] text-muted-foreground">
           <span>Cepat</span>
