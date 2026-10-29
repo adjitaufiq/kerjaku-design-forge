@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Download, ImagePlus, Lock, LockOpen, Share2, Trash2, Wand2 } from "lucide-react";
+import { ImagePlus, Lock, LockOpen, Share2, Trash2, Wand2 } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -8,6 +10,10 @@ import { PageHeader } from "@/components/kerjaku/page-header";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { TextField } from "@/components/kerjaku/form-fields";
+import { useWorkspace } from "@/hooks/useWorkspace";
+import { data } from "@/services/data";
+import { WatermarkDialog } from "./quick-visual";
 import { useServerFn } from "@tanstack/react-start";
 import { render3d } from "@/lib/render-3d.functions";
 import { cn } from "@/lib/utils";
@@ -218,6 +224,17 @@ async function dataUrlToFile(src: string, name: string) {
 
 function Render3dPage() {
   const run = useServerFn(render3d);
+  const { workspaceId } = useWorkspace();
+  const workshopQuery = useQuery({
+    queryKey: ["workshop", workspaceId],
+    queryFn: () => data.workspaces.getWorkshop(workspaceId!),
+    enabled: !!workspaceId,
+  });
+  const brand = {
+    name: workshopQuery.data?.name?.trim() || null,
+    logo: workshopQuery.data?.logo?.trim() || null,
+  };
+  const [wmOpen, setWmOpen] = useState(false);
   const [shots, setShots] = useState<Shot[]>([]);
   const [object, setObject] = useState<string | null>(null);
   const [loc, setLoc] = useState<string | null>(null);
@@ -302,20 +319,6 @@ function Render3dPage() {
 
   const current = shots[active];
   const done = shots.filter((s) => s.result);
-
-  const share = async () => {
-    const files = await Promise.all(done.map((s, i) => dataUrlToFile(s.result!, `render-${i + 1}.png`)));
-    if (navigator.canShare?.({ files })) {
-      await navigator.share({ files, title: "3D Render" }).catch(() => undefined);
-    } else {
-      files.forEach((f) => {
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(f);
-        a.download = f.name;
-        a.click();
-      });
-    }
-  };
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 pb-24">
@@ -442,17 +445,111 @@ function Render3dPage() {
             <Button variant="outline" disabled={running} onClick={() => rerender(active)}>
               <Wand2 className="size-4" /> Render ulang
             </Button>
-            <Button onClick={share}>
-              {typeof navigator !== "undefined" && "share" in navigator ? (
-                <Share2 className="size-4" />
-              ) : (
-                <Download className="size-4" />
-              )}
-              Share ({done.length})
+            <Button disabled={!current.result} onClick={() => setWmOpen(true)}>
+              <Share2 className="size-4" /> Download / Share
             </Button>
           </div>
         </GlassCard>
       )}
+
+      {done.length > 0 && (
+        <ClientForm workspaceId={workspaceId} shots={done} objectLabel={OBJECTS.find((o) => o.id === object)?.label ?? "3D Render"} />
+      )}
+
+      {current?.result && (
+        <WatermarkDialog
+          open={wmOpen}
+          onOpenChange={setWmOpen}
+          option={{
+            id: current.id,
+            name: `render-3d-foto-${active + 1}`,
+            image: current.result,
+            before: current.before ?? current.sketch,
+            spec: "",
+            createdAt: 0,
+          }}
+          before={current.before ?? current.sketch}
+          brand={brand}
+          workshopId={workshopQuery.data?.id ?? null}
+          onBrandSaved={() => void workshopQuery.refetch()}
+          videoKind="cinematic"
+        />
+      )}
     </div>
+  );
+}
+
+function ClientForm({
+  workspaceId,
+  shots,
+  objectLabel,
+}: {
+  workspaceId: string | null;
+  shots: Shot[];
+  objectLabel: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [f, setF] = useState({ name: "", location: "", phone: "", size: "" });
+  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setF({ ...f, [k]: e.target.value });
+  const save = useMutation({
+    mutationFn: async () => {
+      if (!workspaceId) throw new Error("Workspace belum siap, coba lagi");
+      if (!f.name.trim() || !f.location.trim()) throw new Error("Nama & lokasi wajib diisi");
+      const lead = await data.leads.create(workspaceId, {
+        clientName: f.name.trim(),
+        location: f.location.trim(),
+        phone: f.phone.trim() || null,
+        source: "3D Render AI",
+        status: "CONSULTATION",
+      });
+      const project = await data.projects.create(workspaceId, {
+        leadId: lead.id,
+        projectName: `${objectLabel} — ${f.name.trim()}`,
+        projectType: objectLabel === "Kitchen set" ? "KITCHEN_SET" : objectLabel === "Lemari" ? "WARDROBE" : "OTHER",
+      });
+      for (const [i, s] of shots.entries())
+        await data.assets.upload(workspaceId, project.id, "SKETCHUP_RENDER", await dataUrlToFile(s.result!, `render-${i + 1}.png`));
+      await data.activities.log(workspaceId, {
+        leadId: lead.id,
+        type: "AI_CONCEPT",
+        title: `3D Render AI — ${shots.length} render`,
+        body: f.size.trim() ? `Ukuran: ${f.size.trim()}` : null,
+      });
+      return lead.id;
+    },
+    onSuccess: () => toast.success("Data klien & render tersimpan"),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  if (!open)
+    return (
+      <Button variant="outline" className="w-full" onClick={() => setOpen(true)}>
+        💾 {save.data ? "Data klien tersimpan" : "Simpan data klien"}
+      </Button>
+    );
+  return (
+    <SectionCard title="💾 Simpan data klien" description="Nama & lokasi wajib, sisanya opsional.">
+      <div className="space-y-3">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <TextField label="Nama klien *" name="name" value={f.name} onChange={set("name")} />
+          <TextField label="Lokasi proyek *" name="location" value={f.location} onChange={set("location")} />
+        </div>
+        <TextField label="No. WhatsApp (opsional)" name="phone" inputMode="tel" value={f.phone} onChange={set("phone")} />
+        <TextField label="Catatan ukuran (opsional)" name="size" placeholder="300 × 225 × 120 cm" value={f.size} onChange={set("size")} />
+        <Button
+          className="w-full"
+          disabled={!f.name.trim() || !f.location.trim() || save.isPending || !!save.data}
+          onClick={() => save.mutate()}
+        >
+          {save.isPending ? "Menyimpan…" : `Simpan klien + ${shots.length} render`}
+        </Button>
+        {save.data && (
+          <Button asChild variant="outline" className="w-full">
+            <Link to="/leads/$leadId" params={{ leadId: save.data }}>Buka data klien</Link>
+          </Button>
+        )}
+      </div>
+    </SectionCard>
   );
 }
