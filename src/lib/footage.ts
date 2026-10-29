@@ -4,8 +4,10 @@ import { pickVideoMime } from "@/lib/quick-visual-export";
 export const FOOTAGE_MODES = [
   { id: "push", label: "Push-in", emoji: "🔍" },
   { id: "pull", label: "Pull-out", emoji: "🔭" },
-  { id: "slide", label: "Slider kiri→kanan", emoji: "↔️" },
+  { id: "slide", label: "Slider kiri→kanan", emoji: "➡️" },
+  { id: "slideback", label: "Slider kanan→kiri", emoji: "⬅️" },
   { id: "tilt", label: "Tilt naik", emoji: "⬆️" },
+  { id: "tiltdown", label: "Tilt turun", emoji: "⬇️" },
   { id: "orbit", label: "Orbit", emoji: "🌀" },
   { id: "drone", label: "Drone turun", emoji: "🚁" },
 ] as const;
@@ -24,8 +26,12 @@ function camera(mode: FootageMode, t: number) {
       return { s: lerp(1.35, 1.0, e), x: 0, y: lerp(-0.2, 0, e), r: 0 };
     case "slide":
       return { s: 1.22, x: lerp(-1, 1, e), y: 0, r: 0 };
+    case "slideback":
+      return { s: 1.22, x: lerp(1, -1, e), y: 0, r: 0 };
     case "tilt":
       return { s: 1.22, x: 0, y: lerp(1, -1, e), r: 0 };
+    case "tiltdown":
+      return { s: 1.22, x: 0, y: lerp(-1, 1, e), r: 0 };
     case "orbit": {
       const a = lerp(-Math.PI / 2, Math.PI / 2, e);
       return { s: 1.28, x: Math.sin(a) * 0.9, y: Math.cos(a) * 0.25, r: lerp(-0.035, 0.035, e) };
