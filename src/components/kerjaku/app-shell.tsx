@@ -1,6 +1,7 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  Box,
   Building2,
   ClipboardList,
   FileText,
@@ -22,6 +23,7 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
   { to: "/quick-visual", label: "Quick Visual", icon: Sparkles },
+  { to: "/render-3d", label: "3D Render AI", icon: Box },
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/leads", label: "Leads", icon: Users },
   { to: "/consultation", label: "Consultation", icon: ClipboardList },

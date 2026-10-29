@@ -17,6 +17,7 @@ import { Route as AuthenticatedConsultationRouteImport } from './routes/_authent
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedProjectsRouteImport } from './routes/_authenticated/projects'
 import { Route as AuthenticatedQuickVisualRouteImport } from './routes/_authenticated/quick-visual'
+import { Route as AuthenticatedRender3dRouteImport } from './routes/_authenticated/render-3d'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as ProposalTokenRouteImport } from './routes/proposal.$token'
 import { Route as AuthenticatedConceptsConceptIdRouteImport } from './routes/_authenticated/concepts.$conceptId'
@@ -66,6 +67,11 @@ const AuthenticatedQuickVisualRoute =
     path: '/quick-visual',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedRender3dRoute = AuthenticatedRender3dRouteImport.update({
+  id: '/render-3d',
+  path: '/render-3d',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -114,6 +120,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/projects': typeof AuthenticatedProjectsRoute
   '/quick-visual': typeof AuthenticatedQuickVisualRoute
+  '/render-3d': typeof AuthenticatedRender3dRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/proposal/$token': typeof ProposalTokenRoute
   '/concepts/$conceptId': typeof AuthenticatedConceptsConceptIdRoute
@@ -130,6 +137,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/projects': typeof AuthenticatedProjectsRoute
   '/quick-visual': typeof AuthenticatedQuickVisualRoute
+  '/render-3d': typeof AuthenticatedRender3dRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/proposal/$token': typeof ProposalTokenRoute
   '/concepts/$conceptId': typeof AuthenticatedConceptsConceptIdRoute
@@ -148,6 +156,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/projects': typeof AuthenticatedProjectsRoute
   '/_authenticated/quick-visual': typeof AuthenticatedQuickVisualRoute
+  '/_authenticated/render-3d': typeof AuthenticatedRender3dRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/proposal/$token': typeof ProposalTokenRoute
   '/_authenticated/concepts/$conceptId': typeof AuthenticatedConceptsConceptIdRoute
@@ -166,6 +175,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/projects'
     | '/quick-visual'
+    | '/render-3d'
     | '/settings'
     | '/proposal/$token'
     | '/concepts/$conceptId'
@@ -182,6 +192,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/projects'
     | '/quick-visual'
+    | '/render-3d'
     | '/settings'
     | '/proposal/$token'
     | '/concepts/$conceptId'
@@ -199,6 +210,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/projects'
     | '/_authenticated/quick-visual'
+    | '/_authenticated/render-3d'
     | '/_authenticated/settings'
     | '/proposal/$token'
     | '/_authenticated/concepts/$conceptId'
@@ -273,6 +285,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedQuickVisualRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/render-3d': {
+      id: '/_authenticated/render-3d'
+      path: '/render-3d'
+      fullPath: '/render-3d'
+      preLoaderRoute: typeof AuthenticatedRender3dRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/settings': {
       id: '/_authenticated/settings'
       path: '/settings'
@@ -331,6 +350,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedProjectsRoute: typeof AuthenticatedProjectsRoute
   AuthenticatedQuickVisualRoute: typeof AuthenticatedQuickVisualRoute
+  AuthenticatedRender3dRoute: typeof AuthenticatedRender3dRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedConceptsConceptIdRoute: typeof AuthenticatedConceptsConceptIdRoute
   AuthenticatedLeadsLeadIdRoute: typeof AuthenticatedLeadsLeadIdRoute
@@ -345,6 +365,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedProjectsRoute: AuthenticatedProjectsRoute,
   AuthenticatedQuickVisualRoute: AuthenticatedQuickVisualRoute,
+  AuthenticatedRender3dRoute: AuthenticatedRender3dRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedConceptsConceptIdRoute: AuthenticatedConceptsConceptIdRoute,
   AuthenticatedLeadsLeadIdRoute: AuthenticatedLeadsLeadIdRoute,
