@@ -55,7 +55,13 @@ export function FootagePanel({ image, name }: { image: string; name: string }) {
           <span>Speed per take</span>
           <span className="font-semibold text-foreground">{seconds} detik</span>
         </div>
-        <Slider min={3} max={15} step={1} value={[seconds]} onValueChange={(v) => setSeconds(v[0])} />
+        <Slider
+          min={3}
+          max={15}
+          step={1}
+          value={[seconds]}
+          onValueChange={(v) => setSeconds(v[0])}
+        />
         <div className="flex justify-between text-[10px] text-muted-foreground">
           <span>Cepat</span>
           <span>Lambat</span>

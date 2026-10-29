@@ -31,7 +31,12 @@ function camera(mode: FootageMode, t: number) {
       return { s: 1.28, x: Math.sin(a) * 0.9, y: Math.cos(a) * 0.25, r: lerp(-0.035, 0.035, e) };
     }
     case "drone":
-      return { s: lerp(1.5, 1.08, e), x: lerp(0.15, 0, e), y: lerp(-1, 0.2, e), r: lerp(0.02, 0, e) };
+      return {
+        s: lerp(1.5, 1.08, e),
+        x: lerp(0.15, 0, e),
+        y: lerp(-1, 0.2, e),
+        r: lerp(0.02, 0, e),
+      };
   }
 }
 
