@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Download } from "lucide-react";
+import { Download, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -15,6 +15,7 @@ import {
 /** 6 camera takes per photo with live preview, speed setting and per-take download. */
 export function FootagePanel({ image, name }: { image: string; name: string }) {
   const [seconds, setSeconds] = useState(8);
+  const [open, setOpen] = useState<FootageMode | null>(null);
   const [busy, setBusy] = useState<FootageMode | null>(null);
   const [img, setImg] = useState<HTMLImageElement | null>(null);
 
@@ -70,7 +71,14 @@ export function FootagePanel({ image, name }: { image: string; name: string }) {
       <div className="grid grid-cols-2 gap-2">
         {FOOTAGE_MODES.map((m) => (
           <div key={m.id} className="space-y-1.5">
-            <TakePreview img={img} mode={m.id} seconds={seconds} />
+            <button
+              type="button"
+              className="block w-full"
+              onClick={() => setOpen(m.id)}
+              aria-label={`Preview ${m.label}`}
+            >
+              <TakePreview img={img} mode={m.id} seconds={seconds} />
+            </button>
             <p className="text-xs font-medium">
               {m.emoji} {m.label}
             </p>
@@ -87,6 +95,52 @@ export function FootagePanel({ image, name }: { image: string; name: string }) {
           </div>
         ))}
       </div>
+      {open && (
+        <div
+          className="fixed inset-0 z-[100] flex flex-col bg-background/95 p-3 backdrop-blur"
+          onClick={() => setOpen(null)}
+        >
+          <div className="flex items-center justify-between pb-2">
+            <p className="text-sm font-semibold">
+              {FOOTAGE_MODES.find((m) => m.id === open)?.emoji}{" "}
+              {FOOTAGE_MODES.find((m) => m.id === open)?.label} · {seconds}s
+            </p>
+            <Button size="icon" variant="ghost" onClick={() => setOpen(null)} aria-label="Tutup">
+              <X className="size-5" />
+            </Button>
+          </div>
+          <div className="flex min-h-0 flex-1 items-center justify-center">
+            <div className="max-h-full w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+              <TakePreview img={img} mode={open} seconds={seconds} big />
+            </div>
+          </div>
+          <div className="space-y-2 pt-3" onClick={(e) => e.stopPropagation()}>
+            <div className="flex gap-1.5 overflow-x-auto pb-1">
+              {FOOTAGE_MODES.map((m) => (
+                <Button
+                  key={m.id}
+                  size="sm"
+                  variant={m.id === open ? "default" : "outline"}
+                  onClick={() => setOpen(m.id)}
+                >
+                  {m.emoji} {m.label}
+                </Button>
+              ))}
+            </div>
+            <Slider
+              min={3}
+              max={15}
+              step={1}
+              value={[seconds]}
+              onValueChange={(v) => setSeconds(v[0] ?? 8)}
+            />
+            <Button className="w-full" disabled={!!busy} onClick={() => void download(open)}>
+              <Download className="size-4" />
+              {busy === open ? `Merekam ${seconds}s…` : `Download ${seconds}s`}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
