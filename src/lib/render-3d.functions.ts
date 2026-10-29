@@ -78,3 +78,76 @@ export const render3d = createServerFn({ method: "POST" })
     if (!image) throw new Error("AI tidak menghasilkan gambar. Coba gambar lain.");
     return { image };
   });
+
+const CHAT_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const SCAN_MODEL = "google/gemini-3.7-flash";
+
+export interface ScanResult {
+  object: "booth" | "kitchen" | "wardrobe" | "backdrop" | "counter" | "furniture";
+  summary: string;
+  location: "mall" | "ruko" | "cafe" | "indoor" | "outdoor" | "rumah" | "kantor" | "sekolah";
+  ideas: string[];
+}
+
+const OBJ_IDS = ["booth", "kitchen", "wardrobe", "backdrop", "counter", "furniture"];
+const LOC_IDS = ["mall", "ruko", "cafe", "indoor", "outdoor", "rumah", "kantor", "sekolah"];
+
+export const scan3d = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { sketch: string }) => {
+    if (!input?.sketch?.startsWith("data:image")) throw new Error("Upload gambar 3D dulu");
+    return input;
+  })
+  .handler(async ({ data: input }): Promise<ScanResult> => {
+    const apiKey = process.env["LOVABLE_API_KEY"];
+    if (!apiKey) throw new Error("AI belum dikonfigurasi.");
+    const instruction = [
+      "Kamu asisten render interior. Lihat screenshot model 3D (SketchUp) ini.",
+      `Tentukan object salah satu dari: ${OBJ_IDS.join(", ")} (backdrop = backdrop/panel TV, booth = booth/kiosk jualan, counter = meja resepsionis/kasir).`,
+      `Tentukan location paling cocok dari: ${LOC_IDS.join(", ")}.`,
+      "summary: 1 kalimat Bahasa Indonesia yang menjelaskan apa yang terlihat (bentuk, warna, material, tulisan/brand jika ada).",
+      "ideas: 3-5 ide tambahan singkat (Bahasa Indonesia, maks 20 kata masing-masing) yang realistis dan proporsional untuk membuat render lebih menjual. Jangan ubah bentuk desain.",
+      "Aturan wajib: jika ada area/panel kosong untuk TV, sebutkan ukuran nyata, contoh 'Tambah Smart TV 55 inch rasio 16:9 widescreen bezel tipis, layar menyala, ada margin di sekeliling panel'. Untuk booth makanan: etalase berisi produk realistis, signage menyala, kasir/antrian. Untuk kitchen set: kompor tanam, cooker hood, sink, LED strip. Untuk lemari: LED strip dalam, pakaian tergantung rapi.",
+      'Jawab HANYA JSON: {"object":"...","location":"...","summary":"...","ideas":["..."]}',
+    ].join("\n");
+    const res = await fetch(CHAT_GATEWAY, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: SCAN_MODEL,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: instruction },
+              { type: "image_url", image_url: { url: input.sketch } },
+            ],
+          },
+        ],
+      }),
+    });
+    if (!res.ok) {
+      if (res.status === 429) throw new Error("AI sedang sibuk, coba lagi sebentar.");
+      if (res.status === 402) throw new Error("Kredit AI habis. Tambah kredit untuk lanjut.");
+      if (res.status === 403) throw new Error("Akses AI diblokir untuk workspace ini.");
+      throw new Error(`Scan gagal (${res.status})`);
+    }
+    const payload = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+    const raw = (payload.choices?.[0]?.message?.content ?? "")
+      .trim()
+      .replace(/^```(?:json)?/i, "")
+      .replace(/```$/, "");
+    let parsed: Partial<ScanResult> = {};
+    try {
+      parsed = JSON.parse(raw) as Partial<ScanResult>;
+    } catch {
+      throw new Error("Hasil scan tidak terbaca, coba Scan ulang.");
+    }
+    return {
+      object: (OBJ_IDS.includes(parsed.object ?? "") ? parsed.object : "furniture") as ScanResult["object"],
+      location: (LOC_IDS.includes(parsed.location ?? "") ? parsed.location : "indoor") as ScanResult["location"],
+      summary: String(parsed.summary ?? ""),
+      ideas: Array.isArray(parsed.ideas) ? parsed.ideas.map(String).slice(0, 5) : [],
+    };
+  });
