@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ImagePlus, Lock, LockOpen, Plus, ScanSearch, Share2, Trash2, Wand2 } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { kvGet, kvPut } from "@/lib/quick-visual-store";
 import { toast } from "sonner";
 
 import { GlassCard, SectionCard } from "@/components/kerjaku/glass-card";
@@ -78,6 +79,29 @@ interface Shot {
   before?: string;
   busy?: boolean;
 }
+
+interface RenderVersion {
+  id: string;
+  name: string;
+  shots: Shot[];
+  prompt: string;
+  object: string | null;
+  loc: string | null;
+  ratio: RatioId;
+  keepDims: boolean;
+}
+
+interface RenderFolder {
+  id: string;
+  title: string;
+  clientName: string;
+  location: string;
+  leadId: string | null;
+  savedAt: number;
+  versions: RenderVersion[];
+}
+
+const FOLDERS_KEY = "render3d-folders";
 
 const RATIOS = [
   { id: "4:5", label: "4:5 Feed IG", w: 4, h: 5 },
@@ -276,17 +300,113 @@ function Render3dPage() {
   const [ratio, setRatio] = useState<RatioId>("4:5");
   const [active, setActive] = useState(0);
   const [running, setRunning] = useState(false);
+  const [folders, setFolders] = useState<RenderFolder[]>([]);
+  const [folderId, setFolderId] = useState<string | null>(null);
+  const [versionId, setVersionId] = useState<string | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const folder = folders.find((f) => f.id === folderId) ?? null;
+  const objectLabel = OBJECTS.find((o) => o.id === object)?.label ?? "3D Render";
+  const hasResult = shots.some((s) => s.result);
+  const unsaved = hasResult && !folder;
+
+  useEffect(() => {
+    void kvGet<RenderFolder[]>(FOLDERS_KEY).then((f) => f && setFolders(f));
+  }, []);
+
+  // Auto-save the open version into its client folder.
+  useEffect(() => {
+    if (!folderId || !versionId || shots.some((s) => s.busy)) return;
+    setFolders((list) => {
+      const next = list.map((f) => {
+        if (f.id !== folderId) return f;
+        const old = f.versions.find((v) => v.id === versionId);
+        const v: RenderVersion = {
+          id: versionId,
+          name: old?.name ?? `${objectLabel} ${f.versions.length + 1}`,
+          shots: shots.map(({ busy: _b, ...x }) => x),
+          prompt,
+          object,
+          loc,
+          ratio,
+          keepDims,
+        };
+        const versions = old
+          ? f.versions.map((x) => (x.id === versionId ? v : x))
+          : [...f.versions, v];
+        return { ...f, versions, savedAt: Date.now() };
+      });
+      void kvPut(FOLDERS_KEY, next);
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shots, prompt, object, loc, ratio, keepDims, folderId, versionId]);
+
+  const requireSave = () => {
+    toast.error("Simpan profil klien dulu sebelum ganti foto / project");
+    setFormOpen(true);
+  };
+
+  const openVersion = (f: RenderFolder, v: RenderVersion) => {
+    if (unsaved) return requireSave();
+    setFolderId(f.id);
+    setVersionId(v.id);
+    setShots(v.shots);
+    setPrompt(v.prompt);
+    setObject(v.object);
+    setLoc(v.loc);
+    setRatio(v.ratio);
+    setKeepDims(v.keepDims);
+    setScan(null);
+    setActive(0);
+  };
+
+  const newProject = () => {
+    if (unsaved) return requireSave();
+    setFolderId(null);
+    setVersionId(null);
+    setShots([]);
+    setPrompt("");
+    setObject(null);
+    setLoc(null);
+    setScan(null);
+    setActive(0);
+  };
+
+  const onProfileSaved = (p: { name: string; location: string; leadId: string }) => {
+    const vid = crypto.randomUUID();
+    const f: RenderFolder = {
+      id: crypto.randomUUID(),
+      title: `${objectLabel} ${p.name}`,
+      clientName: p.name,
+      location: p.location,
+      leadId: p.leadId,
+      savedAt: Date.now(),
+      versions: [],
+    };
+    setFolders((l) => [f, ...l].slice(0, 30));
+    setFolderId(f.id);
+    setVersionId(vid);
+    setFormOpen(false);
+    toast.success(`Tersimpan: ${f.title} · ${objectLabel} 1`);
+  };
 
   const addFiles = async (files: FileList | null) => {
     if (!files) return;
-    const room = 5 - shots.length;
+    if (unsaved) return requireSave();
+    // Changing photos after a render starts a new version (e.g. Backdrop TV 2).
+    const base = hasResult ? [] : shots;
+    if (hasResult) {
+      setVersionId(folder ? crypto.randomUUID() : null);
+      setActive(0);
+    }
+    const room = 5 - base.length;
     const list = Array.from(files).slice(0, room);
     if (files.length > room) toast.warning("Maksimal 5 gambar");
     const added = await Promise.all(
       list.map(async (f) => ({ id: crypto.randomUUID(), sketch: await fileToDataUrl(f) })),
     );
-    const wasEmpty = shots.length === 0;
-    setShots((s) => [...s, ...added]);
+    const wasEmpty = base.length === 0;
+    setShots([...base, ...added]);
     if (wasEmpty && added[0]) void doScan(added[0].sketch);
   };
 
@@ -402,6 +522,42 @@ function Render3dPage() {
         subtitle="Gambar SketchUp → foto render realistis. Bentuk & warna dikunci."
       />
 
+      <SectionCard title="Folder klien">
+        <div className="space-y-2">
+          {folders.length === 0 && (
+            <p className="text-xs text-muted-foreground">
+              Belum ada folder. Simpan profil klien setelah render untuk membuat folder.
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {folders.map((f) => (
+              <Pill
+                key={f.id}
+                active={folderId === f.id}
+                onClick={() => {
+                  const v = f.versions[f.versions.length - 1];
+                  if (v) openVersion(f, v);
+                }}
+              >
+                📁 {f.title} · {f.location}
+              </Pill>
+            ))}
+          </div>
+          {folder && folder.versions.length > 0 && (
+            <div className="flex flex-wrap gap-2 border-t border-border pt-2">
+              {folder.versions.map((v) => (
+                <Pill key={v.id} active={versionId === v.id} onClick={() => openVersion(folder, v)}>
+                  {v.name}
+                </Pill>
+              ))}
+            </div>
+          )}
+          <Button size="sm" variant="outline" onClick={newProject}>
+            <Plus className="size-4" /> Project baru
+          </Button>
+        </div>
+      </SectionCard>
+
       <SectionCard title="1. Upload gambar 3D (1–5)">
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
           {shots.map((s, i) => (
@@ -421,7 +577,9 @@ function Render3dPage() {
                 type="button"
                 aria-label="Hapus"
                 disabled={running}
-                onClick={() => setShots((x) => x.filter((y) => y.id !== s.id))}
+                onClick={() =>
+                  unsaved ? requireSave() : setShots((x) => x.filter((y) => y.id !== s.id))
+                }
                 className="absolute top-1 right-1 grid size-6 place-items-center rounded-full bg-background/80"
               >
                 <Trash2 className="size-3" />
@@ -590,12 +748,22 @@ function Render3dPage() {
         </GlassCard>
       )}
 
-      {done.length > 0 && (
+      {done.length > 0 && !folder && (
         <ClientForm
           workspaceId={workspaceId}
           shots={done}
-          objectLabel={OBJECTS.find((o) => o.id === object)?.label ?? "3D Render"}
+          objectLabel={objectLabel}
+          open={formOpen}
+          setOpen={setFormOpen}
+          onSaved={onProfileSaved}
         />
+      )}
+      {done.length > 0 && folder && (
+        <p className="text-center text-xs text-muted-foreground">
+          ✅ Auto-save ke folder {folder.title} ·{" "}
+          {folder.versions.find((v) => v.id === versionId)?.name ??
+            `${objectLabel} ${folder.versions.length + 1}`}
+        </p>
       )}
 
       {current?.result && (
@@ -625,12 +793,17 @@ function ClientForm({
   workspaceId,
   shots,
   objectLabel,
+  open,
+  setOpen,
+  onSaved,
 }: {
   workspaceId: string | null;
   shots: Shot[];
   objectLabel: string;
+  open: boolean;
+  setOpen: (v: boolean) => void;
+  onSaved: (p: { name: string; location: string; leadId: string }) => void;
 }) {
-  const [open, setOpen] = useState(false);
   const [f, setF] = useState({ name: "", location: "", phone: "", size: "" });
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setF({ ...f, [k]: e.target.value });
@@ -670,7 +843,7 @@ function ClientForm({
       });
       return lead.id;
     },
-    onSuccess: () => toast.success("Data klien & render tersimpan"),
+    onSuccess: (leadId) => onSaved({ name: f.name.trim(), location: f.location.trim(), leadId }),
     onError: (e: Error) => toast.error(e.message),
   });
 

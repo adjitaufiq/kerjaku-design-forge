@@ -278,3 +278,31 @@ export async function processLogo(file: File, removeBg: boolean, max = 512): Pro
   }
   return c.toDataURL("image/png");
 }
+
+/** Generic key/value helpers on the same IndexedDB store. */
+export async function kvGet<T>(key: string): Promise<T | null> {
+  try {
+    const db = await open();
+    return await new Promise((resolve) => {
+      const req = db.transaction(STORE).objectStore(STORE).get(key);
+      req.onsuccess = () => resolve((req.result as T) ?? null);
+      req.onerror = () => resolve(null);
+    });
+  } catch {
+    return null;
+  }
+}
+
+export async function kvPut(key: string, value: unknown): Promise<void> {
+  try {
+    const db = await open();
+    await new Promise<void>((resolve) => {
+      const tx = db.transaction(STORE, "readwrite");
+      tx.objectStore(STORE).put(value, key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    });
+  } catch {
+    /* ignore */
+  }
+}
