@@ -99,6 +99,27 @@ async function frameToRatio(src: string, ratio: RatioId): Promise<string> {
   return c.toDataURL("image/jpeg", 0.9);
 }
 
+/** Center-crop the sketch to the chosen ratio (no grey bars) for the Before view. */
+async function cropToRatio(src: string, ratio: RatioId): Promise<string> {
+  const r = RATIOS.find((x) => x.id === ratio)!;
+  const img = await new Promise<HTMLImageElement>((res, rej) => {
+    const i = new Image();
+    i.onload = () => res(i);
+    i.onerror = rej;
+    i.src = src;
+  });
+  const target = r.w / r.h;
+  let sw = img.width;
+  let sh = img.height;
+  if (sw / sh > target) sw = Math.round(sh * target);
+  else sh = Math.round(sw / target);
+  const c = document.createElement("canvas");
+  c.width = sw;
+  c.height = sh;
+  c.getContext("2d")!.drawImage(img, (img.width - sw) / 2, (img.height - sh) / 2, sw, sh, 0, 0, sw, sh);
+  return c.toDataURL("image/jpeg", 0.9);
+}
+
 async function fileToDataUrl(file: File, max = 1536): Promise<string> {
   const url = URL.createObjectURL(file);
   try {
@@ -243,7 +264,8 @@ function Render3dPage() {
       const { image } = await run({
         data: { sketch: framed, anchor, scene: prompt, keepDimensions: keepDims, ratio },
       });
-      setShots((s) => s.map((x, i) => (i === idx ? { ...x, result: image, before: framed, busy: false } : x)));
+      const before = await cropToRatio(shots[idx]!.sketch, ratio);
+      setShots((s) => s.map((x, i) => (i === idx ? { ...x, result: image, before, busy: false } : x)));
       return image;
     } catch (e) {
       setShots((s) => s.map((x, i) => (i === idx ? { ...x, busy: false } : x)));
