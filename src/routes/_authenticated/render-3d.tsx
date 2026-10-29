@@ -17,6 +17,7 @@ import { data } from "@/services/data";
 import { WatermarkDialog } from "./quick-visual";
 import { useServerFn } from "@tanstack/react-start";
 import { render3d, scan3d, type ScanResult } from "@/lib/render-3d.functions";
+import { pollVeoVideo, startVeoVideo, type VeoAngle } from "@/lib/veo-video.functions";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/render-3d")({
@@ -745,6 +746,7 @@ function Render3dPage() {
               <Share2 className="size-4" /> Download / Share
             </Button>
           </div>
+          {current.result && <VeoPanel key={current.id} image={current.result} />}
         </GlassCard>
       )}
 
@@ -896,5 +898,131 @@ function ClientForm({
         )}
       </div>
     </SectionCard>
+  );
+}
+
+const VEO_LABELS: { id: VeoAngle; label: string }[] = [
+  { id: "push", label: "Push-in" },
+  { id: "orbit", label: "Orbit" },
+  { id: "drone", label: "Drone turun" },
+  { id: "glide", label: "Slider geser" },
+  { id: "pullout", label: "Pull-out" },
+];
+
+type Clip = { angle: VeoAngle; url: string };
+
+function VeoPanel({ image }: { image: string }) {
+  const start = useServerFn(startVeoVideo);
+  const poll = useServerFn(pollVeoVideo);
+  const [open, setOpen] = useState(false);
+  const [angle, setAngle] = useState<VeoAngle>("push");
+  const [busy, setBusy] = useState(false);
+  const [clips, setClips] = useState<Clip[]>([]);
+  const [idx, setIdx] = useState(0);
+  const [loop, setLoop] = useState(true);
+  const vidRef = useRef<HTMLVideoElement>(null);
+
+  const generate = async () => {
+    setBusy(true);
+    try {
+      const { id } = await start({ data: { image, angle } });
+      for (;;) {
+        await new Promise((r) => setTimeout(r, 7000));
+        const r = await poll({ data: { id } });
+        if (r.status === "failed") throw new Error(r.error);
+        if (r.status === "completed") {
+          const blob = await (await fetch(r.video)).blob();
+          const url = URL.createObjectURL(blob);
+          setClips((c) => {
+            setIdx(c.length);
+            return [...c, { angle, url }];
+          });
+          toast.success("Video AI 8 detik siap");
+          break;
+        }
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Video gagal dibuat");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onEnded = () => {
+    if (clips.length < 2) return void vidRef.current?.play();
+    setIdx((i) => (i + 1) % clips.length);
+  };
+
+  const share = async (c: Clip, i: number) => {
+    const blob = await (await fetch(c.url)).blob();
+    const file = new File([blob], `video-ai-${i + 1}-${c.angle}.mp4`, { type: "video/mp4" });
+    if (navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ files: [file] }).catch(() => {});
+    } else {
+      const a = document.createElement("a");
+      a.href = c.url;
+      a.download = file.name;
+      a.click();
+    }
+  };
+
+  if (!open)
+    return (
+      <Button variant="outline" className="w-full" onClick={() => setOpen(true)}>
+        🎬 Video AI Cinematic (Veo)
+      </Button>
+    );
+
+  const cur = clips[idx];
+  const label = (id: VeoAngle) => VEO_LABELS.find((a) => a.id === id)?.label;
+  return (
+    <div className="space-y-3 rounded-2xl border border-border p-3">
+      <p className="text-sm font-semibold">🎬 Video AI Cinematic · 8 detik / angle</p>
+      <p className="text-xs text-muted-foreground">
+        Tampilan desain dikunci, hanya kamera yang bergerak. Buat beberapa angle, nanti diputar
+        bergantian (looping).
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {VEO_LABELS.map((a) => (
+          <Pill key={a.id} active={angle === a.id} onClick={() => setAngle(a.id)}>
+            {a.label}
+          </Pill>
+        ))}
+      </div>
+      <Button className="w-full" disabled={busy} onClick={generate}>
+        {busy ? "Membuat video… (±1–2 menit)" : `Buat video angle ${label(angle)}`}
+      </Button>
+      {cur && (
+        <>
+          <video
+            ref={vidRef}
+            key={cur.url}
+            src={cur.url}
+            autoPlay
+            muted
+            playsInline
+            controls
+            onEnded={loop ? onEnded : undefined}
+            className="w-full rounded-xl"
+          />
+          <label className="flex items-center justify-between text-sm">
+            Looping ganti angle otomatis
+            <Switch checked={loop} onCheckedChange={setLoop} />
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {clips.map((c, i) => (
+              <div key={c.url} className="flex items-center gap-1">
+                <Pill active={i === idx} onClick={() => setIdx(i)}>
+                  {i + 1}. {label(c.angle)}
+                </Pill>
+                <Button size="sm" variant="ghost" onClick={() => void share(c, i)}>
+                  <Share2 className="size-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
