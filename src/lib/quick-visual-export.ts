@@ -275,17 +275,24 @@ const SHOTS = {
   },
 } satisfies Record<string, Shot>;
 
-/** Auto-recommended storyboard by photo count: establishing → detail → orbit → hero. */
-function directorPlan(n: number): Shot[] {
+/**
+ * Auto-recommended storyboard. Always ≥2 takes: a single photo is re-shot with a
+ * different angle (drone → orbit) so it never looks like one static zoom.
+ */
+function directorPlan(n: number): { shot: Shot; img: number }[] {
   const S = SHOTS;
-  const plans: Record<number, Shot[]> = {
-    1: [S.droneDescent],
-    2: [S.droneDescent, S.heroPullOut],
-    3: [S.droneDescent, S.closeupSlide, S.heroPullOut],
-    4: [S.droneDescent, S.closeupSlide, S.orbitGlide, S.heroPullOut],
-    5: [S.droneDescent, S.closeupSlide, S.orbitGlide, S.pedestalUp, S.heroPullOut],
-  };
-  return plans[Math.min(5, Math.max(1, n))]!;
+  if (n <= 1)
+    return [
+      { shot: S.droneDescent, img: 0 },
+      { shot: S.orbitGlide, img: 0 },
+      { shot: S.heroPullOut, img: 0 },
+    ];
+  const order: Shot[] = [S.droneDescent, S.closeupSlide, S.orbitGlide, S.pedestalUp];
+  const list = Array.from({ length: n }, (_, i) => ({
+    shot: i === n - 1 ? S.heroPullOut : order[i % order.length]!,
+    img: i,
+  }));
+  return list;
 }
 
 const smooth = (t: number) => t * t * (3 - 2 * t);
@@ -301,109 +308,8 @@ function camAt(shot: Shot, t: number): Cam {
   return { s: mix(p.s, q.s, kk), x: mix(p.x, q.x, kk), y: mix(p.y, q.y, kk), r: mix(p.r, q.r, kk) };
 }
 
-export type Backsound = "none" | "ambient" | "cinematic" | "upbeat";
-export const BACKSOUNDS: { id: Backsound; label: string }[] = [
-  { id: "cinematic", label: "Cinematic" },
-  { id: "ambient", label: "Ambient lembut" },
-  { id: "upbeat", label: "Upbeat modern" },
-  { id: "none", label: "Tanpa musik" },
-];
-
-/** Synthesized royalty-free backsound, scheduled for `sec` seconds. */
-function scheduleMusic(ac: AudioContext, out: AudioNode, style: Backsound, sec: number) {
-  const master = ac.createGain();
-  const t0 = ac.currentTime + 0.05;
-  master.gain.setValueAtTime(0, t0);
-  master.gain.linearRampToValueAtTime(0.55, t0 + 2);
-  master.gain.setValueAtTime(0.55, t0 + sec - 2.5);
-  master.gain.linearRampToValueAtTime(0, t0 + sec);
-  const lp = ac.createBiquadFilter();
-  lp.type = "lowpass";
-  lp.frequency.value = style === "upbeat" ? 2600 : 1400;
-  lp.connect(master);
-  master.connect(out);
-  // Simple feedback reverb-ish delay
-  const dl = ac.createDelay(1);
-  dl.delayTime.value = 0.32;
-  const fb = ac.createGain();
-  fb.gain.value = 0.35;
-  lp.connect(dl);
-  dl.connect(fb);
-  fb.connect(dl);
-  dl.connect(master);
-
-  const hz = (m: number) => 440 * Math.pow(2, (m - 69) / 12);
-  // i–VI–III–VII in A minor / Am–F–C–G
-  const prog = [
-    [57, 60, 64],
-    [53, 57, 60],
-    [48, 52, 55],
-    [55, 59, 62],
-  ];
-  const bar = style === "upbeat" ? 2 : style === "cinematic" ? 4 : 5;
-  const pad = (midi: number, at: number, dur: number, vol: number, type: OscillatorType) => {
-    const o = ac.createOscillator();
-    const g = ac.createGain();
-    o.type = type;
-    o.frequency.value = hz(midi);
-    o.detune.value = (Math.random() - 0.5) * 8;
-    g.gain.setValueAtTime(0, at);
-    g.gain.linearRampToValueAtTime(vol, at + Math.min(1.2, dur * 0.35));
-    g.gain.linearRampToValueAtTime(0, at + dur);
-    o.connect(g);
-    g.connect(lp);
-    o.start(at);
-    o.stop(at + dur + 0.05);
-  };
-  const pluck = (midi: number, at: number, vol: number) => {
-    const o = ac.createOscillator();
-    const g = ac.createGain();
-    o.type = "triangle";
-    o.frequency.value = hz(midi);
-    g.gain.setValueAtTime(vol, at);
-    g.gain.exponentialRampToValueAtTime(0.0001, at + 0.6);
-    o.connect(g);
-    g.connect(lp);
-    o.start(at);
-    o.stop(at + 0.7);
-  };
-  const kick = (at: number) => {
-    const o = ac.createOscillator();
-    const g = ac.createGain();
-    o.frequency.setValueAtTime(120, at);
-    o.frequency.exponentialRampToValueAtTime(40, at + 0.25);
-    g.gain.setValueAtTime(0.6, at);
-    g.gain.exponentialRampToValueAtTime(0.0001, at + 0.3);
-    o.connect(g);
-    g.connect(master);
-    o.start(at);
-    o.stop(at + 0.35);
-  };
-
-  for (let b = 0, at = t0; at < t0 + sec; b++, at += bar) {
-    const ch = prog[b % prog.length]!;
-    const dur = bar + 0.8;
-    for (const m of ch) pad(m, at, dur, style === "ambient" ? 0.05 : 0.045, "sine");
-    pad(
-      ch[0]! - 12,
-      at,
-      dur,
-      style === "cinematic" ? 0.09 : 0.06,
-      style === "cinematic" ? "sawtooth" : "sine",
-    );
-    if (style === "cinematic") {
-      pad(ch[2]! + 12, at + bar / 2, bar / 2 + 0.6, 0.02, "triangle");
-      if (b % 2 === 1) kick(at);
-    }
-    if (style === "ambient") {
-      for (let i = 0; i < 4; i++) pluck(ch[i % 3]! + 12, at + i * (bar / 4) + 0.3, 0.03);
-    }
-    if (style === "upbeat") {
-      for (let i = 0; i < 4; i++) kick(at + i * (bar / 4));
-      for (let i = 0; i < 8; i++) pluck(ch[i % 3]! + (i % 2 ? 12 : 24), at + i * (bar / 8), 0.035);
-    }
-  }
-}
+export { BACKSOUNDS, type Backsound } from "@/lib/backsound";
+import { scheduleBacksound, scheduleCustom, type Backsound } from "@/lib/backsound";
 
 /**
  * Multi-photo cinematic story video (1–5 renders), Auto-Director camera moves,
@@ -415,7 +321,8 @@ export async function renderCinematicStory(
   prefs: WatermarkPrefs,
   brand: Brand,
   onProgress?: (p: number) => void,
-  music: Backsound = "cinematic",
+  music: Backsound = "luxury-piano",
+  musicFile: Blob | null = null,
 ): Promise<{ blob: Blob; ext: string }> {
   const mime = pickVideoMime();
   if (!mime) throw new Error("Browser ini belum mendukung pembuatan video");
@@ -448,20 +355,22 @@ export async function renderCinematicStory(
   const ctx = c.getContext("2d")!;
   ctx.imageSmoothingQuality = "high";
   const TOTAL = seconds * 1000;
-  const n = frames.length;
-  const plan = directorPlan(n);
+  const plan = directorPlan(frames.length);
+  const n = plan.length;
   const TR = Math.min(1400, TOTAL / n / 3); // momentum transition length
   const seg = (TOTAL + TR * (n - 1)) / n;
 
   const drawShot = (i: number, local: number, alpha: number, push: number) => {
-    const cam = camAt(plan[i]!, local / seg);
-    const s = cam.s * (1 + push);
+    const cam = camAt(plan[i]!.shot, local / seg);
+    // safe margins: never reveal frame edges while panning/rolling
+    const need = 1 + 2 * Math.max(Math.abs(cam.x), Math.abs(cam.y)) + Math.abs(cam.r) * 0.035;
+    const s = Math.max(cam.s, need) * (1 + push);
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.translate(W / 2 + cam.x * W, H / 2 + cam.y * H);
     ctx.rotate((cam.r * Math.PI) / 180);
     ctx.scale(s, s);
-    ctx.drawImage(frames[i]!, -W / 2, -H / 2, W, H);
+    ctx.drawImage(frames[plan[i]!.img]!, -W / 2, -H / 2, W, H);
     ctx.restore();
   };
 
@@ -520,7 +429,9 @@ export async function renderCinematicStory(
     ac = new AudioContext();
     await ac.resume().catch(() => {});
     const dest = ac.createMediaStreamDestination();
-    scheduleMusic(ac, dest, music, seconds);
+    if (music === "custom") {
+      if (musicFile) await scheduleCustom(ac, dest, musicFile, seconds).catch(() => {});
+    } else scheduleBacksound(ac, dest, music, seconds);
     dest.stream.getAudioTracks().forEach((tr) => stream.addTrack(tr));
   }
   const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 6_000_000 });

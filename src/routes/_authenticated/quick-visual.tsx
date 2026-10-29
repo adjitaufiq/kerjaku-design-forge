@@ -88,6 +88,7 @@ import {
   renderVideo,
 } from "@/lib/quick-visual-export";
 import { cn } from "@/lib/utils";
+import { previewBacksound } from "@/lib/backsound";
 import { data } from "@/services/data";
 import type { ProjectType } from "@/services/domain/models";
 
@@ -1137,9 +1138,25 @@ export function WatermarkDialog({
   const showName = prefs.showName && hasName;
 
   const [pick, setPick] = useState({ after: true, grid: false, video: false, story: false });
-  const [storySec, setStorySec] = useState<30 | 60>(60);
-  const [music, setMusic] = useState<Backsound>("cinematic");
-  const canStory = storyImages.length >= 2;
+  const [tempo, setTempo] = useState<4 | 6 | 8>(6);
+  const [music, setMusic] = useState<Backsound>("luxury-piano");
+  const [musicFile, setMusicFile] = useState<File | null>(null);
+  const [playing, setPlaying] = useState<Backsound | null>(null);
+  const stopRef = useRef<(() => void) | null>(null);
+  const canStory = videoKind === "cinematic" ? storyImages.length >= 1 : storyImages.length >= 2;
+  // takes: 1 photo is re-shot from 3 angles; otherwise one take per photo
+  const takes = storyImages.length <= 1 ? 3 : storyImages.length;
+  const storySec = Math.min(45, Math.max(8, Math.round(takes * tempo)));
+  const togglePreview = async (id: Backsound) => {
+    stopRef.current?.();
+    stopRef.current = null;
+    if (playing === id || id === "none") return setPlaying(null);
+    if (id === "custom" && !musicFile) return;
+    setPlaying(id);
+    stopRef.current = await previewBacksound(id, musicFile, 10);
+    setTimeout(() => setPlaying((cur) => (cur === id ? null : cur)), 10_000);
+  };
+  useEffect(() => () => stopRef.current?.(), []);
   const [busy, setBusy] = useState<string | null>(null);
   const beforeSrc = option.before ?? before;
   const base = option.name.replace(/[^\w-]+/g, "-");
@@ -1179,6 +1196,7 @@ export function WatermarkDialog({
             `Merekam video story ${storyImages.length} foto… ${Math.round(pr * 100)}% (±${storySec} detik, jangan tutup layar)`,
           ),
         music,
+        musicFile,
       );
       files.push(new File([blob], `${base}-story-${storySec}s.${ext}`, { type: blob.type }));
     }
@@ -1186,7 +1204,7 @@ export function WatermarkDialog({
   };
 
   const [previews, setPreviews] = useState<{ file: File; url: string }[] | null>(null);
-  const previewKey = JSON.stringify([prefs, pick, storySec, music, option.image, brand]);
+  const previewKey = JSON.stringify([prefs, pick, storySec, music, musicFile?.name, option.image, brand]);
   const lastKey = useRef(previewKey);
   useEffect(() => {
     if (lastKey.current === previewKey) return;
@@ -1568,36 +1586,90 @@ export function WatermarkDialog({
                   onChange={(e) => setPick((s) => ({ ...s, story: e.target.checked }))}
                   className="size-4 accent-primary"
                 />
-                Video sinematik {storyImages.length} foto (Story / Status WA)
+                Video cinematic Auto-Director {storyImages.length} foto (Reels / Status WA)
               </label>
               {pick.story && (
-                <div className="grid grid-cols-2 gap-2 pl-6">
-                  {([30, 60] as const).map((sec) => (
-                    <Button
-                      key={sec}
-                      type="button"
-                      size="sm"
-                      variant={storySec === sec ? "default" : "outline"}
-                      onClick={() => setStorySec(sec)}
-                    >
-                      {sec} detik
-                    </Button>
-                  ))}
-                  <p className="col-span-2 pt-1 text-xs text-muted-foreground">
-                    🎬 Kamera otomatis: drone turun → close-up → orbit → hero pull-out
+                <div className="space-y-3 pl-6">
+                  <div>
+                    <p className="pb-1 text-xs font-semibold">⏱ Tempo per angle</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(
+                        [
+                          [4, "Cepat"],
+                          [6, "Sinematik"],
+                          [8, "Slow detail"],
+                        ] as const
+                      ).map(([t, l]) => (
+                        <Button
+                          key={t}
+                          type="button"
+                          size="sm"
+                          variant={tempo === t ? "default" : "outline"}
+                          onClick={() => setTempo(t)}
+                        >
+                          {l}
+                        </Button>
+                      ))}
+                    </div>
+                    <p className="pt-1 text-xs text-muted-foreground">
+                      Total ±{storySec} detik · {takes} angle kamera
+                      {storyImages.length <= 1 ? " (1 foto diambil dari 3 sudut)" : ""}
+                    </p>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    🎬 Auto-Director: drone turun → close-up slider → orbit → pedestal → hero
+                    pull-out, transisi momentum halus
                   </p>
-                  <p className="col-span-2 text-xs font-semibold">🎵 Backsound</p>
-                  {BACKSOUNDS.map((b) => (
-                    <Button
-                      key={b.id}
-                      type="button"
-                      size="sm"
-                      variant={music === b.id ? "default" : "outline"}
-                      onClick={() => setMusic(b.id)}
-                    >
-                      {b.label}
-                    </Button>
-                  ))}
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold">🎵 Backsound (tap ▶ untuk dengar)</p>
+                    {Array.from(new Set(BACKSOUNDS.map((b) => b.group))).map((g) => (
+                      <div key={g} className="space-y-1">
+                        <p className="text-[11px] text-muted-foreground">{g}</p>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {BACKSOUNDS.filter((b) => b.group === g).map((b) => (
+                            <div
+                              key={b.id}
+                              className={cn(
+                                "flex items-center overflow-hidden rounded-lg border text-xs",
+                                music === b.id
+                                  ? "border-primary bg-primary/10"
+                                  : "border-border",
+                              )}
+                            >
+                              <button
+                                type="button"
+                                className="min-w-0 flex-1 truncate px-2 py-2 text-left"
+                                onClick={() => setMusic(b.id)}
+                              >
+                                {b.label}
+                              </button>
+                              {b.id !== "none" && (b.id !== "custom" || musicFile) && (
+                                <button
+                                  type="button"
+                                  aria-label={`Dengar ${b.label}`}
+                                  className="px-2 py-2 text-primary"
+                                  onClick={() => void togglePreview(b.id)}
+                                >
+                                  {playing === b.id ? "■" : "▶"}
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                    {music === "custom" && (
+                      <label className="block rounded-lg border border-dashed border-border p-2 text-xs">
+                        {musicFile ? `🎧 ${musicFile.name}` : "Pilih file MP3 / audio dari HP"}
+                        <input
+                          type="file"
+                          accept="audio/*"
+                          className="hidden"
+                          onChange={(e) => setMusicFile(e.target.files?.[0] ?? null)}
+                        />
+                      </label>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
