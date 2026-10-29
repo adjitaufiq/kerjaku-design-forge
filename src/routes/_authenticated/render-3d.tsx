@@ -745,6 +745,7 @@ function Render3dPage() {
               <Share2 className="size-4" /> Download / Share
             </Button>
           </div>
+          {current.result && <VeoPanel key={current.id} image={current.result} />}
         </GlassCard>
       )}
 
