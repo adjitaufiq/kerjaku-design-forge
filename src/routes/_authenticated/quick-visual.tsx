@@ -82,6 +82,8 @@ import { toWhatsAppNumber } from "@/lib/whatsapp";
 import {
   renderCinematic,
   renderCinematicStory,
+  BACKSOUNDS,
+  type Backsound,
   renderGrid,
   renderVideo,
 } from "@/lib/quick-visual-export";
@@ -1136,6 +1138,7 @@ export function WatermarkDialog({
 
   const [pick, setPick] = useState({ after: true, grid: false, video: false, story: false });
   const [storySec, setStorySec] = useState<30 | 60>(60);
+  const [music, setMusic] = useState<Backsound>("cinematic");
   const canStory = storyImages.length >= 2;
   const [busy, setBusy] = useState<string | null>(null);
   const beforeSrc = option.before ?? before;
@@ -1170,6 +1173,7 @@ export function WatermarkDialog({
         setBusy(
           `Merekam video story ${storyImages.length} foto… ${Math.round(pr * 100)}% (±${storySec} detik, jangan tutup layar)`,
         ),
+        music,
       );
       files.push(new File([blob], `${base}-story-${storySec}s.${ext}`, { type: blob.type }));
     }
@@ -1177,7 +1181,7 @@ export function WatermarkDialog({
   };
 
   const [previews, setPreviews] = useState<{ file: File; url: string }[] | null>(null);
-  const previewKey = JSON.stringify([prefs, pick, storySec, option.image, brand]);
+  const previewKey = JSON.stringify([prefs, pick, storySec, music, option.image, brand]);
   const lastKey = useRef(previewKey);
   useEffect(() => {
     if (lastKey.current === previewKey) return;
@@ -1572,6 +1576,21 @@ export function WatermarkDialog({
                       onClick={() => setStorySec(sec)}
                     >
                       {sec} detik
+                    </Button>
+                  ))}
+                  <p className="col-span-2 pt-1 text-xs text-muted-foreground">
+                    🎬 Kamera otomatis: drone turun → close-up → orbit → hero pull-out
+                  </p>
+                  <p className="col-span-2 text-xs font-semibold">🎵 Backsound</p>
+                  {BACKSOUNDS.map((b) => (
+                    <Button
+                      key={b.id}
+                      type="button"
+                      size="sm"
+                      variant={music === b.id ? "default" : "outline"}
+                      onClick={() => setMusic(b.id)}
+                    >
+                      {b.label}
                     </Button>
                   ))}
                 </div>
