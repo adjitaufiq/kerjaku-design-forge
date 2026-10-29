@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ImagePlus, Lock, LockOpen, Share2, Trash2, Wand2 } from "lucide-react";
+import { ImagePlus, Lock, LockOpen, Plus, ScanSearch, Share2, Trash2, Wand2 } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useRef, useState } from "react";
@@ -15,7 +15,7 @@ import { useWorkspace } from "@/hooks/useWorkspace";
 import { data } from "@/services/data";
 import { WatermarkDialog } from "./quick-visual";
 import { useServerFn } from "@tanstack/react-start";
-import { render3d } from "@/lib/render-3d.functions";
+import { render3d, scan3d, type ScanResult } from "@/lib/render-3d.functions";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/render-3d")({
@@ -253,6 +253,10 @@ async function dataUrlToFile(src: string, name: string) {
 
 function Render3dPage() {
   const run = useServerFn(render3d);
+  const scanFn = useServerFn(scan3d);
+  const [scan, setScan] = useState<ScanResult | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [usedIdeas, setUsedIdeas] = useState<string[]>([]);
   const { workspaceId } = useWorkspace();
   const workshopQuery = useQuery({
     queryKey: ["workshop", workspaceId],
@@ -281,7 +285,38 @@ function Render3dPage() {
     const added = await Promise.all(
       list.map(async (f) => ({ id: crypto.randomUUID(), sketch: await fileToDataUrl(f) })),
     );
+    const wasEmpty = shots.length === 0;
     setShots((s) => [...s, ...added]);
+    if (wasEmpty && added[0]) void doScan(added[0].sketch);
+  };
+
+  const doScan = async (sketch: string) => {
+    setScanning(true);
+    try {
+      const r = await scanFn({ data: { sketch } });
+      setScan(r);
+      setUsedIdeas([]);
+      const label = OBJECTS.find((o) => o.id === r.object)!.label;
+      const l = LOCATIONS.find((x) => x.id === r.location)!;
+      setObject(r.object);
+      setLoc(l.id);
+      setPrompt(basePrompt(label, l.text));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Scan gagal");
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const toggleIdea = (idea: string) => {
+    const sentence = idea.trim().replace(/\.?$/, ".");
+    if (usedIdeas.includes(idea)) {
+      setUsedIdeas((u) => u.filter((x) => x !== idea));
+      setPrompt((p) => p.replace(` ${sentence}`, "").replace(sentence, "").trim());
+    } else {
+      setUsedIdeas((u) => [...u, idea]);
+      setPrompt((p) => `${p.trim()} ${sentence}`.trim());
+    }
   };
 
   const pickObject = (id: string) => {
@@ -420,6 +455,52 @@ function Render3dPage() {
       {shots.length > 0 && (
         <SectionCard title="2. Prompt render">
           <div className="space-y-3">
+            <div className="rounded-xl border border-border bg-surface/40 p-3 text-sm">
+              <div className="flex items-center justify-between gap-2">
+                <span className="flex items-center gap-1.5 font-medium">
+                  <ScanSearch className="size-4 text-primary" />
+                  {scanning ? "AI sedang scan gambar 3D..." : "Hasil scan AI"}
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={scanning || running}
+                  onClick={() => shots[0] && void doScan(shots[0].sketch)}
+                >
+                  {scan ? "Scan ulang" : "Scan"}
+                </Button>
+              </div>
+              {scan && !scanning && (
+                <>
+                  {scan.summary && (
+                    <p className="mt-2 text-xs text-muted-foreground">{scan.summary}</p>
+                  )}
+                  {scan.ideas.length > 0 && (
+                    <div className="mt-3 space-y-1.5">
+                      <p className="text-xs font-medium">Ide tambahan (tap untuk masuk prompt)</p>
+                      <div className="flex flex-col gap-1.5">
+                        {scan.ideas.map((idea) => (
+                          <button
+                            key={idea}
+                            type="button"
+                            onClick={() => toggleIdea(idea)}
+                            className={cn(
+                              "flex items-start gap-2 rounded-lg border px-2.5 py-2 text-left text-xs transition",
+                              usedIdeas.includes(idea)
+                                ? "border-primary bg-primary/10"
+                                : "border-border bg-background/40",
+                            )}
+                          >
+                            <Plus className="mt-0.5 size-3 shrink-0" />
+                            {idea}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
             <div>
               <p className="mb-1.5 text-xs font-medium text-muted-foreground">Objek</p>
               <div className="flex flex-wrap gap-2">

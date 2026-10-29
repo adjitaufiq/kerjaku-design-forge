@@ -30,6 +30,7 @@ function buildPrompt(input: RenderInput): string {
     "Replace the plain grey/empty background with a real environment as described below, at realistic eye level camera height.",
     "NO EXTRA OBJECTS: do not add people, products, decorations, plants, screens or props unless the scene description below explicitly asks for them.",
     `Scene description from the workshop: ${input.scene}`,
+    "REAL-WORLD SCALE for any added item: a TV must be a real flat-screen with a true 16:9 widescreen ratio and thin bezel, sized like a real 50-65 inch TV relative to the furniture, centered with visible margin around it — never stretched to fill a whole panel and never square. People, products and appliances must also be true real-life scale.",
     `FRAME: output exactly ${input.ratio ?? "4:5"} aspect ratio, same as IMAGE 1. IMAGE 1 may have flat grey padding bands around the drawing — they are empty canvas, not part of the design: fill them seamlessly with more of the same environment (ceiling, floor, surroundings) using a slightly wide-angle eye-level camera, keeping the whole object fully visible, centered and unchanged.`,
     "Output one single photorealistic photo. No watermark, no collage, no added captions, no grey bars.",
   ]
@@ -77,4 +78,95 @@ export const render3d = createServerFn({ method: "POST" })
     const image = first?.b64_json ? `data:image/png;base64,${first.b64_json}` : first?.url;
     if (!image) throw new Error("AI tidak menghasilkan gambar. Coba gambar lain.");
     return { image };
+  });
+
+const CHAT_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const SCAN_MODEL = "openai/gpt-6-astra";
+
+export interface ScanResult {
+  object: "booth" | "kitchen" | "wardrobe" | "backdrop" | "counter" | "furniture";
+  summary: string;
+  location: "mall" | "ruko" | "cafe" | "indoor" | "outdoor" | "rumah" | "kantor" | "sekolah";
+  ideas: string[];
+}
+
+const OBJ_IDS = ["booth", "kitchen", "wardrobe", "backdrop", "counter", "furniture"];
+const LOC_IDS = ["mall", "ruko", "cafe", "indoor", "outdoor", "rumah", "kantor", "sekolah"];
+
+export const scan3d = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { sketch: string }) => {
+    if (!input?.sketch?.startsWith("data:image")) throw new Error("Upload gambar 3D dulu");
+    return input;
+  })
+  .handler(async ({ data: input }): Promise<ScanResult> => {
+    const apiKey = process.env["LOVABLE_API_KEY"];
+    if (!apiKey) throw new Error("AI belum dikonfigurasi.");
+    const instruction = [
+      "Kamu asisten render interior. Lihat screenshot model 3D (SketchUp) ini.",
+      `Tentukan object salah satu dari: ${OBJ_IDS.join(", ")} (backdrop = backdrop/panel TV, booth = booth/kiosk jualan, counter = meja resepsionis/kasir).`,
+      `Tentukan location paling cocok dari: ${LOC_IDS.join(", ")}.`,
+      "summary: 1 kalimat Bahasa Indonesia yang menjelaskan apa yang terlihat (bentuk, warna, material, tulisan/brand jika ada).",
+      "ideas: 3-5 ide tambahan singkat (Bahasa Indonesia, maks 20 kata masing-masing) yang realistis dan proporsional untuk membuat render lebih menjual. Jangan ubah bentuk desain.",
+      "Aturan wajib: jika ada area/panel kosong untuk TV, sebutkan ukuran nyata, contoh 'Tambah Smart TV 55 inch rasio 16:9 widescreen bezel tipis, layar menyala, ada margin di sekeliling panel'. Untuk booth makanan: etalase berisi produk realistis, signage menyala, kasir/antrian. Untuk kitchen set: kompor tanam, cooker hood, sink, LED strip. Untuk lemari: LED strip dalam, pakaian tergantung rapi.",
+      'Jawab HANYA JSON: {"object":"...","location":"...","summary":"...","ideas":["..."]}',
+    ].join("\n");
+    const res = await fetch(CHAT_GATEWAY, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: SCAN_MODEL,
+        reasoning_effort: "low",
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "scan",
+            strict: true,
+            schema: {
+              type: "object",
+              additionalProperties: false,
+              required: ["object", "location", "summary", "ideas"],
+              properties: {
+                object: { type: "string", enum: OBJ_IDS },
+                location: { type: "string", enum: LOC_IDS },
+                summary: { type: "string" },
+                ideas: { type: "array", items: { type: "string" } },
+              },
+            },
+          },
+        },
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: instruction },
+              { type: "image_url", image_url: { url: input.sketch } },
+            ],
+          },
+        ],
+      }),
+    });
+    if (!res.ok) {
+      if (res.status === 429) throw new Error("AI sedang sibuk, coba lagi sebentar.");
+      if (res.status === 402) throw new Error("Kredit AI habis. Tambah kredit untuk lanjut.");
+      if (res.status === 403) throw new Error("Akses AI diblokir untuk workspace ini.");
+      throw new Error(`Scan gagal (${res.status})`);
+    }
+    const payload = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+    const raw = (payload.choices?.[0]?.message?.content ?? "")
+      .trim()
+      .replace(/^```(?:json)?/i, "")
+      .replace(/```$/, "");
+    let parsed: Partial<ScanResult> = {};
+    try {
+      parsed = JSON.parse(raw) as Partial<ScanResult>;
+    } catch {
+      throw new Error("Hasil scan tidak terbaca, coba Scan ulang.");
+    }
+    return {
+      object: (OBJ_IDS.includes(parsed.object ?? "") ? parsed.object : "furniture") as ScanResult["object"],
+      location: (LOC_IDS.includes(parsed.location ?? "") ? parsed.location : "indoor") as ScanResult["location"],
+      summary: String(parsed.summary ?? ""),
+      ideas: Array.isArray(parsed.ideas) ? parsed.ideas.map(String).slice(0, 5) : [],
+    };
   });
