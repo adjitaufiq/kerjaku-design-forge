@@ -1224,7 +1224,7 @@ export function WatermarkDialog({
       return;
     }
     try {
-      saveFiles(await buildFiles());
+      saveFiles(await getFiles());
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -1239,7 +1239,7 @@ export function WatermarkDialog({
     }
     const text = `Halo, berikut preview konsep ${option.name}${option.spec ? ` (${option.spec})` : ""} dari ${brand.name ?? "workshop kami"}.`;
     try {
-      const files = await buildFiles();
+      const files = await getFiles();
       setBusy(null);
       if (navigator.canShare?.({ files })) {
         await navigator.share({ files, text });
