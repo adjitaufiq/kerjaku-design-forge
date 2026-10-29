@@ -122,12 +122,12 @@ export function FootagePanel({ image, name }: { image: string; name: string }) {
         <p className="text-xs font-semibold">🎛️ Atur Custom mix</p>
         <MixControls mix={mix} setMix={setMix} />
       </div>
-      {open && (
+      {open && typeof document !== "undefined" && createPortal(
         <div
-          className="fixed inset-0 z-[100] flex flex-col bg-background/95 p-3 backdrop-blur"
+          className="fixed inset-0 z-[100] flex h-[100dvh] flex-col overflow-hidden bg-background p-3"
           onClick={() => setOpen(null)}
         >
-          <div className="flex items-center justify-between pb-2">
+          <div className="flex shrink-0 items-center justify-between pb-2">
             <p className="text-sm font-semibold">
               {FOOTAGE_MODES.find((m) => m.id === open)?.emoji}{" "}
               {FOOTAGE_MODES.find((m) => m.id === open)?.label} · {seconds}s
@@ -137,7 +137,7 @@ export function FootagePanel({ image, name }: { image: string; name: string }) {
             </Button>
           </div>
           <div className="flex min-h-0 flex-1 items-center justify-center">
-            <div className="max-h-full w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <div className="flex h-full items-center justify-center" onClick={(e) => e.stopPropagation()}>
               <TakePreview img={img} mode={open} seconds={seconds} mix={mix} zoom={zoom} big />
             </div>
           </div>
