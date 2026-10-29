@@ -252,7 +252,7 @@ export function scheduleBacksound(
       if (full) bass(c[2]! - 24, at + beat * 3.5, beat * 0.5);
     }
     if (p.piano === "arp") {
-      const seq = [c[0]!, c[1]!, c[2]!, c[3]! ?? c[0]! + 12, c[2]! + 12, c[1]! + 12, c[2]!, c[1]!];
+      const seq = [c[0]!, c[1]!, c[2]!, c[3] ?? c[0]! + 12, c[2]! + 12, c[1]! + 12, c[2]!, c[1]!];
       seq.forEach((m, i) => piano(m, at + i * (beat / 2), 0.06));
     } else if (p.piano === "chords") {
       for (const m of c) piano(m, at, 0.045, bar);
