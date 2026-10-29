@@ -492,7 +492,9 @@ function QuickVisualPage() {
                       loading="lazy"
                       className="aspect-square w-full max-w-20 object-contain drop-shadow-xl"
                     />
-                    <span className={`text-xs font-medium ${active ? "text-primary" : "text-foreground"}`}>
+                    <span
+                      className={`text-xs font-medium ${active ? "text-primary" : "text-foreground"}`}
+                    >
                       {r.label}
                     </span>
                   </button>

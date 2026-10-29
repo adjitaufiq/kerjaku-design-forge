@@ -193,7 +193,9 @@ export async function renderCinematic(
   const blank = document.createElement("canvas");
   blank.width = a.naturalWidth;
   blank.height = a.naturalHeight;
-  const overlay = await blobToImg(await renderWithWatermark(blank.toDataURL("image/png"), prefs, brand));
+  const overlay = await blobToImg(
+    await renderWithWatermark(blank.toDataURL("image/png"), prefs, brand),
+  );
 
   const c = document.createElement("canvas");
   c.width = W;

@@ -24,7 +24,8 @@ export const Route = createFileRoute("/_authenticated/render-3d")({
       { title: "3D Render AI — KERJAKU" },
       {
         name: "description",
-        content: "Ubah gambar SketchUp jadi render foto realistis dengan bentuk dan warna terkunci.",
+        content:
+          "Ubah gambar SketchUp jadi render foto realistis dengan bentuk dan warna terkunci.",
       },
     ],
   }),
@@ -41,7 +42,11 @@ const OBJECTS = [
 ] as const;
 
 const LOCATIONS = [
-  { id: "mall", label: "Mall Atrium", text: "di dalam atrium mall mewah yang ramai, lantai marmer mengkilap" },
+  {
+    id: "mall",
+    label: "Mall Atrium",
+    text: "di dalam atrium mall mewah yang ramai, lantai marmer mengkilap",
+  },
   { id: "ruko", label: "Ruko", text: "di dalam ruko/shophouse modern dengan kaca depan" },
   { id: "cafe", label: "Cafe", text: "di dalam cafe modern yang hangat dan estetik" },
   { id: "indoor", label: "Indoor", text: "di dalam ruangan indoor modern yang bersih dan terang" },
@@ -122,7 +127,17 @@ async function cropToRatio(src: string, ratio: RatioId): Promise<string> {
   const c = document.createElement("canvas");
   c.width = sw;
   c.height = sh;
-  c.getContext("2d")!.drawImage(img, (img.width - sw) / 2, (img.height - sh) / 2, sw, sh, 0, 0, sw, sh);
+  c.getContext("2d")!.drawImage(
+    img,
+    (img.width - sw) / 2,
+    (img.height - sh) / 2,
+    sw,
+    sh,
+    0,
+    0,
+    sw,
+    sh,
+  );
   return c.toDataURL("image/jpeg", 0.9);
 }
 
@@ -182,7 +197,9 @@ function Compare({ before, after }: { before: string; after: string }) {
       <div className="absolute inset-y-0 w-0.5 bg-primary" style={{ left: `${pos}%` }}>
         <div className="absolute top-1/2 left-1/2 size-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-primary bg-background" />
       </div>
-      <span className="absolute top-3 left-3 rounded-md bg-background/70 px-2 py-1 text-xs">3D</span>
+      <span className="absolute top-3 left-3 rounded-md bg-background/70 px-2 py-1 text-xs">
+        3D
+      </span>
       <button
         type="button"
         aria-label={locked ? "Buka kunci slider" : "Kunci slider"}
@@ -190,7 +207,9 @@ function Compare({ before, after }: { before: string; after: string }) {
         onClick={() => setLocked((v) => !v)}
         className={cn(
           "absolute top-3 left-1/2 grid size-9 -translate-x-1/2 place-items-center rounded-full border",
-          locked ? "border-cta bg-cta text-cta-foreground" : "border-border bg-background/70 text-foreground",
+          locked
+            ? "border-cta bg-cta text-cta-foreground"
+            : "border-border bg-background/70 text-foreground",
         )}
       >
         {locked ? <Lock className="size-4" /> : <LockOpen className="size-4" />}
@@ -202,14 +221,24 @@ function Compare({ before, after }: { before: string; after: string }) {
   );
 }
 
-function Pill({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+function Pill({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
         "rounded-full border px-3 py-1.5 text-xs font-medium transition",
-        active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-surface/60 text-foreground",
+        active
+          ? "border-primary bg-primary text-primary-foreground"
+          : "border-border bg-surface/60 text-foreground",
       )}
     >
       {children}
@@ -269,8 +298,11 @@ function Render3dPage() {
     setLoc(id);
     const l = LOCATIONS.find((x) => x.id === id)!;
     setPrompt((p) => {
-      if (!p.trim()) return basePrompt(OBJECTS.find((o) => o.id === object)?.label ?? "furnitur", l.text);
-      return LOC_MARK.test(p) ? p.replace(LOC_MARK, `Lokasi: ${l.text}.`) : `${p} Lokasi: ${l.text}.`;
+      if (!p.trim())
+        return basePrompt(OBJECTS.find((o) => o.id === object)?.label ?? "furnitur", l.text);
+      return LOC_MARK.test(p)
+        ? p.replace(LOC_MARK, `Lokasi: ${l.text}.`)
+        : `${p} Lokasi: ${l.text}.`;
     });
   };
 
@@ -282,7 +314,9 @@ function Render3dPage() {
         data: { sketch: framed, anchor, scene: prompt, keepDimensions: keepDims, ratio },
       });
       const before = await cropToRatio(shots[idx]!.sketch, ratio);
-      setShots((s) => s.map((x, i) => (i === idx ? { ...x, result: image, before, busy: false } : x)));
+      setShots((s) =>
+        s.map((x, i) => (i === idx ? { ...x, result: image, before, busy: false } : x)),
+      );
       return image;
     } catch (e) {
       setShots((s) => s.map((x, i) => (i === idx ? { ...x, busy: false } : x)));
@@ -291,8 +325,14 @@ function Render3dPage() {
   };
 
   const renderAll = async () => {
-    if (!shots.length) { toast.error("Upload gambar 3D dulu"); return; }
-    if (!prompt.trim()) { toast.error("Pilih objek atau isi prompt dulu"); return; }
+    if (!shots.length) {
+      toast.error("Upload gambar 3D dulu");
+      return;
+    }
+    if (!prompt.trim()) {
+      toast.error("Pilih objek atau isi prompt dulu");
+      return;
+    }
     setRunning(true);
     try {
       const master = await renderOne(0, null);
@@ -322,13 +362,23 @@ function Render3dPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 pb-24">
-      <PageHeader title="3D Render AI" subtitle="Gambar SketchUp → foto render realistis. Bentuk & warna dikunci." />
+      <PageHeader
+        title="3D Render AI"
+        subtitle="Gambar SketchUp → foto render realistis. Bentuk & warna dikunci."
+      />
 
       <SectionCard title="1. Upload gambar 3D (1–5)">
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
           {shots.map((s, i) => (
-            <div key={s.id} className="relative aspect-square overflow-hidden rounded-xl border border-border">
-              <img src={s.result ?? s.sketch} alt={`Foto ${i + 1}`} className="size-full object-cover" />
+            <div
+              key={s.id}
+              className="relative aspect-square overflow-hidden rounded-xl border border-border"
+            >
+              <img
+                src={s.result ?? s.sketch}
+                alt={`Foto ${i + 1}`}
+                className="size-full object-cover"
+              />
               <span className="absolute bottom-1 left-1 rounded bg-background/80 px-1.5 text-[10px]">
                 {i === 0 ? "Foto 1 · Master" : `Foto ${i + 1}`}
               </span>
@@ -381,7 +431,9 @@ function Render3dPage() {
               </div>
             </div>
             <div>
-              <p className="mb-1.5 text-xs font-medium text-muted-foreground">Lokasi (ganti otomatis di prompt)</p>
+              <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+                Lokasi (ganti otomatis di prompt)
+              </p>
               <div className="flex flex-wrap gap-2">
                 {LOCATIONS.map((l) => (
                   <Pill key={l.id} active={loc === l.id} onClick={() => pickLoc(l.id)}>
@@ -397,17 +449,22 @@ function Render3dPage() {
               placeholder="Contoh: tambah kasir di booth, tambah antrian, signage offle menyala terang, etalase isi croffle."
             />
             <p className="text-xs text-muted-foreground">
-              Tanpa ditulis, AI tidak akan menambah orang/barang. Bentuk, warna & tulisan selalu dikunci.
+              Tanpa ditulis, AI tidak akan menambah orang/barang. Bentuk, warna & tulisan selalu
+              dikunci.
             </p>
             <label className="flex items-center justify-between gap-3 rounded-xl border border-border p-3 text-sm">
               <span>
                 Pertahankan angka & garis ukuran
-                <span className="block text-xs text-muted-foreground">Default mati: render bersih</span>
+                <span className="block text-xs text-muted-foreground">
+                  Default mati: render bersih
+                </span>
               </span>
               <Switch checked={keepDims} onCheckedChange={setKeepDims} />
             </label>
             <div className="space-y-1.5">
-              <p className="text-xs text-muted-foreground">Format foto (berlaku juga untuk Render ulang)</p>
+              <p className="text-xs text-muted-foreground">
+                Format foto (berlaku juga untuk Render ulang)
+              </p>
               <div className="flex flex-wrap gap-2">
                 {RATIOS.map((r) => (
                   <Pill key={r.id} active={ratio === r.id} onClick={() => setRatio(r.id)}>
@@ -453,7 +510,11 @@ function Render3dPage() {
       )}
 
       {done.length > 0 && (
-        <ClientForm workspaceId={workspaceId} shots={done} objectLabel={OBJECTS.find((o) => o.id === object)?.label ?? "3D Render"} />
+        <ClientForm
+          workspaceId={workspaceId}
+          shots={done}
+          objectLabel={OBJECTS.find((o) => o.id === object)?.label ?? "3D Render"}
+        />
       )}
 
       {current?.result && (
@@ -506,10 +567,20 @@ function ClientForm({
       const project = await data.projects.create(workspaceId, {
         leadId: lead.id,
         projectName: `${objectLabel} — ${f.name.trim()}`,
-        projectType: objectLabel === "Kitchen set" ? "KITCHEN_SET" : objectLabel === "Lemari" ? "WARDROBE" : "OTHER",
+        projectType:
+          objectLabel === "Kitchen set"
+            ? "KITCHEN_SET"
+            : objectLabel === "Lemari"
+              ? "WARDROBE"
+              : "OTHER",
       });
       for (const [i, s] of shots.entries())
-        await data.assets.upload(workspaceId, project.id, "SKETCHUP_RENDER", await dataUrlToFile(s.result!, `render-${i + 1}.png`));
+        await data.assets.upload(
+          workspaceId,
+          project.id,
+          "SKETCHUP_RENDER",
+          await dataUrlToFile(s.result!, `render-${i + 1}.png`),
+        );
       await data.activities.log(workspaceId, {
         leadId: lead.id,
         type: "AI_CONCEPT",
@@ -533,10 +604,27 @@ function ClientForm({
       <div className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
           <TextField label="Nama klien *" name="name" value={f.name} onChange={set("name")} />
-          <TextField label="Lokasi proyek *" name="location" value={f.location} onChange={set("location")} />
+          <TextField
+            label="Lokasi proyek *"
+            name="location"
+            value={f.location}
+            onChange={set("location")}
+          />
         </div>
-        <TextField label="No. WhatsApp (opsional)" name="phone" inputMode="tel" value={f.phone} onChange={set("phone")} />
-        <TextField label="Catatan ukuran (opsional)" name="size" placeholder="300 × 225 × 120 cm" value={f.size} onChange={set("size")} />
+        <TextField
+          label="No. WhatsApp (opsional)"
+          name="phone"
+          inputMode="tel"
+          value={f.phone}
+          onChange={set("phone")}
+        />
+        <TextField
+          label="Catatan ukuran (opsional)"
+          name="size"
+          placeholder="300 × 225 × 120 cm"
+          value={f.size}
+          onChange={set("size")}
+        />
         <Button
           className="w-full"
           disabled={!f.name.trim() || !f.location.trim() || save.isPending || !!save.data}
@@ -546,7 +634,9 @@ function ClientForm({
         </Button>
         {save.data && (
           <Button asChild variant="outline" className="w-full">
-            <Link to="/leads/$leadId" params={{ leadId: save.data }}>Buka data klien</Link>
+            <Link to="/leads/$leadId" params={{ leadId: save.data }}>
+              Buka data klien
+            </Link>
           </Button>
         )}
       </div>
