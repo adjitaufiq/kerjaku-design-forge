@@ -235,18 +235,173 @@ export async function renderCinematic(
   return { blob: new Blob(chunks, { type }), ext: type === "video/mp4" ? "mp4" : "webm" };
 }
 
-type Move = { s0: number; s1: number; x0: number; x1: number; y0: number; y1: number; r0: number; r1: number };
-const MOVES: Move[] = [
-  { s0: 1.0, s1: 1.14, x0: 0, x1: 0, y0: 0, y1: -0.02, r0: 0, r1: 0 }, // slow push-in
-  { s0: 1.14, s1: 1.14, x0: -0.05, x1: 0.05, y0: 0, y1: 0, r0: 0, r1: 0 }, // pan right
-  { s0: 1.16, s1: 1.16, x0: 0.05, x1: -0.05, y0: 0.01, y1: -0.01, r0: 0, r1: 0 }, // pan left
-  { s0: 1.1, s1: 1.18, x0: 0, x1: 0, y0: 0, y1: 0, r0: -0.6, r1: 0.6 }, // gimbal orbit
-  { s0: 1.2, s1: 1.02, x0: 0, x1: 0, y0: -0.02, y1: 0, r0: 0, r1: 0 }, // pull-out hero
+// ---------------- Auto-Director cinematic story ----------------
+
+/** Camera keyframe: scale, offset (fraction of frame), roll (deg). */
+type Cam = { s: number; x: number; y: number; r: number };
+type Shot = { name: string; a: Cam; b: Cam; c: Cam };
+
+/** Pro videographer shot library (3 keyframes each → two-phase movement). */
+const SHOTS: Record<string, Shot> = {
+  droneDescent: {
+    name: "Drone descent",
+    a: { s: 1.32, x: 0, y: 0.09, r: 0 },
+    b: { s: 1.18, x: 0, y: 0.0, r: 0 },
+    c: { s: 1.26, x: 0, y: -0.015, r: 0 },
+  },
+  closeupSlide: {
+    name: "Close-up slider",
+    a: { s: 1.45, x: 0.07, y: 0.03, r: 0 },
+    b: { s: 1.38, x: 0.0, y: 0.03, r: 0 },
+    c: { s: 1.3, x: -0.06, y: 0.02, r: 0 },
+  },
+  orbitGlide: {
+    name: "Parallax orbit",
+    a: { s: 1.24, x: -0.06, y: 0, r: -1.1 },
+    b: { s: 1.2, x: 0.0, y: -0.01, r: 0 },
+    c: { s: 1.24, x: 0.06, y: 0, r: 1.1 },
+  },
+  pedestalUp: {
+    name: "Pedestal up",
+    a: { s: 1.3, x: 0, y: -0.08, r: 0 },
+    b: { s: 1.22, x: 0.01, y: 0, r: 0 },
+    c: { s: 1.18, x: 0, y: 0.04, r: 0 },
+  },
+  heroPullOut: {
+    name: "Hero pull-out",
+    a: { s: 1.42, x: 0, y: 0.01, r: 0 },
+    b: { s: 1.12, x: 0, y: 0, r: 0 },
+    c: { s: 1.04, x: 0, y: 0, r: 0 },
+  },
+};
+
+/** Auto-recommended storyboard by photo count: establishing → detail → orbit → hero. */
+function directorPlan(n: number): Shot[] {
+  const S = SHOTS;
+  const plans: Record<number, Shot[]> = {
+    1: [S.droneDescent!],
+    2: [S.droneDescent!, S.heroPullOut!],
+    3: [S.droneDescent!, S.closeupSlide!, S.heroPullOut!],
+    4: [S.droneDescent!, S.closeupSlide!, S.orbitGlide!, S.heroPullOut!],
+    5: [S.droneDescent!, S.closeupSlide!, S.orbitGlide!, S.pedestalUp!, S.heroPullOut!],
+  };
+  return plans[Math.min(5, Math.max(1, n))]!;
+}
+
+const smooth = (t: number) => t * t * (3 - 2 * t);
+const mix = (a: number, b: number, t: number) => a + (b - a) * t;
+function camAt(shot: Shot, t: number): Cam {
+  // Smooth two-phase curve: continuous velocity through middle keyframe.
+  const tt = smooth(Math.min(1, Math.max(0, t)));
+  const u = tt < 0.5 ? tt * 2 : (tt - 0.5) * 2;
+  const p = tt < 0.5 ? shot.a : shot.b;
+  const q = tt < 0.5 ? shot.b : shot.c;
+  const k = tt < 0.5 ? 1 - Math.pow(1 - u, 2) * 0.5 - 0.5 * (1 - u) : u; // gentle ease
+  const kk = Math.min(1, Math.max(0, tt < 0.5 ? k : 1 - Math.pow(1 - u, 1.6)));
+  return { s: mix(p.s, q.s, kk), x: mix(p.x, q.x, kk), y: mix(p.y, q.y, kk), r: mix(p.r, q.r, kk) };
+}
+
+export type Backsound = "none" | "ambient" | "cinematic" | "upbeat";
+export const BACKSOUNDS: { id: Backsound; label: string }[] = [
+  { id: "cinematic", label: "Cinematic" },
+  { id: "ambient", label: "Ambient lembut" },
+  { id: "upbeat", label: "Upbeat modern" },
+  { id: "none", label: "Tanpa musik" },
 ];
 
+/** Synthesized royalty-free backsound, scheduled for `sec` seconds. */
+function scheduleMusic(ac: AudioContext, out: AudioNode, style: Backsound, sec: number) {
+  const master = ac.createGain();
+  const t0 = ac.currentTime + 0.05;
+  master.gain.setValueAtTime(0, t0);
+  master.gain.linearRampToValueAtTime(0.55, t0 + 2);
+  master.gain.setValueAtTime(0.55, t0 + sec - 2.5);
+  master.gain.linearRampToValueAtTime(0, t0 + sec);
+  const lp = ac.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = style === "upbeat" ? 2600 : 1400;
+  lp.connect(master);
+  master.connect(out);
+  // Simple feedback reverb-ish delay
+  const dl = ac.createDelay(1);
+  dl.delayTime.value = 0.32;
+  const fb = ac.createGain();
+  fb.gain.value = 0.35;
+  lp.connect(dl);
+  dl.connect(fb);
+  fb.connect(dl);
+  dl.connect(master);
+
+  const hz = (m: number) => 440 * Math.pow(2, (m - 69) / 12);
+  // i–VI–III–VII in A minor / Am–F–C–G
+  const prog = [
+    [57, 60, 64],
+    [53, 57, 60],
+    [48, 52, 55],
+    [55, 59, 62],
+  ];
+  const bar = style === "upbeat" ? 2 : style === "cinematic" ? 4 : 5;
+  const pad = (midi: number, at: number, dur: number, vol: number, type: OscillatorType) => {
+    const o = ac.createOscillator();
+    const g = ac.createGain();
+    o.type = type;
+    o.frequency.value = hz(midi);
+    o.detune.value = (Math.random() - 0.5) * 8;
+    g.gain.setValueAtTime(0, at);
+    g.gain.linearRampToValueAtTime(vol, at + Math.min(1.2, dur * 0.35));
+    g.gain.linearRampToValueAtTime(0, at + dur);
+    o.connect(g);
+    g.connect(lp);
+    o.start(at);
+    o.stop(at + dur + 0.05);
+  };
+  const pluck = (midi: number, at: number, vol: number) => {
+    const o = ac.createOscillator();
+    const g = ac.createGain();
+    o.type = "triangle";
+    o.frequency.value = hz(midi);
+    g.gain.setValueAtTime(vol, at);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + 0.6);
+    o.connect(g);
+    g.connect(lp);
+    o.start(at);
+    o.stop(at + 0.7);
+  };
+  const kick = (at: number) => {
+    const o = ac.createOscillator();
+    const g = ac.createGain();
+    o.frequency.setValueAtTime(120, at);
+    o.frequency.exponentialRampToValueAtTime(40, at + 0.25);
+    g.gain.setValueAtTime(0.6, at);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + 0.3);
+    o.connect(g);
+    g.connect(master);
+    o.start(at);
+    o.stop(at + 0.35);
+  };
+
+  for (let b = 0, at = t0; at < t0 + sec; b++, at += bar) {
+    const ch = prog[b % prog.length]!;
+    const dur = bar + 0.8;
+    for (const m of ch) pad(m, at, dur, style === "ambient" ? 0.05 : 0.045, "sine");
+    pad(ch[0]! - 12, at, dur, style === "cinematic" ? 0.09 : 0.06, style === "cinematic" ? "sawtooth" : "sine");
+    if (style === "cinematic") {
+      pad(ch[2]! + 12, at + bar / 2, bar / 2 + 0.6, 0.02, "triangle");
+      if (b % 2 === 1) kick(at);
+    }
+    if (style === "ambient") {
+      for (let i = 0; i < 4; i++) pluck(ch[i % 3]! + 12, at + i * (bar / 4) + 0.3, 0.03);
+    }
+    if (style === "upbeat") {
+      for (let i = 0; i < 4; i++) kick(at + i * (bar / 4));
+      for (let i = 0; i < 8; i++) pluck(ch[i % 3]! + (i % 2 ? 12 : 24), at + i * (bar / 8), 0.035);
+    }
+  }
+}
+
 /**
- * Multi-photo cinematic story video (2–5 renders) with varied camera moves and
- * cross-dissolves. Records in real time, so it takes `seconds` to produce.
+ * Multi-photo cinematic story video (1–5 renders), Auto-Director camera moves,
+ * momentum transitions and optional synthesized backsound. Records in real time.
  */
 export async function renderCinematicStory(
   images: string[],
@@ -254,6 +409,7 @@ export async function renderCinematicStory(
   prefs: WatermarkPrefs,
   brand: Brand,
   onProgress?: (p: number) => void,
+  music: Backsound = "cinematic",
 ): Promise<{ blob: Blob; ext: string }> {
   const mime = pickVideoMime();
   if (!mime) throw new Error("Browser ini belum mendukung pembuatan video");
@@ -269,6 +425,16 @@ export async function renderCinematicStory(
   const overlay = await blobToImg(
     await renderWithWatermark(blank.toDataURL("image/png"), prefs, brand),
   );
+  // Pre-scale every photo to a cached canvas (cover W×H) → light per-frame work, no stutter.
+  const frames = imgs.map((img) => {
+    const pc = document.createElement("canvas");
+    pc.width = W;
+    pc.height = H;
+    const pctx = pc.getContext("2d")!;
+    pctx.imageSmoothingQuality = "high";
+    drawCover(pctx, img, 0, 0, W, H);
+    return pc;
+  });
 
   const c = document.createElement("canvas");
   c.width = W;
@@ -276,22 +442,20 @@ export async function renderCinematicStory(
   const ctx = c.getContext("2d")!;
   ctx.imageSmoothingQuality = "high";
   const TOTAL = seconds * 1000;
-  const FADE = 1200;
-  const n = imgs.length;
-  const seg = (TOTAL + FADE * (n - 1)) / n; // each clip overlaps the next by FADE
-  const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+  const n = frames.length;
+  const plan = directorPlan(n);
+  const TR = Math.min(1400, TOTAL / n / 3); // momentum transition length
+  const seg = (TOTAL + TR * (n - 1)) / n;
 
-  const drawClip = (i: number, local: number, alpha: number) => {
-    const img = imgs[i]!;
-    const m = MOVES[i % MOVES.length]!;
-    const t = ease(Math.min(1, Math.max(0, local / seg)));
-    const s = lerp(m.s0, m.s1, t);
+  const drawShot = (i: number, local: number, alpha: number, push: number) => {
+    const cam = camAt(plan[i]!, local / seg);
+    const s = cam.s * (1 + push);
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.translate(W / 2 + lerp(m.x0, m.x1, t) * W, H / 2 + lerp(m.y0, m.y1, t) * H);
-    ctx.rotate((lerp(m.r0, m.r1, t) * Math.PI) / 180);
+    ctx.translate(W / 2 + cam.x * W, H / 2 + cam.y * H);
+    ctx.rotate((cam.r * Math.PI) / 180);
     ctx.scale(s, s);
-    drawCover(ctx, img, -W / 2, -H / 2, W, H);
+    ctx.drawImage(frames[i]!, -W / 2, -H / 2, W, H);
     ctx.restore();
   };
 
@@ -300,17 +464,35 @@ export async function renderCinematicStory(
     ctx.fillStyle = "#000";
     ctx.fillRect(0, 0, W, H);
     for (let i = 0; i < n; i++) {
-      const start = i * (seg - FADE);
+      const start = i * (seg - TR);
       const local = t - start;
       if (local < 0 || local > seg) continue;
-      let a = 1;
-      if (i > 0 && local < FADE) a = local / FADE;
-      drawClip(i, local, a);
+      let alpha = 1;
+      let push = 0;
+      if (i > 0 && local < TR) {
+        // incoming: settles from a slight zoom-through into its own move
+        const p = smooth(local / TR);
+        alpha = p;
+        push = (1 - p) * 0.08;
+      }
+      if (i < n - 1 && local > seg - TR) {
+        // outgoing: keeps momentum forward (zoom-through) as it hands off
+        const p = smooth((local - (seg - TR)) / TR);
+        push = p * 0.1;
+      }
+      drawShot(i, local, alpha, push);
     }
-    // final fade-out
-    const out = TOTAL - t;
-    if (out < 800) {
-      ctx.globalAlpha = 1 - Math.max(0, out) / 800;
+    // cinematic vignette
+    const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.75);
+    g.addColorStop(0, "rgba(0,0,0,0)");
+    g.addColorStop(1, "rgba(0,0,0,0.35)");
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    // fade in / out
+    const edge = t < 600 ? 1 - t / 600 : TOTAL - t < 1000 ? 1 - Math.max(0, TOTAL - t) / 1000 : 0;
+    if (edge > 0) {
+      ctx.globalAlpha = edge;
       ctx.fillStyle = "#000";
       ctx.fillRect(0, 0, W, H);
     }
@@ -320,7 +502,15 @@ export async function renderCinematicStory(
 
   draw(0);
   const stream = c.captureStream(30);
-  const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 4_500_000 });
+  let ac: AudioContext | null = null;
+  if (music !== "none" && typeof AudioContext !== "undefined") {
+    ac = new AudioContext();
+    await ac.resume().catch(() => {});
+    const dest = ac.createMediaStreamDestination();
+    scheduleMusic(ac, dest, music, seconds);
+    dest.stream.getAudioTracks().forEach((tr) => stream.addTrack(tr));
+  }
+  const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 6_000_000 });
   const chunks: Blob[] = [];
   rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
   const done = new Promise<void>((r) => (rec.onstop = () => r()));
@@ -339,6 +529,7 @@ export async function renderCinematicStory(
   rec.stop();
   stream.getTracks().forEach((tr) => tr.stop());
   await done;
+  void ac?.close();
   const type = mime.split(";")[0] ?? "video/webm";
   return { blob: new Blob(chunks, { type }), ext: type === "video/mp4" ? "mp4" : "webm" };
 }
