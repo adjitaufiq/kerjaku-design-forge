@@ -234,3 +234,111 @@ export async function renderCinematic(
   const type = mime.split(";")[0] ?? "video/webm";
   return { blob: new Blob(chunks, { type }), ext: type === "video/mp4" ? "mp4" : "webm" };
 }
+
+type Move = { s0: number; s1: number; x0: number; x1: number; y0: number; y1: number; r0: number; r1: number };
+const MOVES: Move[] = [
+  { s0: 1.0, s1: 1.14, x0: 0, x1: 0, y0: 0, y1: -0.02, r0: 0, r1: 0 }, // slow push-in
+  { s0: 1.14, s1: 1.14, x0: -0.05, x1: 0.05, y0: 0, y1: 0, r0: 0, r1: 0 }, // pan right
+  { s0: 1.16, s1: 1.16, x0: 0.05, x1: -0.05, y0: 0.01, y1: -0.01, r0: 0, r1: 0 }, // pan left
+  { s0: 1.1, s1: 1.18, x0: 0, x1: 0, y0: 0, y1: 0, r0: -0.6, r1: 0.6 }, // gimbal orbit
+  { s0: 1.2, s1: 1.02, x0: 0, x1: 0, y0: -0.02, y1: 0, r0: 0, r1: 0 }, // pull-out hero
+];
+
+/**
+ * Multi-photo cinematic story video (2–5 renders) with varied camera moves and
+ * cross-dissolves. Records in real time, so it takes `seconds` to produce.
+ */
+export async function renderCinematicStory(
+  images: string[],
+  seconds: number,
+  prefs: WatermarkPrefs,
+  brand: Brand,
+  onProgress?: (p: number) => void,
+): Promise<{ blob: Blob; ext: string }> {
+  const mime = pickVideoMime();
+  if (!mime) throw new Error("Browser ini belum mendukung pembuatan video");
+  if (!images.length) throw new Error("Belum ada foto render");
+  const imgs = await Promise.all(images.map(loadImg));
+  const f = imgs[0]!;
+  const k = Math.min(1, 1080 / Math.max(f.naturalWidth, f.naturalHeight));
+  const W = Math.round((f.naturalWidth * k) / 2) * 2;
+  const H = Math.round((f.naturalHeight * k) / 2) * 2;
+  const blank = document.createElement("canvas");
+  blank.width = f.naturalWidth;
+  blank.height = f.naturalHeight;
+  const overlay = await blobToImg(
+    await renderWithWatermark(blank.toDataURL("image/png"), prefs, brand),
+  );
+
+  const c = document.createElement("canvas");
+  c.width = W;
+  c.height = H;
+  const ctx = c.getContext("2d")!;
+  ctx.imageSmoothingQuality = "high";
+  const TOTAL = seconds * 1000;
+  const FADE = 1200;
+  const n = imgs.length;
+  const seg = (TOTAL + FADE * (n - 1)) / n; // each clip overlaps the next by FADE
+  const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
+  const drawClip = (i: number, local: number, alpha: number) => {
+    const img = imgs[i]!;
+    const m = MOVES[i % MOVES.length]!;
+    const t = ease(Math.min(1, Math.max(0, local / seg)));
+    const s = lerp(m.s0, m.s1, t);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(W / 2 + lerp(m.x0, m.x1, t) * W, H / 2 + lerp(m.y0, m.y1, t) * H);
+    ctx.rotate((lerp(m.r0, m.r1, t) * Math.PI) / 180);
+    ctx.scale(s, s);
+    drawCover(ctx, img, -W / 2, -H / 2, W, H);
+    ctx.restore();
+  };
+
+  const draw = (t: number) => {
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, W, H);
+    for (let i = 0; i < n; i++) {
+      const start = i * (seg - FADE);
+      const local = t - start;
+      if (local < 0 || local > seg) continue;
+      let a = 1;
+      if (i > 0 && local < FADE) a = local / FADE;
+      drawClip(i, local, a);
+    }
+    // final fade-out
+    const out = TOTAL - t;
+    if (out < 800) {
+      ctx.globalAlpha = 1 - Math.max(0, out) / 800;
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, W, H);
+    }
+    ctx.globalAlpha = 1;
+    ctx.drawImage(overlay, 0, 0, W, H);
+  };
+
+  draw(0);
+  const stream = c.captureStream(30);
+  const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 4_500_000 });
+  const chunks: Blob[] = [];
+  rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+  const done = new Promise<void>((r) => (rec.onstop = () => r()));
+  rec.start(500);
+  const start = performance.now();
+  await new Promise<void>((resolve) => {
+    const tick = () => {
+      const t = performance.now() - start;
+      draw(Math.min(t, TOTAL));
+      onProgress?.(Math.min(1, t / TOTAL));
+      if (t >= TOTAL) return resolve();
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+  rec.stop();
+  stream.getTracks().forEach((tr) => tr.stop());
+  await done;
+  const type = mime.split(";")[0] ?? "video/webm";
+  return { blob: new Blob(chunks, { type }), ext: type === "video/mp4" ? "mp4" : "webm" };
+}
