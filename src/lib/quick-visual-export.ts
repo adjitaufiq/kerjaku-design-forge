@@ -242,7 +242,7 @@ type Cam = { s: number; x: number; y: number; r: number };
 type Shot = { name: string; a: Cam; b: Cam; c: Cam };
 
 /** Pro videographer shot library (3 keyframes each → two-phase movement). */
-const SHOTS: Record<string, Shot> = {
+const SHOTS = {
   droneDescent: {
     name: "Drone descent",
     a: { s: 1.32, x: 0, y: 0.09, r: 0 },
@@ -273,17 +273,17 @@ const SHOTS: Record<string, Shot> = {
     b: { s: 1.12, x: 0, y: 0, r: 0 },
     c: { s: 1.04, x: 0, y: 0, r: 0 },
   },
-};
+} satisfies Record<string, Shot>;
 
 /** Auto-recommended storyboard by photo count: establishing → detail → orbit → hero. */
 function directorPlan(n: number): Shot[] {
   const S = SHOTS;
   const plans: Record<number, Shot[]> = {
-    1: [S.droneDescent!],
-    2: [S.droneDescent!, S.heroPullOut!],
-    3: [S.droneDescent!, S.closeupSlide!, S.heroPullOut!],
-    4: [S.droneDescent!, S.closeupSlide!, S.orbitGlide!, S.heroPullOut!],
-    5: [S.droneDescent!, S.closeupSlide!, S.orbitGlide!, S.pedestalUp!, S.heroPullOut!],
+    1: [S.droneDescent],
+    2: [S.droneDescent, S.heroPullOut],
+    3: [S.droneDescent, S.closeupSlide, S.heroPullOut],
+    4: [S.droneDescent, S.closeupSlide, S.orbitGlide, S.heroPullOut],
+    5: [S.droneDescent, S.closeupSlide, S.orbitGlide, S.pedestalUp, S.heroPullOut],
   };
   return plans[Math.min(5, Math.max(1, n))]!;
 }
@@ -384,7 +384,13 @@ function scheduleMusic(ac: AudioContext, out: AudioNode, style: Backsound, sec: 
     const ch = prog[b % prog.length]!;
     const dur = bar + 0.8;
     for (const m of ch) pad(m, at, dur, style === "ambient" ? 0.05 : 0.045, "sine");
-    pad(ch[0]! - 12, at, dur, style === "cinematic" ? 0.09 : 0.06, style === "cinematic" ? "sawtooth" : "sine");
+    pad(
+      ch[0]! - 12,
+      at,
+      dur,
+      style === "cinematic" ? 0.09 : 0.06,
+      style === "cinematic" ? "sawtooth" : "sine",
+    );
     if (style === "cinematic") {
       pad(ch[2]! + 12, at + bar / 2, bar / 2 + 0.6, 0.02, "triangle");
       if (b % 2 === 1) kick(at);
@@ -483,7 +489,14 @@ export async function renderCinematicStory(
       drawShot(i, local, alpha, push);
     }
     // cinematic vignette
-    const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.75);
+    const g = ctx.createRadialGradient(
+      W / 2,
+      H / 2,
+      Math.min(W, H) * 0.35,
+      W / 2,
+      H / 2,
+      Math.max(W, H) * 0.75,
+    );
     g.addColorStop(0, "rgba(0,0,0,0)");
     g.addColorStop(1, "rgba(0,0,0,0.35)");
     ctx.globalAlpha = 1;
