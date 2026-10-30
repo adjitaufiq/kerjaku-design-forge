@@ -19,6 +19,7 @@ import { Route as AuthenticatedProjectsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedQuickVisualRouteImport } from './routes/_authenticated/quick-visual'
 import { Route as AuthenticatedRender3dRouteImport } from './routes/_authenticated/render-3d'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as ApiRenderInteriorRouteImport } from './routes/api/render-interior'
 import { Route as ProposalTokenRouteImport } from './routes/proposal.$token'
 import { Route as AuthenticatedConceptsConceptIdRouteImport } from './routes/_authenticated/concepts.$conceptId'
 import { Route as AuthenticatedLeadsIndexRouteImport } from './routes/_authenticated/leads/index'
@@ -77,6 +78,11 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiRenderInteriorRoute = ApiRenderInteriorRouteImport.update({
+  id: '/api/render-interior',
+  path: '/api/render-interior',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProposalTokenRoute = ProposalTokenRouteImport.update({
   id: '/proposal/$token',
   path: '/proposal/$token',
@@ -122,6 +128,7 @@ export interface FileRoutesByFullPath {
   '/quick-visual': typeof AuthenticatedQuickVisualRoute
   '/render-3d': typeof AuthenticatedRender3dRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/api/render-interior': typeof ApiRenderInteriorRoute
   '/proposal/$token': typeof ProposalTokenRoute
   '/concepts/$conceptId': typeof AuthenticatedConceptsConceptIdRoute
   '/leads/$leadId': typeof AuthenticatedLeadsLeadIdRoute
@@ -139,6 +146,7 @@ export interface FileRoutesByTo {
   '/quick-visual': typeof AuthenticatedQuickVisualRoute
   '/render-3d': typeof AuthenticatedRender3dRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/api/render-interior': typeof ApiRenderInteriorRoute
   '/proposal/$token': typeof ProposalTokenRoute
   '/concepts/$conceptId': typeof AuthenticatedConceptsConceptIdRoute
   '/leads/$leadId': typeof AuthenticatedLeadsLeadIdRoute
@@ -158,6 +166,7 @@ export interface FileRoutesById {
   '/_authenticated/quick-visual': typeof AuthenticatedQuickVisualRoute
   '/_authenticated/render-3d': typeof AuthenticatedRender3dRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/api/render-interior': typeof ApiRenderInteriorRoute
   '/proposal/$token': typeof ProposalTokenRoute
   '/_authenticated/concepts/$conceptId': typeof AuthenticatedConceptsConceptIdRoute
   '/_authenticated/leads/$leadId': typeof AuthenticatedLeadsLeadIdRoute
@@ -177,6 +186,7 @@ export interface FileRouteTypes {
     | '/quick-visual'
     | '/render-3d'
     | '/settings'
+    | '/api/render-interior'
     | '/proposal/$token'
     | '/concepts/$conceptId'
     | '/leads/$leadId'
@@ -194,6 +204,7 @@ export interface FileRouteTypes {
     | '/quick-visual'
     | '/render-3d'
     | '/settings'
+    | '/api/render-interior'
     | '/proposal/$token'
     | '/concepts/$conceptId'
     | '/leads/$leadId'
@@ -212,6 +223,7 @@ export interface FileRouteTypes {
     | '/_authenticated/quick-visual'
     | '/_authenticated/render-3d'
     | '/_authenticated/settings'
+    | '/api/render-interior'
     | '/proposal/$token'
     | '/_authenticated/concepts/$conceptId'
     | '/_authenticated/leads/$leadId'
@@ -224,6 +236,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiRenderInteriorRoute: typeof ApiRenderInteriorRoute
   ProposalTokenRoute: typeof ProposalTokenRoute
 }
 
@@ -298,6 +311,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings'
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/render-interior': {
+      id: '/api/render-interior'
+      path: '/api/render-interior'
+      fullPath: '/api/render-interior'
+      preLoaderRoute: typeof ApiRenderInteriorRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/proposal/$token': {
       id: '/proposal/$token'
@@ -381,6 +401,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiRenderInteriorRoute: ApiRenderInteriorRoute,
   ProposalTokenRoute: ProposalTokenRoute,
 }
 export const routeTree = rootRouteImport
