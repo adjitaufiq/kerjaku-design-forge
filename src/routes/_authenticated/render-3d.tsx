@@ -921,7 +921,9 @@ function ClientForm({
         />
         <Button
           className="w-full"
-          disabled={!f.name.trim() || !f.location.trim() || save.isPending || !!save.data}
+          disabled={
+            !f.name.trim() || !f.location.trim() || !f.phone.trim() || save.isPending || !!save.data
+          }
           onClick={() => save.mutate()}
         >
           {save.isPending ? "Menyimpan…" : `Simpan klien + ${shots.length} render`}
