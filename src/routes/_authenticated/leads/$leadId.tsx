@@ -84,7 +84,7 @@ const ACTIVITY_TYPES: ActivityType[] = [
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-start justify-between gap-4 border-b border-border/60 py-2 last:border-0">
-      <span className="text-xs tracking-wide text-muted-foreground uppercase">{label}</span>
+      <span className="shrink-0 text-xs tracking-wide text-muted-foreground uppercase">{label}</span>
       <span className="min-w-0 break-words text-right text-sm text-foreground">{value}</span>
     </div>
   );
@@ -530,7 +530,7 @@ function LeadDetailPage() {
           </SectionCard>
         </div>
 
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <SectionCard title="Pipeline stage">
             <div className="space-y-3">
               <LeadStatusBadge status={lead.status} />
