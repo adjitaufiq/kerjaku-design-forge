@@ -123,13 +123,38 @@ function LeadsPage() {
           />
         </div>
       ) : (
-        <DataTable
-          columns={columns}
-          rows={leadsQuery.data ?? []}
-          getRowId={(l) => l.id}
-          onRowClick={(l) => navigate({ to: "/leads/$leadId", params: { leadId: l.id } })}
-          emptyMessage="No leads yet. Create your first client inquiry."
-        />
+        <>
+          <ul className="space-y-3 md:hidden">
+            {(leadsQuery.data ?? []).map((l) => (
+              <li key={l.id}>
+                <button
+                  type="button"
+                  onClick={() => navigate({ to: "/leads/$leadId", params: { leadId: l.id } })}
+                  className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-border bg-surface/40 px-4 py-3 text-left"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-foreground">{l.clientName}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {[l.location, l.phone, l.source].filter(Boolean).join(" · ") || "—"}
+                    </p>
+                  </div>
+                  <div className="shrink-0">
+                    <LeadStatusBadge status={l.status} />
+                  </div>
+                </button>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden md:block">
+            <DataTable
+              columns={columns}
+              rows={leadsQuery.data ?? []}
+              getRowId={(l) => l.id}
+              onRowClick={(l) => navigate({ to: "/leads/$leadId", params: { leadId: l.id } })}
+              emptyMessage="No leads yet. Create your first client inquiry."
+            />
+          </div>
+        </>
       )}
 
       <Modal
