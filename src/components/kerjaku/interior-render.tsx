@@ -196,17 +196,21 @@ export function InteriorRender({
                     <Trash2 className="size-4" />
                   </Button>
                 </div>
-                <TextField
+                <TextAreaField
                   label="Finishing / HPL"
                   name={`fin-${i}`}
                   maxLength={160}
+                  rows={2}
+                  className="[&_textarea]:min-h-0"
                   value={m.finish}
                   onChange={(e) => setModule(i, { finish: e.target.value })}
                 />
-                <TextField
+                <TextAreaField
                   label="Isi dalam"
                   name={`con-${i}`}
                   maxLength={300}
+                  rows={3}
+                  className="[&_textarea]:min-h-0"
                   value={m.contents}
                   onChange={(e) => setModule(i, { contents: e.target.value })}
                 />
