@@ -8,7 +8,7 @@ export interface VisualOption {
   before?: string; // client photo this visual was made from
   spec: string; // short description of design / finish
   createdAt: number;
-  interiorImage?: string;
+  interiorImage?: string | undefined;
   specHints?: SpecHints;
 }
 

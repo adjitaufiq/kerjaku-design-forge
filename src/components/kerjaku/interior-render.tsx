@@ -17,8 +17,8 @@ export function InteriorRender({
 }: {
   image: string;
   name: string;
-  initialSpec?: SpecHints;
-  interiorImage?: string;
+  initialSpec?: SpecHints | undefined;
+  interiorImage?: string | undefined;
   onSave: (spec: SpecHints, image?: string) => Promise<void>;
 }) {
   const [spec, setSpec] = useState<SpecHints>(
@@ -37,8 +37,8 @@ export function InteriorRender({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const setValue = (key: "outside" | "inside" | "hinge" | "slide", value: string) => {
-    const next = specHintsSchema.parse({ ...spec, [key]: value });
-    setSpec(next);
+    const selected = specHintsSchema.shape[key].parse(value);
+    setSpec(s => ({ ...s, [key]: selected }));
     setPreview("");
   };
   const save = async () => {

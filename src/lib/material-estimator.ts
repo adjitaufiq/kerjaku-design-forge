@@ -42,7 +42,7 @@ export function buildEstimatorUrl(input: {
   beforeUrl?: string | null;
   renderUrl?: string | null;
   interiorUrl?: string | null;
-  specHints?: SpecHints | null;
+  specHints?: SpecHints | null | undefined;
   origin: string;
 }): string {
   const p = new URLSearchParams();

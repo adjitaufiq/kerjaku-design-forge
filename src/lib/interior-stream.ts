@@ -3,6 +3,14 @@ import { flushSync } from "react-dom";
 
 type ImagePayload = { type?: string; b64_json?: string; error?: { message?: string } };
 
+async function safeError(res: Response): Promise<string> {
+  const text = await res.text().catch(() => "");
+  try {
+    const body = JSON.parse(text);
+    return body.error?.message ?? body.message ?? `AI gagal (${res.status})`;
+  } catch { return text || `AI gagal (${res.status})`; }
+}
+
 export async function streamImage(
   endpoint: string,
   input: Record<string, unknown> | FormData,
@@ -31,7 +39,7 @@ export async function streamImage(
   };
   const res = await send(true);
   if (!res.ok || !res.body) {
-    throw new Error(`Image generation failed: ${res.status} ${await res.text().catch(() => "")}`);
+    throw new Error(await safeError(res));
   }
 
   let sawCompleted = false;
@@ -45,12 +53,12 @@ export async function streamImage(
       } catch {
         payload = undefined;
       }
-      if (event.event === "error" || payload?.type === "error") {
+      if (event.event === "error" || event.event === "denied" || payload?.type === "error") {
         sawAnyEvent = true;
         streamError = payload?.error?.message ?? "Image generation failed";
         return;
       }
-      const type = event.event || payload?.type;
+      const type = event.event && event.event !== "message" ? event.event : payload?.type;
       if (
         type !== "image_generation.partial_image" &&
         type !== "image_generation.completed" &&
@@ -91,7 +99,7 @@ export async function streamImage(
   if (!sawAnyEvent) {
     const replay = await send(false);
     if (!replay.ok) {
-      throw new Error(`Image generation failed: ${replay.status} ${await replay.text().catch(() => "")}`);
+      throw new Error(await safeError(replay));
     }
     const json = (await replay.json()) as { data?: { b64_json?: string }[] };
     const b64 = json.data?.[0]?.b64_json;
