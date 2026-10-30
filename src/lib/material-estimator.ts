@@ -19,9 +19,9 @@ export type EstimatePayload = {
 const JOB_TYPE: Record<string, string> = {
   KITCHEN_SET: "kitchen_set",
   WARDROBE: "wardrobe",
-  BEDROOM: "bedroom",
+  BEDROOM_INTERIOR: "bedroom",
   LIVING_ROOM: "living_room",
-  OFFICE: "office",
+  OFFICE_INTERIOR: "office",
 };
 
 export function toJobType(projectType: string): string {
