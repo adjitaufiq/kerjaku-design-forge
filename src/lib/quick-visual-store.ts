@@ -1,4 +1,5 @@
 /** Browser-only persistence for the Quick Visual session (IndexedDB — photos are too big for localStorage). */
+import type { SpecHints } from "@/lib/interior-spec";
 
 export interface VisualOption {
   id: string;
@@ -7,6 +8,8 @@ export interface VisualOption {
   before?: string; // client photo this visual was made from
   spec: string; // short description of design / finish
   createdAt: number;
+  interiorImage?: string | undefined;
+  specHints?: SpecHints;
 }
 
 export interface QuickSession {

@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { EstimateSummary } from "@/components/kerjaku/estimate-summary";
+import { ProjectInterior } from "@/components/kerjaku/project-interior";
+import { INTERIOR_ACTIVITY_TITLE, parseInteriorRecord } from "@/lib/interior-spec";
 import {
   buildEstimatorUrl,
   ESTIMATE_ACTIVITY_TITLE,
@@ -205,14 +207,26 @@ function LeadDetailPage() {
       const current = leadQuery.data;
       if (!current || !workspaceId) throw new Error("Data klien belum siap");
       const win = window.open("about:blank", "_blank");
-      const assets = await data.assets.listByProject(p.id).catch(() => []);
+      const [assets, activities] = await Promise.all([
+        data.assets.listByProject(p.id),
+        data.activities.listByLead(leadId),
+      ]);
+      const records = activities
+        .filter((a) => a.title === INTERIOR_ACTIVITY_TITLE)
+        .map((a) => parseInteriorRecord(a.body))
+        .filter((r) => r !== null && r.projectId === p.id);
+      const interiorIds = new Set(records.map((r) => r?.interiorAssetId));
+      const record = records[0];
       const latest = (type: string) => {
-        const a = [...assets].reverse().find((x) => x.type === type);
+        const a = assets.find((x) => x.type === type && !interiorIds.has(x.id));
         return a ? data.assets.getViewUrl(a.url) : Promise.resolve(null);
       };
-      const [beforeUrl, renderUrl] = await Promise.all([
+      const base = assets.find((a) => a.id === record?.baseAssetId);
+      const inside = assets.find((a) => a.id === record?.interiorAssetId);
+      const [beforeUrl, renderUrl, interiorUrl] = await Promise.all([
         latest("CLIENT_PHOTO"),
-        latest("SKETCHUP_RENDER"),
+        base ? data.assets.getViewUrl(base.url) : latest("SKETCHUP_RENDER"),
+        inside ? data.assets.getViewUrl(inside.url) : Promise.resolve(null),
       ]);
       const url = buildEstimatorUrl({
         projectId: p.id,
@@ -226,6 +240,8 @@ function LeadDetailPage() {
         notes: consultationQuery.data?.notes ?? null,
         beforeUrl,
         renderUrl,
+        interiorUrl,
+        specHints: record?.specHints,
         origin: window.location.origin,
       });
       if (win) win.location.href = url;
@@ -370,6 +386,20 @@ function LeadDetailPage() {
                         <Calculator className="size-4" /> Hitung Estimasi Material
                       </Button>
                       {estimates.get(p.id) && <EstimateSummary estimate={estimates.get(p.id)!} />}
+                      {workspaceId && (
+                        <details className="mt-3 w-full">
+                          <summary className="cursor-pointer text-sm font-medium text-foreground">
+                            Tampak dalam / spek material
+                          </summary>
+                          <div className="mt-3">
+                            <ProjectInterior
+                              workspaceId={workspaceId}
+                              leadId={leadId}
+                              projectId={p.id}
+                            />
+                          </div>
+                        </details>
+                      )}
                     </div>
                   </li>
                 ))}
@@ -411,7 +441,7 @@ function LeadDetailPage() {
                       </span>
                     </div>
                     <p className="mt-1 text-sm font-medium text-foreground">{a.title}</p>
-                    {a.body ? (
+                    {a.body && a.title !== INTERIOR_ACTIVITY_TITLE ? (
                       <p className="mt-0.5 text-sm text-muted-foreground">{a.body}</p>
                     ) : null}
                   </li>

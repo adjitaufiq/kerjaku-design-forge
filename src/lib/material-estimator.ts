@@ -1,4 +1,5 @@
 // Handoff contract with Smart Material Estimator (SME, Apps #3).
+import type { SpecHints } from "@/lib/interior-spec";
 export const ESTIMATOR_BASE_URL = "https://smart-material-kalk.lovable.app/import";
 export const ESTIMATE_ACTIVITY_TITLE = "Estimasi Material (SME)";
 
@@ -40,6 +41,8 @@ export function buildEstimatorUrl(input: {
   notes?: string | null;
   beforeUrl?: string | null;
   renderUrl?: string | null;
+  interiorUrl?: string | null;
+  specHints?: SpecHints | null | undefined;
   origin: string;
 }): string {
   const p = new URLSearchParams();
@@ -56,6 +59,12 @@ export function buildEstimatorUrl(input: {
   set("notes", input.notes);
   set("beforeUrl", input.beforeUrl);
   set("renderUrl", input.renderUrl);
+  set("interiorUrl", input.interiorUrl);
+  if (input.specHints) {
+    const bytes = new TextEncoder().encode(JSON.stringify(input.specHints));
+    const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join("");
+    set("specHints", btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""));
+  }
   set("returnUrl", `${input.origin}/leads/${input.leadId}`);
   return `${ESTIMATOR_BASE_URL}?${p.toString()}`;
 }
