@@ -35,6 +35,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { GlassCard, SectionCard } from "@/components/kerjaku/glass-card";
+import { InteriorRender } from "@/components/kerjaku/interior-render";
+import { INTERIOR_ACTIVITY_TITLE } from "@/lib/interior-spec";
 import { TextAreaField, TextField } from "@/components/kerjaku/form-fields";
 import { PageHeader } from "@/components/kerjaku/page-header";
 import {
@@ -686,6 +688,13 @@ function QuickVisualPage() {
               </Fold>
             </div>
           )}
+          {active && (roomId === "KITCHEN" || roomId === "BEDROOM") && (
+            <Fold title="Tampak dalam / pintu terbuka">
+              <InteriorRender key={active.id} image={active.image} name={active.name} initialSpec={active.specHints} interiorImage={active.interiorImage} onSave={async (specHints, image) => {
+                updateOption(active.id, { specHints, interiorImage: image });
+              }} />
+            </Fold>
+          )}
         </div>
       </div>
 
@@ -980,13 +989,18 @@ function SurveyForm({
           "CLIENT_PHOTO",
           await dataUrlToFile(session.roomImage, "before.jpg"),
         );
-      for (const [i, o] of session.options.entries())
-        await data.assets.upload(
+      for (const [i, o] of session.options.entries()) {
+        const base = await data.assets.upload(
           workspaceId,
           project.id,
           "SKETCHUP_RENDER",
           await dataUrlToFile(o.image, `visual-${i + 1}.png`),
         );
+        if (o.specHints) {
+          const inside = o.interiorImage ? await data.assets.upload(workspaceId, project.id, "SKETCHUP_RENDER", await dataUrlToFile(o.interiorImage, `interior-${i + 1}.png`)) : null;
+          await data.activities.log(workspaceId, { leadId: lead.id, type: "NOTE", title: INTERIOR_ACTIVITY_TITLE, body: JSON.stringify({ projectId: project.id, baseAssetId: base.id, ...(inside ? { interiorAssetId: inside.id } : {}), specHints: o.specHints }) });
+        }
+      }
       await data.activities.log(workspaceId, {
         leadId: lead.id,
         type: "AI_CONCEPT",
