@@ -38,7 +38,7 @@ export function InteriorRender({
   const [error, setError] = useState("");
   const setValue = (key: "outside" | "inside" | "hinge" | "slide", value: string) => {
     const selected = specHintsSchema.shape[key].parse(value);
-    setSpec(s => ({ ...s, [key]: selected }));
+    setSpec((s) => ({ ...s, [key]: selected }));
     setPreview("");
   };
   const save = async () => {

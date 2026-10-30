@@ -8,7 +8,9 @@ async function safeError(res: Response): Promise<string> {
   try {
     const body = JSON.parse(text);
     return body.error?.message ?? body.message ?? `AI gagal (${res.status})`;
-  } catch { return text || `AI gagal (${res.status})`; }
+  } catch {
+    return text || `AI gagal (${res.status})`;
+  }
 }
 
 export async function streamImage(
@@ -35,7 +37,12 @@ export async function streamImage(
       body = JSON.stringify(payload);
       requestHeaders.set("Content-Type", "application/json");
     }
-    return fetch(endpoint, { method: "POST", headers: requestHeaders, body, signal: signal ?? null });
+    return fetch(endpoint, {
+      method: "POST",
+      headers: requestHeaders,
+      body,
+      signal: signal ?? null,
+    });
   };
   const res = await send(true);
   if (!res.ok || !res.body) {
@@ -85,7 +92,12 @@ export async function streamImage(
       try {
         chunk = await reader.read();
       } catch (error) {
-        if (signal?.aborted || sawAnyEvent || (error instanceof Error && error.name === "AbortError")) throw error;
+        if (
+          signal?.aborted ||
+          sawAnyEvent ||
+          (error instanceof Error && error.name === "AbortError")
+        )
+          throw error;
         break;
       }
       if (chunk.done) break;
