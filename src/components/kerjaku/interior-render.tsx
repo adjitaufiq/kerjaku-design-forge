@@ -1,10 +1,20 @@
-import { useState } from "react";
-import { Download, Save, Wand2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Download, ScanSearch, Save, Trash2, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SelectField, TextAreaField, TextField } from "@/components/kerjaku/form-fields";
-import { ACCESSORIES, SPEC_OPTIONS, specHintsSchema, type SpecHints } from "@/lib/interior-spec";
+import {
+  ACCESSORIES,
+  defaultModules,
+  SHAPE_LABEL,
+  SHAPES,
+  SPEC_OPTIONS,
+  specHintsSchema,
+  type CabinetModule,
+  type SpecHints,
+} from "@/lib/interior-spec";
+import { scanInterior } from "@/lib/interior-scan.functions";
 import { streamImage } from "@/lib/interior-stream";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -13,8 +23,10 @@ export function InteriorRender({
   name,
   initialSpec,
   interiorImage,
+  summary,
   onSave,
 }: {
+  summary?: string | undefined;
   image: string;
   name: string;
   initialSpec?: SpecHints | undefined;
@@ -36,6 +48,46 @@ export function InteriorRender({
   const [busy, setBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [scanning, setScanning] = useState(false);
+  const [scanned, setScanned] = useState(false);
+  const autoRan = useRef(false);
+  const scan = async () => {
+    setScanning(true);
+    setError("");
+    try {
+      const blob = await (await fetch(image)).blob();
+      const dataUrl = await new Promise<string>((ok, bad) => {
+        const r = new FileReader();
+        r.onload = () => ok(String(r.result));
+        r.onerror = () => bad(new Error("Foto After tidak bisa dibaca"));
+        r.readAsDataURL(blob);
+      });
+      const result = await scanInterior({ data: { image: dataUrl, summary: summary ?? "" } });
+      setSpec(result);
+      setPreview("");
+      setScanned(true);
+      toast.success("Spek terisi otomatis — cek dulu sebelum simpan");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Scan gagal");
+    } finally {
+      setScanning(false);
+    }
+  };
+  useEffect(() => {
+    if (!initialSpec && !autoRan.current) {
+      autoRan.current = true;
+      void scan();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const modules = spec.modules ?? [];
+  const setModule = (i: number, patch: Partial<CabinetModule>) => {
+    setPreview("");
+    setSpec((s) => ({
+      ...s,
+      modules: (s.modules ?? []).map((m, j) => (j === i ? { ...m, ...patch } : m)),
+    }));
+  };
   const setValue = (key: "outside" | "inside" | "hinge" | "slide", value: string) => {
     const selected = specHintsSchema.shape[key].parse(value);
     setSpec((s) => ({ ...s, [key]: selected }));
@@ -60,6 +112,7 @@ export function InteriorRender({
     setFinal(false);
     try {
       const chosen = specHintsSchema.parse(spec);
+      if (scanning) throw new Error("Tunggu scan selesai.");
       const { data } = await supabase.auth.getSession();
       if (!data.session) throw new Error("Silakan login kembali.");
       const source = await fetch(image);
@@ -98,7 +151,78 @@ export function InteriorRender({
   return (
     <div className="space-y-4">
       <p className="text-sm font-medium text-foreground">{name}</p>
-      <fieldset disabled={busy || saving} className="space-y-4 disabled:opacity-60">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="outline" size="sm" disabled={scanning || busy} onClick={() => void scan()}>
+          <ScanSearch className="size-4" />
+          {scanning ? "Memindai visual…" : "Scan otomatis dari After & summary"}
+        </Button>
+        {scanned && (
+          <span className="text-xs text-muted-foreground">Hasil AI — review &amp; koreksi bila perlu</span>
+        )}
+      </div>
+      <fieldset disabled={busy || saving || scanning} className="space-y-4 disabled:opacity-60">
+        <SelectField
+          label="Bentuk layout"
+          value={spec.shape ?? ""}
+          onValueChange={(v) => {
+            const shape = SHAPES.find((x) => x === v);
+            if (!shape) return;
+            setPreview("");
+            setSpec((s) => ({ ...s, shape, modules: defaultModules(shape) }));
+          }}
+          options={SHAPES.map((x) => ({ value: x, label: SHAPE_LABEL[x] }))}
+        />
+        {modules.length > 0 && (
+          <div className="space-y-3">
+            <p className="text-xs font-medium text-muted-foreground">Modul kabinet ({modules.length})</p>
+            {modules.map((m, i) => (
+              <div key={i} className="space-y-2 rounded-lg border border-border/60 p-3">
+                <div className="flex items-center gap-2">
+                  <TextField
+                    label="Nama modul"
+                    name={`mod-${i}`}
+                    maxLength={80}
+                    value={m.label}
+                    onChange={(e) => setModule(i, { label: e.target.value })}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Hapus modul"
+                    onClick={() =>
+                      setSpec((s) => ({ ...s, modules: (s.modules ?? []).filter((_, j) => j !== i) }))
+                    }
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+                <TextField
+                  label="Finishing / HPL"
+                  name={`fin-${i}`}
+                  maxLength={160}
+                  value={m.finish}
+                  onChange={(e) => setModule(i, { finish: e.target.value })}
+                />
+                <TextField
+                  label="Isi dalam"
+                  name={`con-${i}`}
+                  maxLength={300}
+                  value={m.contents}
+                  onChange={(e) => setModule(i, { contents: e.target.value })}
+                />
+                {m.level === "upper" && (
+                  <label className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={m.fullCeiling}
+                      onCheckedChange={(c) => setModule(i, { fullCeiling: !!c })}
+                    />
+                    Full plafon
+                  </label>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {(["outside", "inside", "hinge", "slide"] as const).map((key) => (
             <SelectField

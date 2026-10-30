@@ -9,7 +9,9 @@ export function ProjectInterior({
   workspaceId,
   leadId,
   projectId,
+  summary,
 }: {
+  summary?: string;
   workspaceId: string;
   leadId: string;
   projectId: string;
@@ -76,6 +78,7 @@ export function ProjectInterior({
         key={current.id}
         image={current.image}
         name="Tampak dalam"
+        summary={summary}
         initialSpec={current.record?.specHints}
         interiorImage={current.interiorImage ?? undefined}
         onSave={async (specHints, image) => {
