@@ -260,7 +260,6 @@ function LeadDetailPage() {
       .catch(() => toast.error("Gagal menyimpan estimasi"));
   }, [estimateParam, workspaceId, leadId, navigate, queryClient]);
 
-
   // Latest estimate per project, sent back by Smart Material Estimator.
   const estimates = new Map<string, EstimatePayload>();
   for (const a of activitiesQuery.data ?? []) {

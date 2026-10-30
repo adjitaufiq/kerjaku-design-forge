@@ -26,7 +26,9 @@ export function EstimateSummary({ estimate }: { estimate: EstimatePayload }) {
             ["Hardware", hardware],
           ].map(([title, rows]) => (
             <div key={title as string}>
-              <p className="mb-1 tracking-wide text-muted-foreground uppercase">{title as string}</p>
+              <p className="mb-1 tracking-wide text-muted-foreground uppercase">
+                {title as string}
+              </p>
               {(rows as [string, number][]).map(([k, v]) => (
                 <div key={k} className="flex justify-between capitalize">
                   <span className="text-muted-foreground">{label(k)}</span>
