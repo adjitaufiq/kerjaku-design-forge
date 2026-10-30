@@ -60,6 +60,7 @@ export function buildEstimatorUrl(input: {
   set("beforeUrl", input.beforeUrl);
   set("renderUrl", input.renderUrl);
   set("interiorUrl", input.interiorUrl);
+  set("shape", input.specHints?.shape);
   if (input.specHints) {
     const bytes = new TextEncoder().encode(JSON.stringify(input.specHints));
     const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join("");
