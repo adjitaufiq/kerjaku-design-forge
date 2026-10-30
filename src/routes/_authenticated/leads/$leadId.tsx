@@ -58,7 +58,7 @@ export const Route = createFileRoute("/_authenticated/leads/$leadId")({
     ],
   }),
   validateSearch: (s: Record<string, unknown>): { estimate?: string } =>
-    typeof s.estimate === "string" ? { estimate: s.estimate } : {},
+    typeof s["estimate"] === "string" ? { estimate: s["estimate"] } : {},
   component: LeadDetailPage,
 });
 
