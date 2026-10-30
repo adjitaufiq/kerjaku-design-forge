@@ -1,6 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Calculator, CalendarClock, MessageCircle, Plus } from "lucide-react";
+import {
+  ArrowLeft,
+  Calculator,
+  CalendarClock,
+  MessageCircle,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -90,6 +98,10 @@ function LeadDetailPage() {
   const [noteOpen, setNoteOpen] = useState(false);
   const [note, setNote] = useState({ type: "NOTE" as ActivityType, title: "", body: "" });
   const [followUpDraft, setFollowUpDraft] = useState<string | null>(null);
+  const [edit, setEdit] = useState<{ clientName: string; location: string; phone: string } | null>(
+    null,
+  );
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const leadQuery = useQuery({
     queryKey: ["lead", leadId],
@@ -116,6 +128,33 @@ function LeadDetailPage() {
     queryKey: ["consultation", projectIds[0]],
     queryFn: () => data.consultations.getByProject(projectIds[0]!),
     enabled: !!projectIds[0],
+  });
+
+  const saveEdit = useMutation({
+    mutationFn: () =>
+      data.leads.update(leadId, {
+        clientName: edit!.clientName.trim(),
+        location: edit!.location.trim() || null,
+        phone: edit!.phone.trim() || null,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lead", leadId] });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      setEdit(null);
+      toast.success("Data klien diperbarui");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Gagal menyimpan"),
+  });
+
+  const removeLead = useMutation({
+    mutationFn: () => data.leads.remove(leadId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      toast.success("Klien dihapus");
+      navigate({ to: "/leads" });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Gagal menghapus"),
   });
 
   const updateStatus = useMutation({
@@ -311,11 +350,30 @@ function LeadDetailPage() {
     <>
       <PageHeader
         title={lead.clientName}
-        subtitle={`${lead.location ?? "No location"} · ${lead.source ?? "Unknown source"}`}
+        subtitle={[lead.location, lead.phone].filter(Boolean).join(" · ") || "—"}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="ghost" onClick={() => navigate({ to: "/leads" })}>
               <ArrowLeft className="size-4" /> Leads
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() =>
+                setEdit({
+                  clientName: lead.clientName,
+                  location: lead.location ?? "",
+                  phone: lead.phone ?? "",
+                })
+              }
+            >
+              <Pencil className="size-4" /> Edit
+            </Button>
+            <Button
+              variant="outline"
+              className="text-destructive"
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Trash2 className="size-4" /> Hapus
             </Button>
             <Button
               className="bg-cta text-cta-foreground hover:bg-cta/90"
@@ -556,6 +614,74 @@ function LeadDetailPage() {
           </SectionCard>
         </div>
       </div>
+
+      <Modal
+        open={!!edit}
+        onOpenChange={(o) => !o && setEdit(null)}
+        title="Edit klien"
+        description="Ubah nama, lokasi atau No. WhatsApp."
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setEdit(null)}>
+              Batal
+            </Button>
+            <Button
+              className="bg-cta text-cta-foreground hover:bg-cta/90"
+              disabled={!edit?.clientName.trim() || saveEdit.isPending}
+              onClick={() => saveEdit.mutate()}
+            >
+              {saveEdit.isPending ? "Menyimpan…" : "Simpan"}
+            </Button>
+          </>
+        }
+      >
+        {edit && (
+          <div className="space-y-4">
+            <TextField
+              label="Nama klien"
+              name="clientName"
+              value={edit.clientName}
+              onChange={(e) => setEdit({ ...edit, clientName: e.target.value })}
+            />
+            <TextField
+              label="Lokasi"
+              name="location"
+              value={edit.location}
+              onChange={(e) => setEdit({ ...edit, location: e.target.value })}
+            />
+            <TextField
+              label="No. WhatsApp"
+              name="phone"
+              inputMode="tel"
+              value={edit.phone}
+              onChange={(e) => setEdit({ ...edit, phone: e.target.value })}
+            />
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Hapus klien ini?"
+        description="Klien beserta semua pekerjaan, foto, proposal dan riwayatnya akan dihapus permanen."
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setDeleteOpen(false)}>
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={removeLead.isPending}
+              onClick={() => removeLead.mutate()}
+            >
+              {removeLead.isPending ? "Menghapus…" : "Ya, hapus"}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-muted-foreground">Tindakan ini tidak bisa dibatalkan.</p>
+      </Modal>
 
       <Modal
         open={noteOpen}
