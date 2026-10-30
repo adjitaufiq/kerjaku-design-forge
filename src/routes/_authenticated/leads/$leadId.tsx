@@ -1,9 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, CalendarClock, MessageCircle, Plus } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, Calculator, CalendarClock, MessageCircle, Plus } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { EstimateSummary } from "@/components/kerjaku/estimate-summary";
+import {
+  buildEstimatorUrl,
+  ESTIMATE_ACTIVITY_TITLE,
+  parseEstimateParam,
+  type EstimatePayload,
+} from "@/lib/material-estimator";
 import { LeadConceptCard } from "@/components/kerjaku/ai-concept-card";
 import { ApprovedConcepts } from "@/components/kerjaku/ai-concepts";
 import { ConsultationSummary } from "@/components/kerjaku/consultation-summary";
@@ -191,6 +198,75 @@ function LeadDetailPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not log follow up"),
   });
 
+  const openEstimator = useMutation({
+    mutationFn: async (p: (typeof projects)[number]) => {
+      const current = leadQuery.data;
+      if (!current || !workspaceId) throw new Error("Data klien belum siap");
+      const win = window.open("about:blank", "_blank");
+      const assets = await data.assets.listByProject(p.id).catch(() => []);
+      const latest = (type: string) => {
+        const a = [...assets].reverse().find((x) => x.type === type);
+        return a ? data.assets.getViewUrl(a.url) : Promise.resolve(null);
+      };
+      const [beforeUrl, renderUrl] = await Promise.all([
+        latest("CLIENT_PHOTO"),
+        latest("SKETCHUP_RENDER"),
+      ]);
+      const url = buildEstimatorUrl({
+        projectId: p.id,
+        workspaceId,
+        leadId,
+        clientName: current.clientName,
+        phone: current.phone,
+        location: current.location,
+        projectName: p.projectName,
+        projectType: p.projectType,
+        notes: consultationQuery.data?.notes ?? null,
+        beforeUrl,
+        renderUrl,
+        origin: window.location.origin,
+      });
+      if (win) win.location.href = url;
+      else window.location.href = url;
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Gagal membuka estimator"),
+  });
+
+  // Receive ?estimate=... from Smart Material Estimator and save it once.
+  const { estimate: estimateParam } = Route.useSearch();
+  const savedEstimate = useRef(false);
+  useEffect(() => {
+    if (!estimateParam || !workspaceId || savedEstimate.current) return;
+    savedEstimate.current = true;
+    const parsed = parseEstimateParam(estimateParam);
+    navigate({ to: "/leads/$leadId", params: { leadId }, search: {}, replace: true });
+    if (!parsed) {
+      toast.error("Data estimasi dari estimator tidak terbaca");
+      return;
+    }
+    data.activities
+      .log(workspaceId, {
+        leadId,
+        type: "NOTE",
+        title: ESTIMATE_ACTIVITY_TITLE,
+        body: JSON.stringify(parsed),
+      })
+      .then(() => {
+        queryClient.invalidateQueries({ queryKey: ["activities", leadId] });
+        toast.success("Hasil estimasi material tersimpan");
+      })
+      .catch(() => toast.error("Gagal menyimpan estimasi"));
+  }, [estimateParam, workspaceId, leadId, navigate, queryClient]);
+
+
+  // Latest estimate per project, sent back by Smart Material Estimator.
+  const estimates = new Map<string, EstimatePayload>();
+  for (const a of activitiesQuery.data ?? []) {
+    if (a.title !== ESTIMATE_ACTIVITY_TITLE || !a.body) continue;
+    const parsed = parseEstimateParam(a.body);
+    if (parsed && !estimates.has(parsed.projectId)) estimates.set(parsed.projectId, parsed);
+  }
+
   if (leadQuery.isLoading) {
     return <Skeleton className="h-72 rounded-2xl" />;
   }
@@ -282,6 +358,17 @@ function LeadDetailPage() {
                     <div className="flex items-center gap-3">
                       <span className="text-sm text-foreground">{formatIDR(p.estimatedValue)}</span>
                       <ProjectStatusBadge status={p.status} />
+                    </div>
+                    <div className="w-full">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={openEstimator.isPending}
+                        onClick={() => openEstimator.mutate(p)}
+                      >
+                        <Calculator className="size-4" /> Hitung Estimasi Material
+                      </Button>
+                      {estimates.get(p.id) && <EstimateSummary estimate={estimates.get(p.id)!} />}
                     </div>
                   </li>
                 ))}
