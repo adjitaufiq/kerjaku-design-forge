@@ -12,3 +12,4 @@
 - Interior views are additional assets linked to their exact After asset by structured `Tampak Dalam / Spek SME` activity records; never select those interior assets as exterior renders in SME handoffs.
 - Interior specifications are user-selected and validated in the shared spec contract; measurements are never inferred from images.
 - New interior image edits use an authenticated streaming server route, preserving the existing Quick Visual generator unchanged.
+- Clients (leads) are deduplicated by normalized WhatsApp number via src/lib/client-folder.ts; jobs are one project per lead per job name. Why: Leads must stay clean with one row per client.
