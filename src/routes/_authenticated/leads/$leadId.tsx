@@ -207,16 +207,22 @@ function LeadDetailPage() {
       const current = leadQuery.data;
       if (!current || !workspaceId) throw new Error("Data klien belum siap");
       const win = window.open("about:blank", "_blank");
-      const [assets, activities] = await Promise.all([data.assets.listByProject(p.id), data.activities.listByLead(leadId)]);
-      const records = activities.filter(a => a.title === INTERIOR_ACTIVITY_TITLE).map(a => parseInteriorRecord(a.body)).filter(r => r !== null && r.projectId === p.id);
-      const interiorIds = new Set(records.map(r => r?.interiorAssetId));
+      const [assets, activities] = await Promise.all([
+        data.assets.listByProject(p.id),
+        data.activities.listByLead(leadId),
+      ]);
+      const records = activities
+        .filter((a) => a.title === INTERIOR_ACTIVITY_TITLE)
+        .map((a) => parseInteriorRecord(a.body))
+        .filter((r) => r !== null && r.projectId === p.id);
+      const interiorIds = new Set(records.map((r) => r?.interiorAssetId));
       const record = records[0];
       const latest = (type: string) => {
         const a = assets.find((x) => x.type === type && !interiorIds.has(x.id));
         return a ? data.assets.getViewUrl(a.url) : Promise.resolve(null);
       };
-      const base = assets.find(a => a.id === record?.baseAssetId);
-      const inside = assets.find(a => a.id === record?.interiorAssetId);
+      const base = assets.find((a) => a.id === record?.baseAssetId);
+      const inside = assets.find((a) => a.id === record?.interiorAssetId);
       const [beforeUrl, renderUrl, interiorUrl] = await Promise.all([
         latest("CLIENT_PHOTO"),
         base ? data.assets.getViewUrl(base.url) : latest("SKETCHUP_RENDER"),
@@ -380,10 +386,20 @@ function LeadDetailPage() {
                         <Calculator className="size-4" /> Hitung Estimasi Material
                       </Button>
                       {estimates.get(p.id) && <EstimateSummary estimate={estimates.get(p.id)!} />}
-                      {workspaceId && <details className="mt-3 w-full">
-                        <summary className="cursor-pointer text-sm font-medium text-foreground">Tampak dalam / spek material</summary>
-                        <div className="mt-3"><ProjectInterior workspaceId={workspaceId} leadId={leadId} projectId={p.id} /></div>
-                      </details>}
+                      {workspaceId && (
+                        <details className="mt-3 w-full">
+                          <summary className="cursor-pointer text-sm font-medium text-foreground">
+                            Tampak dalam / spek material
+                          </summary>
+                          <div className="mt-3">
+                            <ProjectInterior
+                              workspaceId={workspaceId}
+                              leadId={leadId}
+                              projectId={p.id}
+                            />
+                          </div>
+                        </details>
+                      )}
                     </div>
                   </li>
                 ))}

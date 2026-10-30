@@ -62,7 +62,7 @@ export function buildEstimatorUrl(input: {
   set("interiorUrl", input.interiorUrl);
   if (input.specHints) {
     const bytes = new TextEncoder().encode(JSON.stringify(input.specHints));
-    const binary = Array.from(bytes, byte => String.fromCharCode(byte)).join("");
+    const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join("");
     set("specHints", btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""));
   }
   set("returnUrl", `${input.origin}/leads/${input.leadId}`);

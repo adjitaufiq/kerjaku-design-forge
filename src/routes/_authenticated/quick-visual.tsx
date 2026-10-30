@@ -690,9 +690,16 @@ function QuickVisualPage() {
           )}
           {active && (roomId === "KITCHEN" || roomId === "BEDROOM") && (
             <Fold title="Tampak dalam / pintu terbuka">
-              <InteriorRender key={active.id} image={active.image} name={active.name} initialSpec={active.specHints} interiorImage={active.interiorImage} onSave={async (specHints, image) => {
-                updateOption(active.id, { specHints, interiorImage: image });
-              }} />
+              <InteriorRender
+                key={active.id}
+                image={active.image}
+                name={active.name}
+                initialSpec={active.specHints}
+                interiorImage={active.interiorImage}
+                onSave={async (specHints, image) => {
+                  updateOption(active.id, { specHints, interiorImage: image });
+                }}
+              />
             </Fold>
           )}
         </div>
@@ -997,8 +1004,25 @@ function SurveyForm({
           await dataUrlToFile(o.image, `visual-${i + 1}.png`),
         );
         if (o.specHints) {
-          const inside = o.interiorImage ? await data.assets.upload(workspaceId, project.id, "SKETCHUP_RENDER", await dataUrlToFile(o.interiorImage, `interior-${i + 1}.png`)) : null;
-          await data.activities.log(workspaceId, { leadId: lead.id, type: "NOTE", title: INTERIOR_ACTIVITY_TITLE, body: JSON.stringify({ projectId: project.id, baseAssetId: base.id, ...(inside ? { interiorAssetId: inside.id } : {}), specHints: o.specHints }) });
+          const inside = o.interiorImage
+            ? await data.assets.upload(
+                workspaceId,
+                project.id,
+                "SKETCHUP_RENDER",
+                await dataUrlToFile(o.interiorImage, `interior-${i + 1}.png`),
+              )
+            : null;
+          await data.activities.log(workspaceId, {
+            leadId: lead.id,
+            type: "NOTE",
+            title: INTERIOR_ACTIVITY_TITLE,
+            body: JSON.stringify({
+              projectId: project.id,
+              baseAssetId: base.id,
+              ...(inside ? { interiorAssetId: inside.id } : {}),
+              specHints: o.specHints,
+            }),
+          });
         }
       }
       await data.activities.log(workspaceId, {
