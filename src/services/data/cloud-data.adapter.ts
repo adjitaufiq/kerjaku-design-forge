@@ -202,8 +202,17 @@ export const cloudDataLayer: DataLayer = {
         .update({
           ...(patch.status !== undefined ? { status: patch.status } : {}),
           ...(patch.nextFollowUp !== undefined ? { next_follow_up: patch.nextFollowUp } : {}),
+          ...(patch.clientName !== undefined ? { client_name: patch.clientName } : {}),
+          ...(patch.phone !== undefined ? { phone: patch.phone } : {}),
+          ...(patch.location !== undefined ? { location: patch.location } : {}),
         })
         .eq("id", id);
+      if (error) throw new Error(error.message);
+    },
+    async remove(id) {
+      const p = await supabase.from("projects").delete().eq("lead_id", id);
+      if (p.error) throw new Error(p.error.message);
+      const { error } = await supabase.from("leads").delete().eq("id", id);
       if (error) throw new Error(error.message);
     },
   },
