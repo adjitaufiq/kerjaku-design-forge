@@ -38,7 +38,12 @@ export interface LeadRepository {
       status?: LeadStatus;
     },
   ): Promise<Lead>;
-  update(id: string, patch: Partial<Pick<Lead, "status" | "nextFollowUp">>): Promise<void>;
+  update(
+    id: string,
+    patch: Partial<Pick<Lead, "status" | "nextFollowUp" | "clientName" | "phone" | "location">>,
+  ): Promise<void>;
+  /** Deletes the lead together with its projects (assets, proposals cascade). */
+  remove(id: string): Promise<void>;
 }
 
 export interface ProjectRepository {

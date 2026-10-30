@@ -38,6 +38,8 @@ import { GlassCard, SectionCard } from "@/components/kerjaku/glass-card";
 import { InteriorRender } from "@/components/kerjaku/interior-render";
 import { INTERIOR_ACTIVITY_TITLE } from "@/lib/interior-spec";
 import { TextAreaField, TextField } from "@/components/kerjaku/form-fields";
+import { ExistingClientPicker } from "@/components/kerjaku/existing-client-picker";
+import { resolveClientLead, resolveClientProject } from "@/lib/client-folder";
 import { PageHeader } from "@/components/kerjaku/page-header";
 import {
   AlertDialog,
@@ -960,48 +962,60 @@ function SurveyForm({
   onSaved: (info: { leadId: string; name: string; location: string }) => void;
 }) {
   const [f, setF] = useState({ name: "", location: "", phone: "", p: "", l: "", t: "" });
+  const [existingId, setExistingId] = useState<string | null>(null);
+  const [finalId, setFinalId] = useState<string | null>(null);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setF({ ...f, [k]: e.target.value });
+  const finalOption =
+    session.options.find((o) => o.id === finalId) ??
+    session.options.find((o) => o.id === session.activeId) ??
+    session.options[session.options.length - 1];
 
   const save = useMutation({
     mutationFn: async () => {
       if (!workspaceId) throw new Error("Workspace belum siap, coba lagi");
-      if (!f.name.trim() || !f.location.trim()) throw new Error("Nama & lokasi wajib diisi");
-      const lead = await data.leads.create(workspaceId, {
-        clientName: f.name.trim(),
+      if (!f.name.trim() || !f.location.trim() || !f.phone.trim())
+        throw new Error("Nama, lokasi & No. WhatsApp wajib diisi");
+      if (!finalOption) throw new Error("Belum ada visual");
+      const leadId = await resolveClientLead(workspaceId, {
+        existingLeadId: existingId,
+        name: f.name.trim(),
         location: f.location.trim(),
-        phone: f.phone.trim() || null,
+        phone: f.phone.trim(),
         source: "Quick Visual",
-        status: "CONSULTATION",
       });
+      const lead = { id: leadId };
       const roomLabel = ROOMS.find((r) => r.id === roomId)?.label.replace(/^\S+\s/, "") ?? "";
-      const project = await data.projects.create(workspaceId, {
-        leadId: lead.id,
-        projectName: `${roomLabel} — ${f.name.trim()}`,
-        projectType: ROOM_PROJECT_TYPE[roomId] ?? "OTHER",
-      });
+      const jobName = roomId === "KITCHEN" ? "Kitchen Set" : roomLabel || "Project";
+      const project = await resolveClientProject(
+        workspaceId,
+        leadId,
+        jobName,
+        ROOM_PROJECT_TYPE[roomId] ?? "OTHER",
+      );
       const dims = [f.p && `P ${f.p} m`, f.l && `L ${f.l} m`, f.t && `T ${f.t} m`]
         .filter(Boolean)
         .join(" × ");
-      const specs = session.options.map((o) => `• ${o.name}: ${o.spec}`).join("\n");
-      await data.consultations.create(workspaceId, {
-        projectId: project.id,
-        clientRequirement: specs || null,
-        notes: dims ? `Ukuran survei: ${dims}` : null,
-      });
-      if (session.roomImage)
+      const specs = `• ${finalOption.name}: ${finalOption.spec}`;
+      if (project.isNew)
+        await data.consultations.create(workspaceId, {
+          projectId: project.id,
+          clientRequirement: specs,
+          notes: dims ? `Ukuran survei: ${dims}` : null,
+        });
+      if (session.roomImage && project.isNew)
         await data.assets.upload(
           workspaceId,
           project.id,
           "CLIENT_PHOTO",
           await dataUrlToFile(session.roomImage, "before.jpg"),
         );
-      for (const [i, o] of session.options.entries()) {
+      for (const o of [finalOption]) {
         const base = await data.assets.upload(
           workspaceId,
           project.id,
           "SKETCHUP_RENDER",
-          await dataUrlToFile(o.image, `visual-${i + 1}.png`),
+          await dataUrlToFile(o.image, `visual-final.png`),
         );
         if (o.specHints) {
           const inside = o.interiorImage
@@ -1009,7 +1023,7 @@ function SurveyForm({
                 workspaceId,
                 project.id,
                 "SKETCHUP_RENDER",
-                await dataUrlToFile(o.interiorImage, `interior-${i + 1}.png`),
+                await dataUrlToFile(o.interiorImage, `interior-final.png`),
               )
             : null;
           await data.activities.log(workspaceId, {
@@ -1028,7 +1042,7 @@ function SurveyForm({
       await data.activities.log(workspaceId, {
         leadId: lead.id,
         type: "AI_CONCEPT",
-        title: `Survei Quick Visual — ${session.options.length} visual`,
+        title: `${jobName} — visual final: ${finalOption.name}`,
         body: [dims && `Ukuran: ${dims}`, specs].filter(Boolean).join("\n") || null,
       });
       return lead.id;
@@ -1045,9 +1059,46 @@ function SurveyForm({
   return (
     <SectionCard
       title="💾 Simpan hasil survei"
-      description="Isi setelah visual oke. Nama & lokasi wajib, sisanya opsional."
+      description="Pilih 1 visual final, lalu simpan ke data klien. Draft lain tetap di folder ini."
     >
       <div className="space-y-3">
+        <div>
+          <p className="mb-2 text-xs tracking-wide text-muted-foreground uppercase">
+            ⭐ Visual final (masuk ke Leads)
+          </p>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {session.options.map((o) => (
+              <button
+                key={o.id}
+                type="button"
+                onClick={() => setFinalId(o.id)}
+                className={`relative w-20 shrink-0 overflow-hidden rounded-xl border-2 ${
+                  finalOption?.id === o.id ? "border-primary" : "border-transparent opacity-60"
+                }`}
+              >
+                <img src={o.image} alt={o.name} className="aspect-square w-full object-cover" />
+                <span className="block truncate px-1 py-0.5 text-[10px] text-foreground">
+                  {finalOption?.id === o.id ? "⭐ " : ""}
+                  {o.name}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+        <ExistingClientPicker
+          workspaceId={workspaceId}
+          value={existingId}
+          onChange={(l) => {
+            setExistingId(l?.id ?? null);
+            if (l)
+              setF({
+                ...f,
+                name: l.clientName,
+                location: l.location ?? "",
+                phone: l.phone ?? "",
+              });
+          }}
+        />
         <div className="grid gap-3 sm:grid-cols-2">
           <TextField
             label="Nama klien *"
@@ -1055,6 +1106,7 @@ function SurveyForm({
             placeholder="Ibu Malla"
             value={f.name}
             onChange={set("name")}
+            disabled={!!existingId}
           />
           <TextField
             label="Lokasi proyek *"
@@ -1062,15 +1114,17 @@ function SurveyForm({
             placeholder="Cibubur"
             value={f.location}
             onChange={set("location")}
+            disabled={!!existingId}
           />
         </div>
         <TextField
-          label="No. WhatsApp (opsional)"
+          label="No. WhatsApp *"
           name="phone"
           inputMode="tel"
           placeholder="0812…"
           value={f.phone}
           onChange={set("phone")}
+          disabled={!!existingId}
         />
         <Fold title="📏 Ukuran survei (opsional)">
           <div className="grid grid-cols-3 gap-2">
@@ -1102,13 +1156,14 @@ function SurveyForm({
           disabled={
             !f.name.trim() ||
             !f.location.trim() ||
+            !f.phone.trim() ||
             save.isPending ||
             (session.saved && !!savedLeadId)
           }
           onClick={() => save.mutate()}
         >
           <Save className="size-4" />
-          {save.isPending ? "Menyimpan…" : `Simpan klien + ${session.options.length} visual`}
+          {save.isPending ? "Menyimpan…" : "Simpan visual final ke klien"}
         </Button>
         {savedLeadId && (
           <Button asChild variant="outline" className="w-full">

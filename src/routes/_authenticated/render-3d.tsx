@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { TextField } from "@/components/kerjaku/form-fields";
+import { ExistingClientPicker } from "@/components/kerjaku/existing-client-picker";
+import { resolveClientLead, resolveClientProject } from "@/lib/client-folder";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { data } from "@/services/data";
 import { WatermarkDialog } from "./quick-visual";
@@ -821,29 +823,31 @@ function ClientForm({
   onSaved: (p: { name: string; location: string; leadId: string }) => void;
 }) {
   const [f, setF] = useState({ name: "", location: "", phone: "", size: "" });
+  const [existingId, setExistingId] = useState<string | null>(null);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setF({ ...f, [k]: e.target.value });
   const save = useMutation({
     mutationFn: async () => {
       if (!workspaceId) throw new Error("Workspace belum siap, coba lagi");
-      if (!f.name.trim() || !f.location.trim()) throw new Error("Nama & lokasi wajib diisi");
-      const lead = await data.leads.create(workspaceId, {
-        clientName: f.name.trim(),
+      if (!f.name.trim() || !f.location.trim() || !f.phone.trim())
+        throw new Error("Nama, lokasi & No. WhatsApp wajib diisi");
+      const leadId = await resolveClientLead(workspaceId, {
+        existingLeadId: existingId,
+        name: f.name.trim(),
         location: f.location.trim(),
-        phone: f.phone.trim() || null,
+        phone: f.phone.trim(),
         source: "3D Render AI",
-        status: "CONSULTATION",
       });
-      const project = await data.projects.create(workspaceId, {
-        leadId: lead.id,
-        projectName: `${objectLabel} — ${f.name.trim()}`,
-        projectType:
-          objectLabel === "Kitchen set"
-            ? "KITCHEN_SET"
-            : objectLabel === "Lemari"
-              ? "WARDROBE"
-              : "OTHER",
-      });
+      const project = await resolveClientProject(
+        workspaceId,
+        leadId,
+        objectLabel === "Kitchen set" ? "Kitchen Set" : objectLabel || "Project",
+        objectLabel === "Kitchen set"
+          ? "KITCHEN_SET"
+          : objectLabel === "Lemari"
+            ? "WARDROBE"
+            : "OTHER",
+      );
       for (const [i, s] of shots.entries())
         await data.assets.upload(
           workspaceId,
@@ -852,12 +856,12 @@ function ClientForm({
           await dataUrlToFile(s.result!, `render-${i + 1}.png`),
         );
       await data.activities.log(workspaceId, {
-        leadId: lead.id,
+        leadId,
         type: "AI_CONCEPT",
         title: `3D Render AI — ${shots.length} render`,
         body: f.size.trim() ? `Ukuran: ${f.size.trim()}` : null,
       });
-      return lead.id;
+      return leadId;
     },
     onSuccess: (leadId) => onSaved({ name: f.name.trim(), location: f.location.trim(), leadId }),
     onError: (e: Error) => toast.error(e.message),
@@ -870,23 +874,43 @@ function ClientForm({
       </Button>
     );
   return (
-    <SectionCard title="💾 Simpan data klien" description="Nama & lokasi wajib, sisanya opsional.">
+    <SectionCard
+      title="💾 Simpan data klien"
+      description="Pilih klien existing atau buat baru. No. WhatsApp jadi kode unik klien."
+    >
       <div className="space-y-3">
+        <ExistingClientPicker
+          workspaceId={workspaceId}
+          value={existingId}
+          onChange={(l) => {
+            setExistingId(l?.id ?? null);
+            if (l)
+              setF({ ...f, name: l.clientName, location: l.location ?? "", phone: l.phone ?? "" });
+          }}
+        />
         <div className="grid gap-3 sm:grid-cols-2">
-          <TextField label="Nama klien *" name="name" value={f.name} onChange={set("name")} />
+          <TextField
+            label="Nama klien *"
+            name="name"
+            value={f.name}
+            onChange={set("name")}
+            disabled={!!existingId}
+          />
           <TextField
             label="Lokasi proyek *"
             name="location"
             value={f.location}
             onChange={set("location")}
+            disabled={!!existingId}
           />
         </div>
         <TextField
-          label="No. WhatsApp (opsional)"
+          label="No. WhatsApp *"
           name="phone"
           inputMode="tel"
           value={f.phone}
           onChange={set("phone")}
+          disabled={!!existingId}
         />
         <TextField
           label="Catatan ukuran (opsional)"
