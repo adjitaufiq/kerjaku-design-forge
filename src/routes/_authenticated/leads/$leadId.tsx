@@ -84,8 +84,8 @@ const ACTIVITY_TYPES: ActivityType[] = [
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-start justify-between gap-4 border-b border-border/60 py-2 last:border-0">
-      <span className="text-xs tracking-wide text-muted-foreground uppercase">{label}</span>
-      <span className="text-right text-sm text-foreground">{value}</span>
+      <span className="shrink-0 text-xs tracking-wide text-muted-foreground uppercase">{label}</span>
+      <span className="min-w-0 break-words text-right text-sm text-foreground">{value}</span>
     </div>
   );
 }
@@ -385,8 +385,8 @@ function LeadDetailPage() {
         }
       />
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
+      <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="min-w-0 space-y-6 lg:col-span-2">
           <SectionCard title="Client information">
             <div className="grid gap-x-8 sm:grid-cols-2">
               <InfoRow label="Name" value={lead.clientName} />
@@ -507,9 +507,21 @@ function LeadDetailPage() {
                         {formatDate(a.createdAt)}
                       </span>
                     </div>
-                    <p className="mt-1 text-sm font-medium text-foreground">{a.title}</p>
-                    {a.body && a.title !== INTERIOR_ACTIVITY_TITLE ? (
-                      <p className="mt-0.5 text-sm text-muted-foreground">{a.body}</p>
+                    <p className="mt-1 break-words text-sm font-medium text-foreground">{a.title}</p>
+                    {a.body && a.title === ESTIMATE_ACTIVITY_TITLE ? (
+                      (() => {
+                        const e = parseEstimateParam(a.body);
+                        return (
+                          <p className="mt-0.5 text-sm text-muted-foreground">
+                            {e?.estimatedMaterialCost != null
+                              ? `Total material ${formatIDR(e.estimatedMaterialCost)}`
+                              : "Estimasi diterima"}
+                            {e?.summary?.estimatedDays ? ` · ±${e.summary.estimatedDays} hari kerja` : ""}
+                          </p>
+                        );
+                      })()
+                    ) : a.body && a.title !== INTERIOR_ACTIVITY_TITLE ? (
+                      <p className="mt-0.5 break-words text-sm text-muted-foreground">{a.body}</p>
                     ) : null}
                   </li>
                 ))}
@@ -518,7 +530,7 @@ function LeadDetailPage() {
           </SectionCard>
         </div>
 
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <SectionCard title="Pipeline stage">
             <div className="space-y-3">
               <LeadStatusBadge status={lead.status} />

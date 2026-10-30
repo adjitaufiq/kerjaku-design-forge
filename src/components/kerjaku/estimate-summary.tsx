@@ -32,7 +32,9 @@ export function EstimateSummary({ estimate }: { estimate: EstimatePayload }) {
               {(rows as [string, number][]).map(([k, v]) => (
                 <div key={k} className="flex justify-between capitalize">
                   <span className="text-muted-foreground">{label(k)}</span>
-                  <span className="text-foreground">{v}</span>
+                  <span className="shrink-0 text-foreground">
+                    {Math.round(Number(v) * 10) / 10}
+                  </span>
                 </div>
               ))}
             </div>
