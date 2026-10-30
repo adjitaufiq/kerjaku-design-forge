@@ -960,48 +960,60 @@ function SurveyForm({
   onSaved: (info: { leadId: string; name: string; location: string }) => void;
 }) {
   const [f, setF] = useState({ name: "", location: "", phone: "", p: "", l: "", t: "" });
+  const [existingId, setExistingId] = useState<string | null>(null);
+  const [finalId, setFinalId] = useState<string | null>(null);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setF({ ...f, [k]: e.target.value });
+  const finalOption =
+    session.options.find((o) => o.id === finalId) ??
+    session.options.find((o) => o.id === session.activeId) ??
+    session.options[session.options.length - 1];
 
   const save = useMutation({
     mutationFn: async () => {
       if (!workspaceId) throw new Error("Workspace belum siap, coba lagi");
-      if (!f.name.trim() || !f.location.trim()) throw new Error("Nama & lokasi wajib diisi");
-      const lead = await data.leads.create(workspaceId, {
-        clientName: f.name.trim(),
+      if (!f.name.trim() || !f.location.trim() || !f.phone.trim())
+        throw new Error("Nama, lokasi & No. WhatsApp wajib diisi");
+      if (!finalOption) throw new Error("Belum ada visual");
+      const leadId = await resolveClientLead(workspaceId, {
+        existingLeadId: existingId,
+        name: f.name.trim(),
         location: f.location.trim(),
-        phone: f.phone.trim() || null,
+        phone: f.phone.trim(),
         source: "Quick Visual",
-        status: "CONSULTATION",
       });
+      const lead = { id: leadId };
       const roomLabel = ROOMS.find((r) => r.id === roomId)?.label.replace(/^\S+\s/, "") ?? "";
-      const project = await data.projects.create(workspaceId, {
-        leadId: lead.id,
-        projectName: `${roomLabel} — ${f.name.trim()}`,
-        projectType: ROOM_PROJECT_TYPE[roomId] ?? "OTHER",
-      });
+      const jobName = roomId === "KITCHEN" ? "Kitchen Set" : roomLabel || "Project";
+      const project = await resolveClientProject(
+        workspaceId,
+        leadId,
+        jobName,
+        ROOM_PROJECT_TYPE[roomId] ?? "OTHER",
+      );
       const dims = [f.p && `P ${f.p} m`, f.l && `L ${f.l} m`, f.t && `T ${f.t} m`]
         .filter(Boolean)
         .join(" × ");
-      const specs = session.options.map((o) => `• ${o.name}: ${o.spec}`).join("\n");
-      await data.consultations.create(workspaceId, {
-        projectId: project.id,
-        clientRequirement: specs || null,
-        notes: dims ? `Ukuran survei: ${dims}` : null,
-      });
-      if (session.roomImage)
+      const specs = `• ${finalOption.name}: ${finalOption.spec}`;
+      if (project.isNew)
+        await data.consultations.create(workspaceId, {
+          projectId: project.id,
+          clientRequirement: specs,
+          notes: dims ? `Ukuran survei: ${dims}` : null,
+        });
+      if (session.roomImage && project.isNew)
         await data.assets.upload(
           workspaceId,
           project.id,
           "CLIENT_PHOTO",
           await dataUrlToFile(session.roomImage, "before.jpg"),
         );
-      for (const [i, o] of session.options.entries()) {
+      for (const o of [finalOption]) {
         const base = await data.assets.upload(
           workspaceId,
           project.id,
           "SKETCHUP_RENDER",
-          await dataUrlToFile(o.image, `visual-${i + 1}.png`),
+          await dataUrlToFile(o.image, `visual-final.png`),
         );
         if (o.specHints) {
           const inside = o.interiorImage
@@ -1009,7 +1021,7 @@ function SurveyForm({
                 workspaceId,
                 project.id,
                 "SKETCHUP_RENDER",
-                await dataUrlToFile(o.interiorImage, `interior-${i + 1}.png`),
+                await dataUrlToFile(o.interiorImage, `interior-final.png`),
               )
             : null;
           await data.activities.log(workspaceId, {
@@ -1028,7 +1040,7 @@ function SurveyForm({
       await data.activities.log(workspaceId, {
         leadId: lead.id,
         type: "AI_CONCEPT",
-        title: `Survei Quick Visual — ${session.options.length} visual`,
+        title: `${jobName} — visual final: ${finalOption.name}`,
         body: [dims && `Ukuran: ${dims}`, specs].filter(Boolean).join("\n") || null,
       });
       return lead.id;
