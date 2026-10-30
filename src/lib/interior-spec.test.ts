@@ -59,3 +59,19 @@ describe("SME interior contract", () => {
     expect(parseInteriorRecord('{"projectId":"p"}')).toBeNull();
   });
 });
+
+describe("layout handoff", () => {
+  it("splits an L-shape into 4 cabinet modules and sends shape=L to SME", async () => {
+    const { defaultModules } = await import("./interior-spec");
+    expect(defaultModules("L")).toHaveLength(4);
+    expect(defaultModules("single")).toHaveLength(2);
+    const url = new URL(
+      buildEstimatorUrl({
+        projectId: "p", workspaceId: "w", leadId: "l", clientName: "c", projectName: "n",
+        projectType: "KITCHEN_SET", origin: "https://x",
+        specHints: { ...hints, shape: "L", modules: defaultModules("L") },
+      }),
+    );
+    expect(url.searchParams.get("shape")).toBe("L");
+  });
+});

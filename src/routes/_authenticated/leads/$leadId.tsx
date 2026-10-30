@@ -454,6 +454,15 @@ function LeadDetailPage() {
                               workspaceId={workspaceId}
                               leadId={leadId}
                               projectId={p.id}
+                              summary={[
+                                consultationQuery.data?.clientRequirement,
+                                consultationQuery.data?.stylePreference,
+                                consultationQuery.data?.colorPreference,
+                                consultationQuery.data?.specialRequest,
+                                consultationQuery.data?.notes,
+                              ]
+                                .filter(Boolean)
+                                .join(" | ")}
                             />
                           </div>
                         </details>
