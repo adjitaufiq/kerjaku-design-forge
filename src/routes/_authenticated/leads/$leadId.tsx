@@ -57,6 +57,8 @@ export const Route = createFileRoute("/_authenticated/leads/$leadId")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
+  validateSearch: (s: Record<string, unknown>): { estimate?: string } =>
+    typeof s.estimate === "string" ? { estimate: s.estimate } : {},
   component: LeadDetailPage,
 });
 
