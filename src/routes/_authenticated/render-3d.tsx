@@ -29,6 +29,13 @@ export const Route = createFileRoute("/_authenticated/render-3d")({
         content:
           "Ubah gambar SketchUp jadi render foto realistis dengan bentuk dan warna terkunci.",
       },
+      { property: "og:title", content: "3D Render AI — KERJAKU" },
+      {
+        property: "og:description",
+        content: "Render realistis dari gambar 3D untuk workshop interior KERJAKU.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Render3dPage,
