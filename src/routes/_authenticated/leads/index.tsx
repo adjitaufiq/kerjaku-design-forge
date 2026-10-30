@@ -56,6 +56,19 @@ function LeadsPage() {
     queryFn: () => data.leads.list(workspaceId!),
     enabled: !!workspaceId,
   });
+  const projectsQuery = useQuery({
+    queryKey: ["projects", workspaceId],
+    queryFn: () => data.projects.list(workspaceId!),
+    enabled: !!workspaceId,
+  });
+  const jobsByLead = new Map<string, string[]>();
+  for (const p of projectsQuery.data ?? []) {
+    if (!p.leadId) continue;
+    const list = jobsByLead.get(p.leadId) ?? [];
+    const name = p.projectName.split(" — ")[0]!;
+    if (!list.includes(name)) list.push(name);
+    jobsByLead.set(p.leadId, list);
+  }
 
   const createLead = useMutation({
     mutationFn: () =>
@@ -135,7 +148,9 @@ function LeadsPage() {
                   <div className="min-w-0">
                     <p className="truncate font-medium text-foreground">{l.clientName}</p>
                     <p className="truncate text-xs text-muted-foreground">
-                      {[l.location, l.phone, l.source].filter(Boolean).join(" · ") || "—"}
+                      {[l.location, jobsByLead.get(l.id)?.join(", ") || "Belum ada pekerjaan"]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </p>
                   </div>
                   <div className="shrink-0">
