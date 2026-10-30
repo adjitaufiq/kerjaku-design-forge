@@ -1,5 +1,16 @@
 import { z } from "zod";
 
+export const SHAPES = ["single", "L", "U"] as const;
+export const moduleSchema = z.object({
+  label: z.string().trim().min(1).max(80),
+  level: z.enum(["lower", "upper", "tall"]),
+  side: z.enum(["main", "wing", "wing2"]),
+  fullCeiling: z.boolean(),
+  finish: z.string().trim().max(160),
+  contents: z.string().trim().max(300),
+});
+export type CabinetModule = z.infer<typeof moduleSchema>;
+
 export const specHintsSchema = z.object({
   outside: z.enum(["hpl", "hpl_premium", "duco"]),
   inside: z.enum(["blockmin", "tacosheet", "hpl"]),
@@ -13,7 +24,31 @@ export const specHintsSchema = z.object({
       }),
     )
     .max(20),
+  // Layout/modules come from an AI pre-fill the workshop reviews; never measurements.
+  shape: z.enum(SHAPES).optional(),
+  modules: z.array(moduleSchema).max(12).optional(),
 });
+
+export const SHAPE_LABEL: Record<(typeof SHAPES)[number], string> = {
+  single: "Lurus (single line)",
+  L: "Letter L",
+  U: "Letter U",
+};
+const LEVEL_LABEL = { lower: "Kabinet bawah", upper: "Kabinet atas", tall: "Kabinet tinggi" };
+const SIDE_LABEL = { main: "sisi utama", wing: "sayap L", wing2: "sayap U" };
+export function defaultModules(shape: (typeof SHAPES)[number]): CabinetModule[] {
+  const sides = shape === "single" ? (["main"] as const) : shape === "L" ? (["main", "wing"] as const) : (["main", "wing", "wing2"] as const);
+  return sides.flatMap((side) =>
+    (["lower", "upper"] as const).map((level) => ({
+      label: shape === "single" ? LEVEL_LABEL[level] : `${LEVEL_LABEL[level]} (${SIDE_LABEL[side]})`,
+      level,
+      side,
+      fullCeiling: false,
+      finish: "",
+      contents: "",
+    })),
+  );
+}
 export type SpecHints = z.infer<typeof specHintsSchema>;
 export const INTERIOR_ACTIVITY_TITLE = "Tampak Dalam / Spek SME";
 export const interiorRecordSchema = z.object({
