@@ -14,6 +14,11 @@ export interface RoomCategory {
   tags: string[];
 }
 
+/** Kitchen appliance mode tags. Default (no tag) behaves like KEEP. */
+export const APPLIANCE_TAG_KEEP = "Pakai peralatan asli Before";
+export const APPLIANCE_TAG_UPGRADE = "Upgrade alat ikut referensi";
+
+
 export const ROOMS: RoomCategory[] = [
   {
     id: "KITCHEN",
@@ -39,6 +44,11 @@ export const ROOMS: RoomCategory[] = [
       "Pintu kaca + frame",
       "Ada cooker hood",
       "Sisakan space kulkas",
+      APPLIANCE_TAG_KEEP,
+      APPLIANCE_TAG_UPGRADE,
+      "Tanpa wastafel / keran",
+      "Tanpa oven tanam",
+      "Tambah wastafel baru",
     ],
   },
   {
