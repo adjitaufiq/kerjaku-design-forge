@@ -4,6 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   ALL_ITEMS,
   APPLIANCE_TAG_CLEAN,
+  ADDON_PLACEMENTS,
   APPLIANCE_TAG_KEEP,
   CEILING_ITEM_ID,
   RESKIN_TARGETS,
