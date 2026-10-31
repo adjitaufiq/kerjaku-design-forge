@@ -28,8 +28,10 @@ export const ACCESSORY_IDS = [
   "rak-bumbu",
   "tray-sendok",
   "keranjang-tarik",
+  "hidrolik",
 ] as const;
-export const EDGES = ["edging", "tusir"] as const;
+export const EDGES = ["edging", "tusir", "list_gold", "list_chrome", "list_black"] as const;
+export const TOP_LAYERS = ["1", "2"] as const;
 export const HANDLES = ["none", "profile_j", "push", "handle"] as const;
 export const GLASSES = ["none", "dark", "clear", "fluted"] as const;
 export const LIGHTINGS = ["none", "led", "spot", "led_spot"] as const;
@@ -67,6 +69,7 @@ export const specHintsSchema = z.object({
   handle: z.enum(HANDLES).optional(),
   glass: z.enum(GLASSES).optional(),
   lighting: z.enum(LIGHTINGS).optional(),
+  topLayers: z.enum(TOP_LAYERS).optional(),
   accessoryMode: z.enum(["plain", "selected"]).optional(),
   // Master spec version: 1 = "Spek Final 1", n>1 = "Spek Revisi n-1".
   version: z.number().int().min(1).max(999).optional(),
@@ -155,6 +158,13 @@ export const SPEC_OPTIONS = {
   edge: [
     { value: "edging", label: "Edging PVC TACO" },
     { value: "tusir", label: "Tusiran (tanpa edging)" },
+    { value: "list_gold", label: "Edging + list aluminium gold" },
+    { value: "list_chrome", label: "Edging + list stainless / chrome" },
+    { value: "list_black", label: "Edging + list aluminium hitam doff" },
+  ],
+  topLayers: [
+    { value: "2", label: "2 lapis bahan (tebal ±36mm)" },
+    { value: "1", label: "1 lapis bahan (tebal 18mm)" },
   ],
   handle: [
     { value: "none", label: "Tanpa handle / bevel 45°" },
@@ -210,6 +220,7 @@ export function missingFinalSpec(spec: SpecHints): string[] {
   }
   if (!c || !hasTacoHplCode(c.top)) miss.push("Kode HPL top table");
   if (c?.hasAccent && !hasTacoHplCode(c.accent)) miss.push("Kode HPL aksen");
+  if (!spec.topLayers) miss.push("Top table 1 / 2 lapis");
   if (!spec.edge) miss.push("Edging / tusiran");
   if (!spec.handle) miss.push("Handle");
   if (!spec.glass) miss.push("Kaca");
@@ -227,6 +238,7 @@ export const ACCESSORIES = [
   { id: "rak-bumbu", label: "Rak bumbu / botol" },
   { id: "tray-sendok", label: "Tray sendok" },
   { id: "keranjang-tarik", label: "Keranjang tarik bawah" },
+  { id: "hidrolik", label: "Hidrolik pintu angkat (gas spring)" },
 ] as const;
 
 const optLabel = (key: keyof typeof SPEC_OPTIONS, value: string | undefined) =>
@@ -266,6 +278,7 @@ export function specReviewRows(spec: SpecHints): { label: string; value: string 
     { label: "Finishing luar", value: optLabel("outside", spec.outside) },
     { label: `Motif HPL (${motifs.length})`, value: motifs.join("\n") },
     { label: "Finishing dalam", value: optLabel("inside", spec.inside) },
+    { label: "Top table", value: optLabel("topLayers", spec.topLayers) },
     { label: "Pinggiran", value: optLabel("edge", spec.edge) },
     { label: "Handle", value: optLabel("handle", spec.handle) },
     { label: "Kaca", value: optLabel("glass", spec.glass) },
@@ -288,6 +301,8 @@ export function buildInteriorPrompt(spec: SpecHints, note = ""): string {
     "ONLY articulate the existing upper and lower cabinet doors open on their hinges, realistically avoiding collisions; pull existing drawers partially out so their runners can be seen. Do not invent drawers where there were doors, or change panel widths. Open doors retain their original exterior finish.",
     `Selected outside specification: ${label("outside", spec.outside)}; retain IMAGE 1's exact outside appearance. Selected interior finish: ${label("inside", spec.inside)}. Hinge: ${label("hinge", spec.hinge)}. Drawer runners: ${label("slide", spec.slide)}. Show realistic shelving inside existing modules.`,
     [
+      spec.topLayers ? `Countertop thickness: ${spec.topLayers === "2" ? "thick double-layer slab (about 36mm front edge)" : "single-layer slab (18mm)"}.` : "",
+      spec.edge?.startsWith("list_") ? `Thin decorative ${spec.edge === "list_gold" ? "gold" : spec.edge === "list_chrome" ? "polished chrome / stainless" : "matte black"} aluminium trim lines on door/frame edges exactly where visible in IMAGE 1; never add new trim.` : "",
       spec.handle ? `Handles: ${optLabel("handle", spec.handle)}.` : "",
       spec.glass && spec.glass !== "none"
         ? `Glass doors exactly as in IMAGE 1, glass type: ${optLabel("glass", spec.glass)}; keep glass where IMAGE 1 has it, never add new glass doors.`
@@ -334,6 +349,7 @@ export function toSmeSpec(spec: SpecHints) {
     handle: spec.handle,
     glass: spec.glass,
     lighting: spec.lighting,
+    topLayers: spec.topLayers === "1" ? 1 : spec.topLayers === "2" ? 2 : undefined,
     // Tiap kode HPL berbeda dibeli minimal 1 lembar utuh walau dipakai sedikit.
     hplSheets: hplPurchaseList(spec.hplCodes),
     modules: (spec.modules ?? []).map((m) => ({ ...m, name: m.label, category: cat[m.level] })),

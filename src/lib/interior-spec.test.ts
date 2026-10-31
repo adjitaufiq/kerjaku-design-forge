@@ -129,8 +129,13 @@ describe("final spec HPL sheets", () => {
     const base: SpecHints = { outside: "hpl", inside: "blockmin", hinge: "slowmo", slide: "tandem", accessories: [] };
     expect(missingFinalSpec({ ...base, hplCodes: { ...codes, top: "" } })).toContain("Kode HPL top table");
     expect(
-      missingFinalSpec({ ...base, hplCodes: codes, edge: "edging", handle: "none", glass: "dark", lighting: "led_spot", accessoryMode: "plain" }),
+      missingFinalSpec({ ...base, hplCodes: codes, topLayers: "2", edge: "edging", handle: "none", glass: "dark", lighting: "led_spot", accessoryMode: "plain" }),
     ).toEqual([]);
+  });
+  it("requires choosing 1 or 2 layer top table", () => {
+    const base: SpecHints = { outside: "hpl", inside: "blockmin", hinge: "slowmo", slide: "tandem", accessories: [] };
+    expect(missingFinalSpec(base)).toContain("Top table 1 / 2 lapis");
+    expect(missingFinalSpec({ ...base, topLayers: "1" })).not.toContain("Top table 1 / 2 lapis");
   });
 });
 
