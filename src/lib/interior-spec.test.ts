@@ -85,3 +85,29 @@ describe("toSmeSpec", () => {
     expect(s.modules.map((m) => m.category)).toEqual(["kitchen-base", "kitchen-upper"]);
   });
 });
+
+import { missingForEstimate } from "./interior-spec";
+describe("estimate gate (spek wajib lengkap sebelum ke SME)", () => {
+  const full = {
+    material: "pvc-board-18", outside: "hpl", inside: "blockmin", hinge: "slowmo",
+    slide: "dt_slowmo", glue: "active", accessories: [],
+    modules: defaultModules("single").map((m) => ({ ...m, finish: "TACO TH 825 NT" })),
+  } as const;
+  it("passes when body, glue and every HPL code are filled", () => {
+    expect(missingForEstimate(specHintsSchema.parse(full))).toEqual([]);
+  });
+  it("blocks when a cabinet has no HPL code with a suffix", () => {
+    const s = specHintsSchema.parse({ ...full, modules: [full.modules[0], { ...full.modules[1], finish: "HPL putih" }] });
+    expect(missingForEstimate(s)).toEqual(["Kode HPL Kabinet atas"]);
+  });
+  it("blocks when body or glue is not chosen", () => {
+    const { material: _m, glue: _g, ...rest } = full;
+    expect(missingForEstimate(specHintsSchema.parse(rest))).toEqual(["Bahan bodi", "Jenis lem (Active / Starmax)"]);
+  });
+  it("sends SME body/hinge codes", () => {
+    const s = _toSme(specHintsSchema.parse({ ...full, material: "blockmin-1s-18", hinge: "slowmo_stainless" }));
+    expect(s.body).toBe("ply");
+    expect(s.hardware).toBe("ET-02");
+    expect(s.glue).toBe("active");
+  });
+});
