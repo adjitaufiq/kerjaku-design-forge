@@ -182,18 +182,72 @@ export function InteriorRender({
       setBusy(false);
     }
   };
+  const review = saved && !editing ? saved : undefined;
   return (
     <div className="space-y-4">
       <p className="text-sm font-medium text-foreground">{name}</p>
-      <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" size="sm" disabled={scanning || busy} onClick={() => void scan()}>
-          <ScanSearch className="size-4" />
-          {scanning ? "Memindai visual…" : "Scan otomatis dari After & summary"}
-        </Button>
-        {scanned && (
-          <span className="text-xs text-muted-foreground">Hasil AI — review &amp; koreksi bila perlu</span>
-        )}
-      </div>
+      {!review && (
+        <div className="space-y-2">
+          <Button
+            type="button"
+            disabled={scanning || busy}
+            onClick={() => void scan()}
+            className="h-auto w-full justify-start gap-3 rounded-xl border border-primary/40 bg-gradient-to-b from-primary/25 to-primary/10 px-4 py-3 text-left text-foreground shadow-[0_4px_0_0_hsl(var(--primary)/0.35),0_8px_18px_-6px_hsl(var(--primary)/0.5)] transition-all hover:from-primary/30 active:translate-y-[3px] active:shadow-[0_1px_0_0_hsl(var(--primary)/0.35)] disabled:opacity-100"
+          >
+            {scanning ? (
+              <Loader2 className="size-5 shrink-0 animate-spin text-primary" />
+            ) : scanned ? (
+              <CheckCircle2 className="size-5 shrink-0 text-primary" />
+            ) : (
+              <ScanSearch className="size-5 shrink-0 text-primary" />
+            )}
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold">
+                {scanning ? "Sedang memindai layout kitchen set…" : scanned ? "Layout terdeteksi" : "Scan layout kitchen set"}
+              </span>
+              <span className="block text-xs font-normal text-muted-foreground">
+                {scanning
+                  ? "Tunggu sebentar"
+                  : scanned
+                    ? `${spec.shape ? SHAPE_LABEL[spec.shape] : ""} · ${modules.length} modul — tap untuk scan ulang`
+                    : "Dari foto After & catatan konsultasi"}
+              </span>
+            </span>
+          </Button>
+          {!scanned && !scanning && (
+            <p className="text-xs text-muted-foreground">Isian spek material muncul setelah scan.</p>
+          )}
+        </div>
+      )}
+      {review && (
+        <div className="space-y-3 rounded-xl border border-primary/40 bg-primary/5 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-foreground">
+              Rekap spek material — {specVersionLabel(review.version)}
+            </p>
+            <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs text-primary">Data master</span>
+          </div>
+          <dl className="divide-y divide-border/60 text-sm">
+            {specReviewRows(review).map((r) => (
+              <div key={r.label} className="grid grid-cols-[7.5rem_1fr] gap-2 py-1.5">
+                <dt className="text-muted-foreground">{r.label}</dt>
+                <dd className="min-w-0 whitespace-pre-line break-words text-foreground">{r.value || "—"}</dd>
+              </div>
+            ))}
+            {modules.some((m) => m.fullCeiling) && (
+              <div className="grid grid-cols-[7.5rem_1fr] gap-2 py-1.5">
+                <dt className="text-muted-foreground">Kabinet atas</dt>
+                <dd className="text-foreground">Full plafon</dd>
+              </div>
+            )}
+          </dl>
+          <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+            <Pencil className="size-4" />
+            Edit / revisi spek
+          </Button>
+        </div>
+      )}
+      {!review && scanned && (
       <fieldset disabled={busy || saving || scanning} className="space-y-4 disabled:opacity-60">
         <SelectField
           label="Bentuk layout"
@@ -206,60 +260,19 @@ export function InteriorRender({
           }}
           options={SHAPES.map((x) => ({ value: x, label: SHAPE_LABEL[x] }))}
         />
-        {modules.length > 0 && (
-          <div className="space-y-3">
-            <p className="text-xs font-medium text-muted-foreground">Modul kabinet ({modules.length})</p>
-            {modules.map((m, i) => (
-              <div key={i} className="space-y-2 rounded-lg border border-border/60 p-3">
-                <div className="flex items-center gap-2">
-                  <TextField
-                    label="Nama modul"
-                    name={`mod-${i}`}
-                    maxLength={80}
-                    value={m.label}
-                    onChange={(e) => setModule(i, { label: e.target.value })}
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Hapus modul"
-                    onClick={() =>
-                      setSpec((s) => ({ ...s, modules: (s.modules ?? []).filter((_, j) => j !== i) }))
-                    }
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                </div>
-                <TextAreaField
-                  label="Finishing / HPL (ikut slot kode di bawah)"
-                  name={`fin-${i}`}
-                  maxLength={160}
-                  rows={2}
-                  className="[&_textarea]:min-h-0"
-                  value={m.finish}
-                  onChange={(e) => setModule(i, { finish: e.target.value })}
-                />
-                <TextAreaField
-                  label="Isi dalam"
-                  name={`con-${i}`}
-                  maxLength={300}
-                  rows={3}
-                  className="[&_textarea]:min-h-0"
-                  value={m.contents}
-                  onChange={(e) => setModule(i, { contents: e.target.value })}
-                />
-                {m.level === "upper" && (
-                  <label className="flex items-center gap-2 text-sm">
-                    <Checkbox
-                      checked={m.fullCeiling}
-                      onCheckedChange={(c) => setModule(i, { fullCeiling: !!c })}
-                    />
-                    Full plafon
-                  </label>
-                )}
-              </div>
-            ))}
-          </div>
+        {modules.some((m) => m.level === "upper") && (
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={modules.filter((m) => m.level === "upper").every((m) => m.fullCeiling)}
+              onCheckedChange={(c) =>
+                setSpec((s) => ({
+                  ...s,
+                  modules: (s.modules ?? []).map((m) => (m.level === "upper" ? { ...m, fullCeiling: !!c } : m)),
+                }))
+              }
+            />
+            Kabinet atas full plafon
+          </label>
         )}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {(["material", "outside", "inside", "hinge", "slide", "glue"] as const).map((key) => (
