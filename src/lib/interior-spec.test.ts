@@ -42,7 +42,7 @@ describe("SME interior contract", () => {
     expect(url.searchParams.get("renderUrl")).toBe("https://example.com/after.png");
     const encoded = url.searchParams.get("specHints") ?? "";
     expect(encoded).toMatch(/^[A-Za-z0-9_-]+$/);
-    expect(JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"))).toEqual(spec);
+    expect(JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"))).toMatchObject({ ...spec, brand: "TACO", material: "pvc-board-18" });
     expect(url.searchParams.has("dimensions")).toBe(false);
   });
   it("links the interior image to its exact After rather than replacing it", () => {
@@ -73,5 +73,15 @@ describe("layout handoff", () => {
       }),
     );
     expect(url.searchParams.get("shape")).toBe("L");
+  });
+});
+
+import { toSmeSpec as _toSme, defaultModules } from "./interior-spec";
+describe("toSmeSpec", () => {
+  it("maps modules to SME categories with TACO defaults", () => {
+    const s = _toSme({ outside: "hpl", inside: "blockmin", hinge: "slowmo", slide: "tandem", accessories: [], modules: defaultModules("single") });
+    expect(s.material).toBe("pvc-board-18");
+    expect(s.brand).toBe("TACO");
+    expect(s.modules.map((m) => m.category)).toEqual(["kitchen-base", "kitchen-upper"]);
   });
 });

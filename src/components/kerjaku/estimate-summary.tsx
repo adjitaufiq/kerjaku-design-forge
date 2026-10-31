@@ -9,6 +9,9 @@ const label = (k: string) => k.replace(/_/g, " ");
 export function EstimateSummary({ estimate }: { estimate: EstimatePayload }) {
   const sheets = Object.entries(estimate.summary?.sheetCount ?? {});
   const hardware = Object.entries(estimate.summary?.hardwareCount ?? {});
+  const shop = Array.isArray(estimate.shoppingList) ? estimate.shoppingList : [];
+  const cost = estimate.estimatedMaterialCost ?? estimate.materialCost;
+  const days = estimate.summary?.estimatedDays ?? estimate.workdays;
   return (
     <div className="mt-3 rounded-xl border border-border bg-background/40 p-3 text-xs">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -16,7 +19,7 @@ export function EstimateSummary({ estimate }: { estimate: EstimatePayload }) {
           <Calculator className="size-3.5" /> Estimasi material · {estimate.status ?? "—"}
         </span>
         <span className="text-sm font-semibold text-foreground">
-          {estimate.estimatedMaterialCost != null ? formatIDR(estimate.estimatedMaterialCost) : "—"}
+          {cost != null ? formatIDR(cost) : "—"}
         </span>
       </div>
       {(sheets.length > 0 || hardware.length > 0) && (
@@ -41,9 +44,29 @@ export function EstimateSummary({ estimate }: { estimate: EstimatePayload }) {
           ))}
         </div>
       )}
+      {shop.length > 0 && (
+        <div className="mt-3">
+          <p className="mb-1 tracking-wide text-muted-foreground uppercase">Daftar belanja TACO (HET)</p>
+          {shop.map((it, i) => (
+            <div key={i} className="flex justify-between gap-2 border-b border-border/50 py-1 last:border-0">
+              <span className="min-w-0 break-words text-foreground">
+                {it.name}
+                {it.code ? ` · ${it.code}` : ""}
+                <span className="block text-muted-foreground">
+                  {Math.round(Number(it.qty) * 10) / 10} {it.unit ?? ""}
+                  {it.unitPrice != null ? ` × ${formatIDR(it.unitPrice)}` : ""}
+                </span>
+              </span>
+              <span className="shrink-0 text-foreground">
+                {it.subtotal != null ? formatIDR(it.subtotal) : ""}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-muted-foreground">
         <span>
-          {estimate.summary?.estimatedDays ? `±${estimate.summary.estimatedDays} hari kerja` : ""}
+          {days ? `±${days} hari kerja` : ""}
         </span>
         {estimate.deepLinkUrl && (
           <Button variant="ghost" size="sm" asChild>
