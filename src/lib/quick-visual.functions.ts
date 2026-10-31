@@ -3,6 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   ALL_ITEMS,
+  APPLIANCE_TAG_UPGRADE,
   CEILING_ITEM_ID,
   RESKIN_TARGETS,
   type ReskinTarget,
@@ -23,6 +24,32 @@ interface ReskinInput {
   target: ReskinTarget;
   swatchImage?: string | null; // HPL / material photo
   colorText?: string | null; // e.g. "putih matte"
+}
+
+/** Kitchen appliance rule: by default keep the client's real appliances from IMAGE 1. */
+export function applianceRule(input: { items: string[]; note?: string | null }): string {
+  if (!input.items.includes("KITCHEN_SET")) return "";
+  const note = input.note ?? "";
+  const upgrade = note.includes(APPLIANCE_TAG_UPGRADE);
+  const noSink = note.includes("Tanpa wastafel / keran");
+  const noOven = note.includes("Tanpa oven tanam");
+  const addSink = note.includes("Tambah wastafel baru");
+  const rules: string[] = [];
+  if (upgrade) {
+    rules.push(
+      "APPLIANCES: upgrade the kitchen appliances to follow IMAGE 2 — built-in hob / induction cooktop, oven, cooker hood, sink and tap as shown in IMAGE 2, integrated into the new cabinets.",
+    );
+  } else {
+    rules.push(
+      "APPLIANCES (STRICT): IMAGE 2 is ONLY a reference for cabinetry (layout style, doors, colours, HPL finish, handles, countertop material). Do NOT copy any appliance, sink, tap, oven, built-in hob, cooker hood or gadget from IMAGE 2.",
+      "Keep the client's real appliances from IMAGE 1: the same stove type (e.g. a freestanding tabletop gas stove stays a tabletop gas stove), in the same position, now standing on the new countertop.",
+      "Only include a sink and tap if IMAGE 1 already has a sink or tap; otherwise the countertop is solid with no sink cut-out and no tap. Only include an oven or cooker hood if IMAGE 1 already has one.",
+    );
+  }
+  if (noSink) rules.push("No sink and no tap anywhere.");
+  if (noOven) rules.push("No built-in oven anywhere.");
+  if (addSink) rules.push("Add one new undermount sink with a tap in the countertop.");
+  return rules.join(" ");
 }
 
 function buildPrompt(input: QuickInput): string {
@@ -54,6 +81,7 @@ function buildPrompt(input: QuickInput): string {
     "Upper cabinet HEIGHT: use a normal standard upper cabinet height like IMAGE 2 (a regular wall cabinet, NOT up to the ceiling) with one level top line. Only extend upper cabinets all the way to the ceiling / roof if the workshop note explicitly asks for it (e.g. 'sampai plafon' / 'full plafon').",
     "Base cabinets: one straight, level plinth and countertop line; the countertop is one continuous slab.",
     "The 'LOCKED' list applies to the room outside the cabinet area; elements behind the new cabinets may be covered.",
+    applianceRule(input),
     input.note ? `Extra note from the workshop: ${input.note}` : "",
     "Output a single photorealistic photo with the same aspect ratio as IMAGE 1. No text, no watermark, no collage.",
   ]
