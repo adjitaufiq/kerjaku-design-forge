@@ -29,6 +29,7 @@ export const ACCESSORY_IDS = [
   "tray-sendok",
   "keranjang-tarik",
   "hidrolik",
+  "ventilasi",
 ] as const;
 export const EDGES = ["edging", "tusir", "list_gold", "list_chrome", "list_black"] as const;
 export const TOP_LAYERS = ["1", "2"] as const;
@@ -239,6 +240,7 @@ export const ACCESSORIES = [
   { id: "tray-sendok", label: "Tray sendok" },
   { id: "keranjang-tarik", label: "Keranjang tarik bawah" },
   { id: "hidrolik", label: "Hidrolik pintu angkat (gas spring)" },
+  { id: "ventilasi", label: "Kisi ventilasi hawa (tabung gas / sirkulasi)" },
 ] as const;
 
 const optLabel = (key: keyof typeof SPEC_OPTIONS, value: string | undefined) =>
@@ -313,8 +315,8 @@ export function buildInteriorPrompt(spec: SpecHints, note = ""): string {
         : "",
     ].join(" "),
     spec.accessories.length
-      ? `ONLY these selected accessories, in exactly these workshop-specified positions: ${spec.accessories.map((a) => `${ACCESSORIES.find((x) => x.id === a.id)?.label}: ${a.position}`).join("; ")}. Do not add any unselected accessory.`
-      : "No accessory inserts are selected. Show plain shelves only; no dish racks, vegetable pullouts, spice inserts or cutlery trays.",
+      ? `ONLY these selected accessories, in exactly these workshop-specified positions: ${spec.accessories.map((a) => `${ACCESSORIES.find((x) => x.id === a.id)?.label}: ${a.position}`).join("; ")}.${spec.accessories.some((a) => a.id === "ventilasi") ? " Ventilation grille = a small slatted aluminium louver vent on that base cabinet door or plinth." : ""} Do not add any unselected accessory, and never draw a ventilation grille unless it is selected.`
+      : "No accessory inserts are selected. Show plain shelves only; no ventilation grilles, no dish racks, vegetable pullouts, spice inserts or cutlery trays.",
     "Positions count cabinet modules from the viewer's left unless explicitly specified otherwise. Keep every accessory inside its existing cabinet footprint. Do not fabricate measurements or label inferred dimensions.",
     note ? `Workshop clarification, subordinate to the exterior design locks: ${note}` : "",
     "Output one photo, no collage, no dimension text, no annotations, no watermark. This is a visual concept, not a measured production drawing.",
