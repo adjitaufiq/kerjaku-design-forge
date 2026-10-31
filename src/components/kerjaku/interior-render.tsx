@@ -52,8 +52,10 @@ export function InteriorRender({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [scanning, setScanning] = useState(false);
-  const [scanned, setScanned] = useState(false);
-  const autoRan = useRef(false);
+  const [scanned, setScanned] = useState(!!initialSpec);
+  // Master spec yang terakhir disimpan; review mode bila ada.
+  const [saved, setSaved] = useState<SpecHints | undefined>(initialSpec);
+  const [editing, setEditing] = useState(!initialSpec);
   const scan = async () => {
     setScanning(true);
     setError("");
@@ -66,23 +68,17 @@ export function InteriorRender({
         r.readAsDataURL(blob);
       });
       const result = await scanInterior({ data: { image: dataUrl, summary: summary ?? "" } });
-      setSpec(result);
+      // Kode HPL yang sudah diisi manual tidak ditimpa scan ulang.
+      setSpec((s) => ({ ...result, hplCodes: s.hplCodes?.lower ? s.hplCodes : result.hplCodes }));
       setPreview("");
       setScanned(true);
-      toast.success("Spek terisi otomatis — cek dulu sebelum simpan");
+      toast.success("Layout terdeteksi — lengkapi spek material");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Scan gagal");
     } finally {
       setScanning(false);
     }
   };
-  useEffect(() => {
-    if (!initialSpec && !autoRan.current) {
-      autoRan.current = true;
-      void scan();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
   const modules = spec.modules ?? [];
   const setModule = (i: number, patch: Partial<CabinetModule>) => {
     setPreview("");
