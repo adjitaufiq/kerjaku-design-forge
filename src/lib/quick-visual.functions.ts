@@ -14,7 +14,7 @@ const IMAGE_MODEL = "openai/gpt-image-2.5-sunburst";
 
 interface QuickInput {
   roomImage: string; // data URL
-  referenceImage: string; // data URL
+  referenceImage?: string | null; // data URL, optional
   items: string[];
   note?: string | null;
 }
@@ -50,6 +50,17 @@ export function applianceRule(input: { items: string[]; note?: string | null }):
   if (noOven) rules.push("No built-in oven anywhere.");
   if (addSink) rules.push("Add one new undermount sink with a tap in the countertop.");
   return rules.join(" ");
+}
+
+function buildPromptOnly(input: QuickInput): string {
+  const chosen = ALL_ITEMS.filter((i) => input.items.includes(i.id));
+  const what = chosen.map((i) => i.prompt).join(", ") || "furniture";
+  return buildPrompt({ ...input, referenceImage: "x" })
+    .replace(/IMAGE 1 is a real photo[^.]*\.[^.]*\./, `IMAGE 1 is a real photo of a client's room. There is NO reference photo. Task: design and install a new ${what} into the room in IMAGE 1, as if a workshop produced and installed it on site, following ONLY the workshop note below for style, colours and finish (if the note is silent, use a clean modern minimalist style with neutral HPL).`)
+    .replace(/Copy from IMAGE 2:[^.]*\./, "")
+    .replace(/Do not copy the room, walls, floor or lighting of IMAGE 2\./, "")
+    .replace(/like IMAGE 2 /g, "")
+    .replace(/IMAGE 2/g, "the workshop note");
 }
 
 function buildPrompt(input: QuickInput): string {
@@ -148,14 +159,18 @@ export const quickVisualize = createServerFn({ method: "POST" })
   .inputValidator((input: QuickInput) => {
     if (!input?.roomImage?.startsWith("data:image"))
       throw new Error("Upload the client room photo");
-    if (!input.referenceImage?.startsWith("data:image"))
-      throw new Error("Upload the reference photo");
+    if (input.referenceImage && !input.referenceImage.startsWith("data:image"))
+      throw new Error("Foto referensi tidak valid");
+    if (!input.referenceImage && !input.note?.trim())
+      throw new Error("Tanpa foto referensi, tulis dulu catatan / prompt desainnya");
     const valid = (input.items ?? []).filter((id) => ALL_ITEMS.some((i) => i.id === id));
     if (!valid.length) throw new Error("Pilih minimal satu item yang dipasang");
     return { ...input, items: valid };
   })
   .handler(async ({ data: input }) => {
-    const image = await callEdit(buildPrompt(input), [input.roomImage, input.referenceImage]);
+    const image = input.referenceImage
+      ? await callEdit(buildPrompt(input), [input.roomImage, input.referenceImage])
+      : await callEdit(buildPromptOnly(input), [input.roomImage]);
     return { image };
   });
 
