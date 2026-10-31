@@ -9,13 +9,19 @@ const str = { type: "string" };
 const schema = {
   type: "object",
   additionalProperties: false,
-  required: ["outside", "inside", "hinge", "slide", "shape", "modules", "accessories"],
+  required: ["outside", "inside", "hinge", "slide", "shape", "modules", "accessories", "handle", "glass", "lighting", "hasAccent", "accentNote", "edge"],
   properties: {
     outside: { type: "string", enum: ["hpl", "hpl_premium", "duco"] },
     inside: { type: "string", enum: ["blockmin", "tacosheet", "hpl"] },
     hinge: { type: "string", enum: ["slowmo", "slowmo_stainless", "biasa"] },
     slide: { type: "string", enum: ["dt_slowmo", "dt_biasa", "dt_eco", "push", "tandem", "roller"] },
     shape: { type: "string", enum: ["single", "L", "U"] },
+    handle: { type: "string", enum: ["none", "profile_j", "push", "handle"] },
+    glass: { type: "string", enum: ["none", "dark", "clear", "fluted"] },
+    lighting: { type: "string", enum: ["none", "led", "spot", "led_spot"] },
+    edge: { type: "string", enum: ["edging", "tusir"] },
+    hasAccent: { type: "boolean" },
+    accentNote: str,
     modules: {
       type: "array",
       items: {
@@ -41,7 +47,7 @@ const schema = {
         properties: {
           id: {
             type: "string",
-            enum: ["rak-piring", "rak-gelas", "rak-sayur", "rak-bumbu", "tray-sendok"],
+            enum: ["rak-piring", "rak-gelas", "rak-sayur", "rak-bumbu", "tray-sendok", "keranjang-tarik"],
           },
           position: str,
         },
@@ -68,6 +74,7 @@ export const scanInterior = createServerFn({ method: "POST" })
       "contents: isi dalam modul dalam Bahasa Indonesia sesuai yang terlihat, misal 'pintu swing bawah sink, siphon', 'modul kompor', '3 laci susun di tengah', 'rak terbuka bumbu'.",
       "accessories: centang rak-piring (posisi kabinet atas tepat di atas sink jika ada sink), tray-sendok + rel laci jika ada laci, rak-bumbu jika ada rak bumbu/terbuka. position wajib diisi, menyebut modul dihitung dari kiri.",
       "slide dt_slowmo jika ada laci. hinge slowmo. outside hpl kecuali terlihat cat duco. inside blockmin kecuali disebut lain.",
+      "Deteksi komponen: handle (none jika bevel/tanpa pegangan, profile_j, push, handle luar), glass (dark jika pintu kaca gelap/riben, clear, fluted, none), lighting (led strip bawah kabinet, spot kecil, keduanya, none), edge selalu edging. hasAccent true jika ada panel/rak/lis warna lain (mis. aksen putih) — accentNote singkat misal 'rak terbuka putih'.",
       "DILARANG menulis ukuran/angka cm. Ini draft yang akan direview workshop.",
       `Ringkasan konsultasi: ${input.summary || "-"}`,
     ].join("\n");
@@ -112,8 +119,20 @@ export const scanInterior = createServerFn({ method: "POST" })
       ? (json["accessories"] as { id: string; position: string }[])
       : [];
     const seen = new Set<string>();
+    const fromSummary = (input.summary.toUpperCase().match(/TH[\s-]*L?[\s-]*\d{3,5}[\s-]*[A-Z]{1,3}\b/g) ?? [])[0] ?? "";
+    const { hasAccent, accentNote, ...rest } = json;
     const parsed = specHintsSchema.safeParse({
-      ...json,
+      ...rest,
+      // Kode HPL tidak pernah ditebak dari foto; hanya dari ringkasan, sisanya workshop isi.
+      hplCodes: {
+        lower: fromSummary,
+        upperSame: true,
+        upper: "",
+        top: "",
+        hasAccent: hasAccent === true,
+        accent: "",
+        accentNote: String(accentNote ?? "").slice(0, 120),
+      },
       modules: mods.slice(0, 12).map((m) => ({
         ...m,
         label: String(m["label"] ?? "Kabinet").slice(0, 80),

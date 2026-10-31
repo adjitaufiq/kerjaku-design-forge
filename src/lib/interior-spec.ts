@@ -21,6 +21,29 @@ export const MATERIALS = [
   "hybrid",
 ] as const;
 export const GLUES = ["active", "starmax"] as const;
+export const ACCESSORY_IDS = [
+  "rak-piring",
+  "rak-gelas",
+  "rak-sayur",
+  "rak-bumbu",
+  "tray-sendok",
+  "keranjang-tarik",
+] as const;
+export const EDGES = ["edging", "tusir"] as const;
+export const HANDLES = ["none", "profile_j", "push", "handle"] as const;
+export const GLASSES = ["none", "dark", "clear", "fluted"] as const;
+export const LIGHTINGS = ["none", "led", "spot", "led_spot"] as const;
+/** Kode HPL per bagian. Tiap kode berbeda = minimal 1 lembar utuh dibeli. */
+export const hplCodesSchema = z.object({
+  lower: z.string().trim().max(60),
+  upperSame: z.boolean(),
+  upper: z.string().trim().max(60),
+  top: z.string().trim().max(60),
+  hasAccent: z.boolean(),
+  accent: z.string().trim().max(60),
+  accentNote: z.string().trim().max(120),
+});
+export type HplCodes = z.infer<typeof hplCodesSchema>;
 export const specHintsSchema = z.object({
   material: z.enum(MATERIALS).optional(),
   outside: z.enum(["hpl", "hpl_premium", "duco"]),
@@ -31,7 +54,7 @@ export const specHintsSchema = z.object({
   accessories: z
     .array(
       z.object({
-        id: z.enum(["rak-piring", "rak-gelas", "rak-sayur", "rak-bumbu", "tray-sendok"]),
+        id: z.enum(ACCESSORY_IDS),
         position: z.string().trim().min(1, "Isi posisi setiap aksesori").max(300),
       }),
     )
@@ -39,6 +62,12 @@ export const specHintsSchema = z.object({
   // Layout/modules come from an AI pre-fill the workshop reviews; never measurements.
   shape: z.enum(SHAPES).optional(),
   modules: z.array(moduleSchema).max(12).optional(),
+  hplCodes: hplCodesSchema.optional(),
+  edge: z.enum(EDGES).optional(),
+  handle: z.enum(HANDLES).optional(),
+  glass: z.enum(GLASSES).optional(),
+  lighting: z.enum(LIGHTINGS).optional(),
+  accessoryMode: z.enum(["plain", "selected"]).optional(),
 });
 
 export const SHAPE_LABEL: Record<(typeof SHAPES)[number], string> = {
@@ -112,6 +141,28 @@ export const SPEC_OPTIONS = {
     { value: "tandem", label: "TACO US 001 SC tandem slowmo" },
     { value: "roller", label: "TACO RLT roller putih" },
   ],
+  edge: [
+    { value: "edging", label: "Edging PVC TACO" },
+    { value: "tusir", label: "Tusiran (tanpa edging)" },
+  ],
+  handle: [
+    { value: "none", label: "Tanpa handle / bevel 45°" },
+    { value: "profile_j", label: "Profil J aluminium" },
+    { value: "push", label: "Push to open (magnet / tip-on)" },
+    { value: "handle", label: "Handle tarikan luar" },
+  ],
+  glass: [
+    { value: "none", label: "Tanpa kaca" },
+    { value: "dark", label: "Kaca gelap (riben / smoke)" },
+    { value: "clear", label: "Kaca bening" },
+    { value: "fluted", label: "Kaca buram / fluted" },
+  ],
+  lighting: [
+    { value: "none", label: "Tanpa lampu" },
+    { value: "led", label: "LED strip + profil + trafo" },
+    { value: "spot", label: "Lampu sorot kecil (spot)" },
+    { value: "led_spot", label: "LED strip + lampu sorot" },
+  ],
   glue: [
     { value: "active", label: "Lem kuning TACO Active" },
     { value: "starmax", label: "Lem kuning TACO Starmax" },
@@ -132,8 +183,29 @@ export function missingForEstimate(spec: SpecHints | null | undefined): string[]
   if (!spec.glue) miss.push("Jenis lem (Active / Starmax)");
   const mods = spec.modules ?? [];
   if (!mods.length) miss.push("Daftar kabinet (modul)");
-  if (spec.outside !== "duco")
+  miss.push(...missingFinalSpec(spec));
+  if (spec.outside !== "duco" && !spec.hplCodes)
     for (const m of mods) if (!hasTacoHplCode(m.finish)) miss.push(`Kode HPL ${m.label}`);
+  return miss;
+}
+
+/** Gerbang final spek: wajib lengkap sebelum generate tampak dalam & kirim SME. */
+export function missingFinalSpec(spec: SpecHints): string[] {
+  const miss: string[] = [];
+  const c = spec.hplCodes;
+  if (spec.outside !== "duco") {
+    if (!c || !hasTacoHplCode(c.lower)) miss.push("Kode HPL kabinet bawah");
+    if (c && !c.upperSame && !hasTacoHplCode(c.upper)) miss.push("Kode HPL kabinet atas");
+  }
+  if (!c || !hasTacoHplCode(c.top)) miss.push("Kode HPL top table");
+  if (c?.hasAccent && !hasTacoHplCode(c.accent)) miss.push("Kode HPL aksen");
+  if (!spec.edge) miss.push("Edging / tusiran");
+  if (!spec.handle) miss.push("Handle");
+  if (!spec.glass) miss.push("Kaca");
+  if (!spec.lighting) miss.push("Lampu");
+  if (!spec.accessoryMode) miss.push("Aksesori dalam: polos atau pakai aksesori");
+  if (spec.accessoryMode === "selected" && !spec.accessories.length)
+    miss.push("Centang minimal 1 aksesori");
   return miss;
 }
 
@@ -143,7 +215,29 @@ export const ACCESSORIES = [
   { id: "rak-sayur", label: "Rak sayur tarik" },
   { id: "rak-bumbu", label: "Rak bumbu / botol" },
   { id: "tray-sendok", label: "Tray sendok" },
+  { id: "keranjang-tarik", label: "Keranjang tarik bawah" },
 ] as const;
+
+const optLabel = (key: keyof typeof SPEC_OPTIONS, value: string | undefined) =>
+  SPEC_OPTIONS[key].find((o) => o.value === value)?.label ?? "";
+
+/** Daftar HPL yang dibeli; kode sama digabung. Minimal 1 lembar utuh per kode. */
+export function hplPurchaseList(codes: HplCodes | undefined) {
+  if (!codes) return [];
+  const parts: { part: string; code: string }[] = [
+    { part: "Kabinet bawah", code: codes.lower },
+    { part: "Kabinet atas", code: codes.upperSame ? codes.lower : codes.upper },
+    { part: "Top table", code: codes.top },
+    ...(codes.hasAccent ? [{ part: `Aksen${codes.accentNote ? ` (${codes.accentNote})` : ""}`, code: codes.accent }] : []),
+  ];
+  const map = new Map<string, string[]>();
+  for (const p of parts) {
+    const key = p.code.trim().toUpperCase();
+    if (!key) continue;
+    map.set(key, [...(map.get(key) ?? []), p.part]);
+  }
+  return [...map.entries()].map(([code, used]) => ({ code, parts: used, minSheets: 1 }));
+}
 
 export function buildInteriorPrompt(spec: SpecHints, note = ""): string {
   const label = (key: keyof typeof SPEC_OPTIONS, value: string) =>
@@ -154,6 +248,16 @@ export function buildInteriorPrompt(spec: SpecHints, note = ""): string {
     "LOCK the cabinet carcass dimensions, module count, positions, outside colours, outside HPL grain, materials, handles, countertop, sink, appliances, walls, ceiling, floor and lighting. Never resize, remove, redesign or add cabinet modules. No full-ceiling extension.",
     "ONLY articulate the existing upper and lower cabinet doors open on their hinges, realistically avoiding collisions; pull existing drawers partially out so their runners can be seen. Do not invent drawers where there were doors, or change panel widths. Open doors retain their original exterior finish.",
     `Selected outside specification: ${label("outside", spec.outside)}; retain IMAGE 1's exact outside appearance. Selected interior finish: ${label("inside", spec.inside)}. Hinge: ${label("hinge", spec.hinge)}. Drawer runners: ${label("slide", spec.slide)}. Show realistic shelving inside existing modules.`,
+    [
+      spec.handle ? `Handles: ${optLabel("handle", spec.handle)}.` : "",
+      spec.glass && spec.glass !== "none"
+        ? `Glass doors exactly as in IMAGE 1, glass type: ${optLabel("glass", spec.glass)}; keep glass where IMAGE 1 has it, never add new glass doors.`
+        : "",
+      spec.lighting ? `Lighting: ${optLabel("lighting", spec.lighting)}; keep exactly as visible in IMAGE 1.` : "",
+      spec.hplCodes
+        ? `Countertop HPL ${spec.hplCodes.top}; keep IMAGE 1 countertop colour.${spec.hplCodes.hasAccent ? ` Accent panels (${spec.hplCodes.accentNote || "accent"}) HPL ${spec.hplCodes.accent}, keep as in IMAGE 1.` : ""}`
+        : "",
+    ].join(" "),
     spec.accessories.length
       ? `ONLY these selected accessories, in exactly these workshop-specified positions: ${spec.accessories.map((a) => `${ACCESSORIES.find((x) => x.id === a.id)?.label}: ${a.position}`).join("; ")}. Do not add any unselected accessory.`
       : "No accessory inserts are selected. Show plain shelves only; no dish racks, vegetable pullouts, spice inserts or cutlery trays.",
@@ -187,6 +291,12 @@ export function toSmeSpec(spec: SpecHints) {
     hardware: HINGE_CODE[spec.hinge],
     drawerSlide: spec.slide,
     glue: spec.glue,
+    edge: spec.edge,
+    handle: spec.handle,
+    glass: spec.glass,
+    lighting: spec.lighting,
+    // Tiap kode HPL berbeda dibeli minimal 1 lembar utuh walau dipakai sedikit.
+    hplSheets: hplPurchaseList(spec.hplCodes),
     modules: (spec.modules ?? []).map((m) => ({ ...m, name: m.label, category: cat[m.level] })),
   };
 }
