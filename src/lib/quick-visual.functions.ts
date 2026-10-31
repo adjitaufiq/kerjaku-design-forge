@@ -44,7 +44,7 @@ export function applianceRule(input: { items: string[]; note?: string | null }):
   const addSink = note.includes("Tambah wastafel baru");
   const rules: string[] = [];
   const solidUppers =
-    "UPPER CABINETS (STRICT): one continuous run of identical full-height closed doors from end to end. NO cooker-hood niche, NO shortened cabinet, NO gap, NO open shelf above the stove — even if IMAGE 2 has one. Ignore that part of IMAGE 2 and fill it with normal doors.";
+    "CABINET DESIGN STAYS LIKE IMAGE 2: this appliance rule changes ONLY appliances. Keep the upper and base cabinet design of IMAGE 2 exactly — same door split, door rows, open shelf / open niche, crown, handles and built-in cabinet lights (LED strip under the uppers, downlights). Where IMAGE 2 has a cooker hood, remove only the hood itself and leave that cabinet section as the same empty open niche / shelf; do not redesign the cabinets.";
   if (clean) {
     rules.push(
       "APPLIANCES (STRICT — CABINETRY ONLY): IMAGE 2 is ONLY a reference for cabinet style, doors, colours, HPL finish, handles and countertop material.",
@@ -108,7 +108,8 @@ function buildPrompt(input: QuickInput): string {
     "NEVER notch, step, cut out or shorten a cabinet to avoid a vent, small window opening, glass block, pipe, cable, hook, shelf or rough wall patch.",
     "Instead, keep the cabinet at its normal full size and build it straight in front of the obstacle so the cabinet simply covers and hides it.",
     "Remove old shelves, racks, curtains and clutter in the installation area.",
-    "Upper cabinet HEIGHT: use a normal standard upper cabinet height like IMAGE 2 (a regular wall cabinet, NOT up to the ceiling) with one level top line. Only extend upper cabinets all the way to the ceiling / roof if the workshop note explicitly asks for it (e.g. 'sampai plafon' / 'full plafon').",
+    "Upper cabinet HEIGHT: use a normal standard upper cabinet height like IMAGE 2 (a regular wall cabinet, NOT up to the ceiling) with one level top line. Only extend upper cabinets all the way to the ceiling / roof if the workshop note explicitly asks for it (e.g. 'sampai plafon' / 'full plafon'); then ONLY make them taller — keep the same door layout, open niche, handles, crown and lights as IMAGE 2.",
+    "Built-in cabinet lights (LED strip under the upper cabinets, downlights in the cabinet crown) are part of the furniture: copy them from IMAGE 2 and keep them on, unless the workshop note says no LED. If the note asks for LED strip, add it.",
     "Base cabinets: one straight, level plinth and countertop line; the countertop is one continuous slab.",
     "The 'LOCKED' list applies to the room outside the cabinet area; elements behind the new cabinets may be covered.",
     applianceRule(input),
