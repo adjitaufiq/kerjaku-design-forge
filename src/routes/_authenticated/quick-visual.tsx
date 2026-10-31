@@ -692,7 +692,7 @@ function QuickVisualPage() {
             </div>
           )}
           {active && (roomId === "KITCHEN" || roomId === "BEDROOM") && (
-            <Fold title="Tampak dalam / pintu terbuka">
+            <Fold title="Spek material · final tampak luar & dalam">
               <InteriorRender
                 key={active.id}
                 image={active.image}
