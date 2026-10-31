@@ -115,7 +115,7 @@ describe("estimate gate (spek wajib lengkap sebelum ke SME)", () => {
   });
 });
 
-import { hplPurchaseList, missingFinalSpec } from "./interior-spec";
+import { hplPurchaseList, missingFinalSpec, type SpecHints } from "./interior-spec";
 describe("final spec HPL sheets", () => {
   const codes = { lower: "TH 825 NT", upperSame: true, upper: "", top: "TH 003 AA", hasAccent: true, accent: "TH 001 AA", accentNote: "rak putih" };
   it("buys at least 1 full sheet per distinct HPL code", () => {
@@ -124,7 +124,7 @@ describe("final spec HPL sheets", () => {
     expect(list.every((x) => x.minSheets === 1)).toBe(true);
   });
   it("blocks generate until top table code, edge, handle, glass, lamp and accessory choice are set", () => {
-    const base = { outside: "hpl", inside: "blockmin", hinge: "slowmo", slide: "tandem", accessories: [] } as const;
+    const base: SpecHints = { outside: "hpl", inside: "blockmin", hinge: "slowmo", slide: "tandem", accessories: [] };
     expect(missingFinalSpec({ ...base, hplCodes: { ...codes, top: "" } })).toContain("Kode HPL top table");
     expect(
       missingFinalSpec({ ...base, hplCodes: codes, edge: "edging", handle: "none", glass: "dark", lighting: "led_spot", accessoryMode: "plain" }),
