@@ -250,6 +250,34 @@ export function hplPurchaseList(codes: HplCodes | undefined) {
   return [...map.entries()].map(([code, used]) => ({ code, parts: used, minSheets: 1 }));
 }
 
+/** Rekap master spek untuk review workshop (tanpa jumlah lembar). */
+export function specReviewRows(spec: SpecHints): { label: string; value: string }[] {
+  const c = spec.hplCodes;
+  const motifs = hplPurchaseList(c).map((x) => `${x.code} — ${x.parts.join(", ")}`);
+  const accessories =
+    spec.accessoryMode === "plain"
+      ? "Polos (hanya ambalan)"
+      : spec.accessories
+          .map((a) => `${ACCESSORIES.find((x) => x.id === a.id)?.label ?? a.id} (${a.position})`)
+          .join(", ");
+  return [
+    { label: "Bentuk", value: spec.shape ? SHAPE_LABEL[spec.shape] : "" },
+    { label: "Bahan bodi", value: optLabel("material", spec.material) },
+    { label: "Finishing luar", value: optLabel("outside", spec.outside) },
+    { label: `Motif HPL (${motifs.length})`, value: motifs.join("\n") },
+    { label: "Finishing dalam", value: optLabel("inside", spec.inside) },
+    { label: "Pinggiran", value: optLabel("edge", spec.edge) },
+    { label: "Handle", value: optLabel("handle", spec.handle) },
+    { label: "Kaca", value: optLabel("glass", spec.glass) },
+    { label: "Lampu", value: optLabel("lighting", spec.lighting) },
+    { label: "Engsel", value: optLabel("hinge", spec.hinge) },
+    { label: "Rel laci", value: optLabel("slide", spec.slide) },
+    { label: "Lem HPL", value: optLabel("glue", spec.glue) },
+    { label: "Aksesori dalam", value: accessories },
+  ];
+}
+
+
 export function buildInteriorPrompt(spec: SpecHints, note = ""): string {
   const label = (key: keyof typeof SPEC_OPTIONS, value: string) =>
     SPEC_OPTIONS[key].find((o) => o.value === value)?.label ?? value;
