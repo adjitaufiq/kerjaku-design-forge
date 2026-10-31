@@ -29,18 +29,22 @@ export function ProjectInterior({
         .filter((a) => a.title === INTERIOR_ACTIVITY_TITLE)
         .map((a) => parseInteriorRecord(a.body))
         .filter((r) => r !== null && r.projectId === projectId);
-      const interiors = new Set(records.map((r) => r?.interiorAssetId));
+      const interiors = new Set(
+        records.flatMap((r) => [r?.interiorAssetId, r?.exteriorAssetId]),
+      );
       return Promise.all(
         assets
           .filter((a) => a.type === "SKETCHUP_RENDER" && !interiors.has(a.id))
           .map(async (a) => {
             const record = records.find((r) => r?.baseAssetId === a.id);
             const inside = assets.find((x) => x.id === record?.interiorAssetId);
+            const outside = assets.find((x) => x.id === record?.exteriorAssetId);
             return {
               id: a.id,
               image: await data.assets.getViewUrl(a.url),
               record,
               interiorImage: inside ? await data.assets.getViewUrl(inside.url) : null,
+              exteriorImage: outside ? await data.assets.getViewUrl(outside.url) : null,
             };
           }),
       );
@@ -81,19 +85,18 @@ export function ProjectInterior({
         summary={summary}
         initialSpec={current.record?.specHints}
         interiorImage={current.interiorImage ?? undefined}
-        onSave={async (specHints, image) => {
-          let interiorAssetId = current.record?.interiorAssetId;
-          if (image && image !== current.interiorImage) {
-            const blob = await (await fetch(image)).blob();
-            interiorAssetId = (
-              await data.assets.upload(
-                workspaceId,
-                projectId,
-                "SKETCHUP_RENDER",
-                new File([blob], "interior.png", { type: blob.type }),
-              )
+        exteriorImage={current.exteriorImage ?? undefined}
+        onSave={async (specHints, image, exterior) => {
+          const keep = async (url: string | undefined, prev: string | null, id: string | undefined, file: string) => {
+            if (!url) return undefined;
+            if (url === prev) return id;
+            const blob = await (await fetch(url)).blob();
+            return (
+              await data.assets.upload(workspaceId, projectId, "SKETCHUP_RENDER", new File([blob], file, { type: blob.type }))
             ).id;
-          }
+          };
+          const interiorAssetId = await keep(image, current.interiorImage, current.record?.interiorAssetId, "final-tampak-dalam.png");
+          const exteriorAssetId = await keep(exterior, current.exteriorImage, current.record?.exteriorAssetId, "final-tampak-luar.png");
           await data.activities.log(workspaceId, {
             leadId,
             type: "NOTE",
@@ -101,7 +104,8 @@ export function ProjectInterior({
             body: JSON.stringify({
               projectId,
               baseAssetId: current.id,
-              ...(image && interiorAssetId ? { interiorAssetId } : {}),
+              ...(interiorAssetId ? { interiorAssetId } : {}),
+              ...(exteriorAssetId ? { exteriorAssetId } : {}),
               specHints,
             }),
           });

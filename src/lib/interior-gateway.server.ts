@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { buildInteriorPrompt, specHintsSchema } from "@/lib/interior-spec";
+import { buildExteriorPrompt, buildInteriorPrompt, specHintsSchema } from "@/lib/interior-spec";
 
 export async function renderInterior(request: Request): Promise<Response> {
   const token = request.headers.get("authorization")?.replace(/^Bearer /, "");
@@ -57,7 +57,10 @@ export async function renderInterior(request: Request): Promise<Response> {
     });
   const payload = new FormData();
   payload.set("model", "openai/gpt-image-2.5-sunburst");
-  payload.set("prompt", buildInteriorPrompt(spec, note));
+  payload.set(
+    "prompt",
+    form.get("view") === "exterior" ? buildExteriorPrompt(spec, note) : buildInteriorPrompt(spec, note),
+  );
   payload.set("image", image);
   if (form.get("stream") !== "false") {
     payload.set("stream", "true");

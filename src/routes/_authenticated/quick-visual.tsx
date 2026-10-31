@@ -692,15 +692,16 @@ function QuickVisualPage() {
             </div>
           )}
           {active && (roomId === "KITCHEN" || roomId === "BEDROOM") && (
-            <Fold title="Tampak dalam / pintu terbuka">
+            <Fold title="Spek material · final tampak luar & dalam">
               <InteriorRender
                 key={active.id}
                 image={active.image}
                 name={active.name}
                 initialSpec={active.specHints}
                 interiorImage={active.interiorImage}
-                onSave={async (specHints, image) => {
-                  updateOption(active.id, { specHints, interiorImage: image });
+                exteriorImage={active.exteriorImage}
+                onSave={async (specHints, image, exterior) => {
+                  updateOption(active.id, { specHints, interiorImage: image, exteriorImage: exterior });
                 }}
               />
             </Fold>
@@ -1027,6 +1028,14 @@ function SurveyForm({
                 await dataUrlToFile(o.interiorImage, `interior-final.png`),
               )
             : null;
+          const outside = o.exteriorImage
+            ? await data.assets.upload(
+                workspaceId,
+                project.id,
+                "SKETCHUP_RENDER",
+                await dataUrlToFile(o.exteriorImage, `exterior-final.png`),
+              )
+            : null;
           await data.activities.log(workspaceId, {
             leadId: lead.id,
             type: "NOTE",
@@ -1035,6 +1044,7 @@ function SurveyForm({
               projectId: project.id,
               baseAssetId: base.id,
               ...(inside ? { interiorAssetId: inside.id } : {}),
+              ...(outside ? { exteriorAssetId: outside.id } : {}),
               specHints: o.specHints,
             }),
           });

@@ -111,6 +111,7 @@ export const interiorRecordSchema = z.object({
   projectId: z.string(),
   baseAssetId: z.string(),
   interiorAssetId: z.string().optional(),
+  exteriorAssetId: z.string().optional(),
   specHints: specHintsSchema,
 });
 export type InteriorRecord = z.infer<typeof interiorRecordSchema>;
@@ -292,6 +293,25 @@ export function specReviewRows(spec: SpecHints): { label: string; value: string 
   ];
 }
 
+
+/** Final closed-door exterior: IMAGE 1 geometry locked, only spec-visible finishes applied. */
+export function buildExteriorPrompt(spec: SpecHints, note = ""): string {
+  const c = spec.hplCodes;
+  const upper = c ? (c.upperSame ? c.lower : c.upper) : "";
+  return [
+    "IMAGE 1 is the client's approved After render. Produce ONE photorealistic FINAL EXTERIOR view (all doors closed) from exactly the same camera, framing, perspective and aspect ratio.",
+    "LOCK everything in IMAGE 1: room walls, tiles, ceiling, floor, windows, room lights, appliances, sink, objects, cabinet length, height, module count, door split, open niches and positions. Never resize, add or remove modules, never extend to the ceiling unless IMAGE 1 already does.",
+    "ONLY update the visible cabinet finishes so they match this final material specification:",
+    c ? `Base cabinet fronts HPL TACO ${c.lower}; upper cabinet fronts HPL TACO ${upper}; countertop HPL TACO ${c.top}.${c.hasAccent ? ` Accent (${c.accentNote || "accent parts"}) HPL TACO ${c.accent}.` : ""} Keep the colour/motif family already shown in IMAGE 1 for each part.` : "",
+    spec.topLayers ? `Countertop front edge: ${spec.topLayers === "2" ? "thick double layer (about 36mm)" : "single 18mm"}.` : "",
+    spec.edge ? `Door edges: ${optLabel("edge", spec.edge)}.` : "",
+    spec.handle ? `Handles: ${optLabel("handle", spec.handle)}.` : "",
+    spec.glass ? (spec.glass === "none" ? "No glass doors: glass panels become solid doors in the same finish." : `Glass: ${optLabel("glass", spec.glass)} — only on doors that already have glass in IMAGE 1 (or where the note says).`) : "",
+    spec.lighting ? (spec.lighting === "none" ? "No built-in cabinet lights." : `Built-in cabinet lights: ${optLabel("lighting", spec.lighting)}, switched on, warm white, placed under the upper cabinets / in the cabinet crown.`) : "",
+    "Do not invent decorations, trims, vents, shelves or objects not listed here. Do not label dimensions.",
+    note ? `Workshop note (positions/extra): ${note}` : "",
+  ].filter(Boolean).join("\n");
+}
 
 export function buildInteriorPrompt(spec: SpecHints, note = ""): string {
   const label = (key: keyof typeof SPEC_OPTIONS, value: string) =>

@@ -9,6 +9,7 @@ export interface VisualOption {
   spec: string; // short description of design / finish
   createdAt: number;
   interiorImage?: string | undefined;
+  exteriorImage?: string | undefined;
   specHints?: SpecHints;
 }
 
