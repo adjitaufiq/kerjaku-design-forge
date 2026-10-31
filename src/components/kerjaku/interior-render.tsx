@@ -82,13 +82,6 @@ export function InteriorRender({
     }
   };
   const modules = spec.modules ?? [];
-  const setModule = (i: number, patch: Partial<CabinetModule>) => {
-    setPreview("");
-    setSpec((s) => ({
-      ...s,
-      modules: (s.modules ?? []).map((m, j) => (j === i ? { ...m, ...patch } : m)),
-    }));
-  };
   const setValue = (
     key: "material" | "outside" | "inside" | "hinge" | "slide" | "glue" | "edge" | "handle" | "glass" | "lighting",
     value: string,
