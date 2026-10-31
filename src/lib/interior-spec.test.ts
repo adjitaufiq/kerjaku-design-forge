@@ -133,3 +133,18 @@ describe("final spec HPL sheets", () => {
     ).toEqual([]);
   });
 });
+
+import { nextSpecVersion as nsv, specVersionLabel as svl } from "./interior-spec";
+describe("spec master versioning", () => {
+  it("first save is Spek Final 1", () => {
+    expect(nsv(undefined, true)).toBe(1);
+    expect(svl(1)).toBe("Spek Final 1");
+  });
+  it("changed spec becomes Spek Revisi 1, then 2", () => {
+    expect(svl(nsv({ version: 1 }, true))).toBe("Spek Revisi 1");
+    expect(svl(nsv({ version: 2 }, true))).toBe("Spek Revisi 2");
+  });
+  it("unchanged save keeps version", () => {
+    expect(nsv({ version: 2 }, false)).toBe(2);
+  });
+});

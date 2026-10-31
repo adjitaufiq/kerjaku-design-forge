@@ -68,7 +68,18 @@ export const specHintsSchema = z.object({
   glass: z.enum(GLASSES).optional(),
   lighting: z.enum(LIGHTINGS).optional(),
   accessoryMode: z.enum(["plain", "selected"]).optional(),
+  // Master spec version: 1 = "Spek Final 1", n>1 = "Spek Revisi n-1".
+  version: z.number().int().min(1).max(999).optional(),
 });
+
+export const specVersionLabel = (version: number | undefined) =>
+  !version || version <= 1 ? "Spek Final 1" : `Spek Revisi ${version - 1}`;
+
+/** Next version when saving: unchanged spec keeps its version, any change bumps it. */
+export const nextSpecVersion = (
+  saved: { version?: number | undefined } | undefined,
+  changed: boolean,
+) => (!saved ? 1 : changed ? (saved.version ?? 1) + 1 : (saved.version ?? 1));
 
 export const SHAPE_LABEL: Record<(typeof SHAPES)[number], string> = {
   single: "Lurus (single line)",
@@ -238,6 +249,34 @@ export function hplPurchaseList(codes: HplCodes | undefined) {
   }
   return [...map.entries()].map(([code, used]) => ({ code, parts: used, minSheets: 1 }));
 }
+
+/** Rekap master spek untuk review workshop (tanpa jumlah lembar). */
+export function specReviewRows(spec: SpecHints): { label: string; value: string }[] {
+  const c = spec.hplCodes;
+  const motifs = hplPurchaseList(c).map((x) => `${x.code} — ${x.parts.join(", ")}`);
+  const accessories =
+    spec.accessoryMode === "plain"
+      ? "Polos (hanya ambalan)"
+      : spec.accessories
+          .map((a) => `${ACCESSORIES.find((x) => x.id === a.id)?.label ?? a.id} (${a.position})`)
+          .join(", ");
+  return [
+    { label: "Bentuk", value: spec.shape ? SHAPE_LABEL[spec.shape] : "" },
+    { label: "Bahan bodi", value: optLabel("material", spec.material) },
+    { label: "Finishing luar", value: optLabel("outside", spec.outside) },
+    { label: `Motif HPL (${motifs.length})`, value: motifs.join("\n") },
+    { label: "Finishing dalam", value: optLabel("inside", spec.inside) },
+    { label: "Pinggiran", value: optLabel("edge", spec.edge) },
+    { label: "Handle", value: optLabel("handle", spec.handle) },
+    { label: "Kaca", value: optLabel("glass", spec.glass) },
+    { label: "Lampu", value: optLabel("lighting", spec.lighting) },
+    { label: "Engsel", value: optLabel("hinge", spec.hinge) },
+    { label: "Rel laci", value: optLabel("slide", spec.slide) },
+    { label: "Lem HPL", value: optLabel("glue", spec.glue) },
+    { label: "Aksesori dalam", value: accessories },
+  ];
+}
+
 
 export function buildInteriorPrompt(spec: SpecHints, note = ""): string {
   const label = (key: keyof typeof SPEC_OPTIONS, value: string) =>

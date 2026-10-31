@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Download, ScanSearch, Save, Trash2, Wand2 } from "lucide-react";
+import { useState } from "react";
+import { CheckCircle2, Download, Loader2, Pencil, ScanSearch, Save, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -9,12 +9,14 @@ import {
   defaultModules,
   hplPurchaseList,
   missingFinalSpec,
+  nextSpecVersion,
   type HplCodes,
   SHAPE_LABEL,
   SHAPES,
   SPEC_OPTIONS,
   specHintsSchema,
-  type CabinetModule,
+  specReviewRows,
+  specVersionLabel,
   type SpecHints,
 } from "@/lib/interior-spec";
 import { scanInterior } from "@/lib/interior-scan.functions";
@@ -52,8 +54,10 @@ export function InteriorRender({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [scanning, setScanning] = useState(false);
-  const [scanned, setScanned] = useState(false);
-  const autoRan = useRef(false);
+  const [scanned, setScanned] = useState(!!initialSpec);
+  // Master spec yang terakhir disimpan; review mode bila ada.
+  const [saved, setSaved] = useState<SpecHints | undefined>(initialSpec);
+  const [editing, setEditing] = useState(!initialSpec);
   const scan = async () => {
     setScanning(true);
     setError("");
@@ -66,31 +70,18 @@ export function InteriorRender({
         r.readAsDataURL(blob);
       });
       const result = await scanInterior({ data: { image: dataUrl, summary: summary ?? "" } });
-      setSpec(result);
+      // Kode HPL yang sudah diisi manual tidak ditimpa scan ulang.
+      setSpec((s) => ({ ...result, hplCodes: s.hplCodes?.lower ? s.hplCodes : result.hplCodes }));
       setPreview("");
       setScanned(true);
-      toast.success("Spek terisi otomatis — cek dulu sebelum simpan");
+      toast.success("Layout terdeteksi — lengkapi spek material");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Scan gagal");
     } finally {
       setScanning(false);
     }
   };
-  useEffect(() => {
-    if (!initialSpec && !autoRan.current) {
-      autoRan.current = true;
-      void scan();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
   const modules = spec.modules ?? [];
-  const setModule = (i: number, patch: Partial<CabinetModule>) => {
-    setPreview("");
-    setSpec((s) => ({
-      ...s,
-      modules: (s.modules ?? []).map((m, j) => (j === i ? { ...m, ...patch } : m)),
-    }));
-  };
   const setValue = (
     key: "material" | "outside" | "inside" | "hinge" | "slide" | "glue" | "edge" | "handle" | "glass" | "lighting",
     value: string,
@@ -119,12 +110,23 @@ export function InteriorRender({
   };
   const missing = missingFinalSpec(spec);
   const sheets = hplPurchaseList(spec.hplCodes);
+  const strip = (s: SpecHints | undefined) => (s ? JSON.stringify({ ...s, version: undefined }) : "");
   const save = async () => {
     setSaving(true);
     setError("");
     try {
-      await onSave(specHintsSchema.parse(spec), preview && final ? preview : undefined);
-      toast.success("Spek tersimpan");
+      if (missing.length) throw new Error(`Lengkapi dulu: ${missing.join(", ")}`);
+      const changed = strip(spec) !== strip(saved);
+      const version = nextSpecVersion(saved, changed);
+      const master = specHintsSchema.parse({ ...spec, version });
+      // Spek berubah = gambar lama tidak berlaku lagi.
+      const keepImage = !changed && preview && final ? preview : undefined;
+      await onSave(master, keepImage);
+      setSpec(master);
+      setSaved(master);
+      if (changed) setPreview("");
+      setEditing(false);
+      toast.success(`${specVersionLabel(version)} tersimpan — tanpa kredit AI`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Gagal menyimpan spek");
     } finally {
@@ -137,9 +139,9 @@ export function InteriorRender({
     setPreview("");
     setFinal(false);
     try {
-      const chosen = specHintsSchema.parse(spec);
-      if (missing.length) throw new Error(`Lengkapi dulu: ${missing.join(", ")}`);
-      if (scanning) throw new Error("Tunggu scan selesai.");
+      if (!saved || editing) throw new Error("Simpan data spek master dulu.");
+      const chosen = specHintsSchema.parse(saved);
+      if (missingFinalSpec(chosen).length) throw new Error("Spek master belum lengkap.");
       const { data } = await supabase.auth.getSession();
       if (!data.session) throw new Error("Silakan login kembali.");
       const source = await fetch(image);
@@ -175,18 +177,72 @@ export function InteriorRender({
       setBusy(false);
     }
   };
+  const review = saved && !editing ? saved : undefined;
   return (
     <div className="space-y-4">
       <p className="text-sm font-medium text-foreground">{name}</p>
-      <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" size="sm" disabled={scanning || busy} onClick={() => void scan()}>
-          <ScanSearch className="size-4" />
-          {scanning ? "Memindai visual…" : "Scan otomatis dari After & summary"}
-        </Button>
-        {scanned && (
-          <span className="text-xs text-muted-foreground">Hasil AI — review &amp; koreksi bila perlu</span>
-        )}
-      </div>
+      {!review && (
+        <div className="space-y-2">
+          <Button
+            type="button"
+            disabled={scanning || busy}
+            onClick={() => void scan()}
+            className="h-auto w-full justify-start gap-3 rounded-xl border border-primary/40 bg-gradient-to-b from-primary/25 to-primary/10 px-4 py-3 text-left text-foreground shadow-[0_4px_0_0_hsl(var(--primary)/0.35),0_8px_18px_-6px_hsl(var(--primary)/0.5)] transition-all hover:from-primary/30 active:translate-y-[3px] active:shadow-[0_1px_0_0_hsl(var(--primary)/0.35)] disabled:opacity-100"
+          >
+            {scanning ? (
+              <Loader2 className="size-5 shrink-0 animate-spin text-primary" />
+            ) : scanned ? (
+              <CheckCircle2 className="size-5 shrink-0 text-primary" />
+            ) : (
+              <ScanSearch className="size-5 shrink-0 text-primary" />
+            )}
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold">
+                {scanning ? "Sedang memindai layout kitchen set…" : scanned ? "Layout terdeteksi" : "Scan layout kitchen set"}
+              </span>
+              <span className="block text-xs font-normal text-muted-foreground">
+                {scanning
+                  ? "Tunggu sebentar"
+                  : scanned
+                    ? `${spec.shape ? SHAPE_LABEL[spec.shape] : ""} · ${modules.length} modul — tap untuk scan ulang`
+                    : "Dari foto After & catatan konsultasi"}
+              </span>
+            </span>
+          </Button>
+          {!scanned && !scanning && (
+            <p className="text-xs text-muted-foreground">Isian spek material muncul setelah scan.</p>
+          )}
+        </div>
+      )}
+      {review && (
+        <div className="space-y-3 rounded-xl border border-primary/40 bg-primary/5 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-foreground">
+              Rekap spek material — {specVersionLabel(review.version)}
+            </p>
+            <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs text-primary">Data master</span>
+          </div>
+          <dl className="divide-y divide-border/60 text-sm">
+            {specReviewRows(review).map((r) => (
+              <div key={r.label} className="grid grid-cols-[7.5rem_1fr] gap-2 py-1.5">
+                <dt className="text-muted-foreground">{r.label}</dt>
+                <dd className="min-w-0 whitespace-pre-line break-words text-foreground">{r.value || "—"}</dd>
+              </div>
+            ))}
+            {modules.some((m) => m.fullCeiling) && (
+              <div className="grid grid-cols-[7.5rem_1fr] gap-2 py-1.5">
+                <dt className="text-muted-foreground">Kabinet atas</dt>
+                <dd className="text-foreground">Full plafon</dd>
+              </div>
+            )}
+          </dl>
+          <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+            <Pencil className="size-4" />
+            Edit / revisi spek
+          </Button>
+        </div>
+      )}
+      {!review && scanned && (
       <fieldset disabled={busy || saving || scanning} className="space-y-4 disabled:opacity-60">
         <SelectField
           label="Bentuk layout"
@@ -199,60 +255,19 @@ export function InteriorRender({
           }}
           options={SHAPES.map((x) => ({ value: x, label: SHAPE_LABEL[x] }))}
         />
-        {modules.length > 0 && (
-          <div className="space-y-3">
-            <p className="text-xs font-medium text-muted-foreground">Modul kabinet ({modules.length})</p>
-            {modules.map((m, i) => (
-              <div key={i} className="space-y-2 rounded-lg border border-border/60 p-3">
-                <div className="flex items-center gap-2">
-                  <TextField
-                    label="Nama modul"
-                    name={`mod-${i}`}
-                    maxLength={80}
-                    value={m.label}
-                    onChange={(e) => setModule(i, { label: e.target.value })}
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Hapus modul"
-                    onClick={() =>
-                      setSpec((s) => ({ ...s, modules: (s.modules ?? []).filter((_, j) => j !== i) }))
-                    }
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                </div>
-                <TextAreaField
-                  label="Finishing / HPL (ikut slot kode di bawah)"
-                  name={`fin-${i}`}
-                  maxLength={160}
-                  rows={2}
-                  className="[&_textarea]:min-h-0"
-                  value={m.finish}
-                  onChange={(e) => setModule(i, { finish: e.target.value })}
-                />
-                <TextAreaField
-                  label="Isi dalam"
-                  name={`con-${i}`}
-                  maxLength={300}
-                  rows={3}
-                  className="[&_textarea]:min-h-0"
-                  value={m.contents}
-                  onChange={(e) => setModule(i, { contents: e.target.value })}
-                />
-                {m.level === "upper" && (
-                  <label className="flex items-center gap-2 text-sm">
-                    <Checkbox
-                      checked={m.fullCeiling}
-                      onCheckedChange={(c) => setModule(i, { fullCeiling: !!c })}
-                    />
-                    Full plafon
-                  </label>
-                )}
-              </div>
-            ))}
-          </div>
+        {modules.some((m) => m.level === "upper") && (
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={modules.filter((m) => m.level === "upper").every((m) => m.fullCeiling)}
+              onCheckedChange={(c) =>
+                setSpec((s) => ({
+                  ...s,
+                  modules: (s.modules ?? []).map((m) => (m.level === "upper" ? { ...m, fullCeiling: !!c } : m)),
+                }))
+              }
+            />
+            Kabinet atas full plafon
+          </label>
         )}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {(["material", "outside", "inside", "hinge", "slide", "glue"] as const).map((key) => (
@@ -303,9 +318,10 @@ export function InteriorRender({
           )}
           {sheets.length > 0 && (
             <ul className="space-y-1 text-xs text-muted-foreground">
+              <li className="font-medium">{sheets.length} motif HPL dipakai:</li>
               {sheets.map((x) => (
                 <li key={x.code} className="break-words">
-                  {x.code} — min. 1 lembar · {x.parts.join(", ")}
+                  {x.code} — {x.parts.join(", ")}
                 </li>
               ))}
             </ul>
@@ -394,11 +410,8 @@ export function InteriorRender({
           placeholder="Rak piring di kabinet atas tepat di atas sink"
         />
       </fieldset>
-      <p className="text-xs text-muted-foreground">
-        Konsep visual, bukan gambar kerja. Ukuran tetap dari ukur workshop. Periksa engsel, rel, dan
-        posisi aksesori sebelum produksi.
-      </p>
-      {missing.length > 0 && (
+      )}
+      {!review && scanned && missing.length > 0 && (
         <p className="break-words text-xs text-destructive">Belum lengkap: {missing.join(", ")}</p>
       )}
       {error && (
@@ -414,14 +427,25 @@ export function InteriorRender({
         />
       )}
       <div className="flex flex-wrap gap-2">
-        <Button variant="outline" disabled={busy || saving} onClick={() => void save()}>
-          <Save className="size-4" />
-          {saving ? "Menyimpan…" : "Simpan spek"}
-        </Button>
-        <Button disabled={busy || saving || missing.length > 0} onClick={() => void generate()}>
-          <Wand2 className="size-4" />
-          {busy ? "Membuka kabinet…" : "Buat tampak dalam (AI)"}
-        </Button>
+        {!review && scanned && (
+          <>
+            <Button disabled={busy || saving || missing.length > 0} onClick={() => void save()}>
+              <Save className="size-4" />
+              {saving ? "Menyimpan…" : "Simpan data spek master"}
+            </Button>
+            {saved && (
+              <Button variant="ghost" onClick={() => { setSpec(saved); setEditing(false); }}>
+                Batal
+              </Button>
+            )}
+          </>
+        )}
+        {review && (
+          <Button disabled={busy || saving} onClick={() => void generate()}>
+            <Wand2 className="size-4" />
+            {busy ? "Membuka kabinet…" : preview ? "Buat ulang tampak dalam (AI)" : "Buat tampak dalam (AI)"}
+          </Button>
+        )}
         {preview && final && !busy && (
           <Button variant="outline" asChild>
             <a href={preview} download={`${name}-tampak-dalam.png`}>
@@ -431,6 +455,11 @@ export function InteriorRender({
           </Button>
         )}
       </div>
+      {review && (
+        <p className="text-xs text-muted-foreground">
+          Gambar opsional (pakai kredit AI) dan hanya mengikuti {specVersionLabel(review.version)}. Ukuran tetap dari ukur workshop.
+        </p>
+      )}
     </div>
   );
 }
