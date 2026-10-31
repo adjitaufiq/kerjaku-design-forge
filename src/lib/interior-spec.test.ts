@@ -92,13 +92,15 @@ describe("estimate gate (spek wajib lengkap sebelum ke SME)", () => {
     material: "pvc-board-18", outside: "hpl", inside: "blockmin", hinge: "slowmo",
     slide: "dt_slowmo", glue: "active", accessories: [],
     modules: defaultModules("single").map((m) => ({ ...m, finish: "TACO TH 825 NT" })),
+    hplCodes: { lower: "TH 825 NT", upperSame: true, upper: "", top: "TH 003 AA", hasAccent: false, accent: "", accentNote: "" },
+    edge: "edging", handle: "profile_j", glass: "none", lighting: "led", accessoryMode: "plain",
   } as const;
   it("passes when body, glue and every HPL code are filled", () => {
     expect(missingForEstimate(specHintsSchema.parse(full))).toEqual([]);
   });
   it("blocks when a cabinet has no HPL code with a suffix", () => {
-    const s = specHintsSchema.parse({ ...full, modules: [full.modules[0], { ...full.modules[1], finish: "HPL putih" }] });
-    expect(missingForEstimate(s)).toEqual(["Kode HPL Kabinet atas"]);
+    const s = specHintsSchema.parse({ ...full, hplCodes: { ...full.hplCodes, upperSame: false, upper: "HPL putih" } });
+    expect(missingForEstimate(s)).toEqual(["Kode HPL kabinet atas"]);
   });
   it("blocks when body or glue is not chosen", () => {
     const { material: _m, glue: _g, ...rest } = full;
@@ -112,5 +114,22 @@ describe("estimate gate (spek wajib lengkap sebelum ke SME)", () => {
     expect(_toSme(specHintsSchema.parse({ ...full, material: "multiplek-18" })).body).toBe("ply");
     expect(s.hardware).toBe("ET-02");
     expect(s.glue).toBe("active");
+  });
+});
+
+import { hplPurchaseList, missingFinalSpec, type SpecHints } from "./interior-spec";
+describe("final spec HPL sheets", () => {
+  const codes = { lower: "TH 825 NT", upperSame: true, upper: "", top: "TH 003 AA", hasAccent: true, accent: "TH 001 AA", accentNote: "rak putih" };
+  it("buys at least 1 full sheet per distinct HPL code", () => {
+    const list = hplPurchaseList(codes);
+    expect(list.map((x) => x.code)).toEqual(["TH 825 NT", "TH 003 AA", "TH 001 AA"]);
+    expect(list.every((x) => x.minSheets === 1)).toBe(true);
+  });
+  it("blocks generate until top table code, edge, handle, glass, lamp and accessory choice are set", () => {
+    const base: SpecHints = { outside: "hpl", inside: "blockmin", hinge: "slowmo", slide: "tandem", accessories: [] };
+    expect(missingFinalSpec({ ...base, hplCodes: { ...codes, top: "" } })).toContain("Kode HPL top table");
+    expect(
+      missingFinalSpec({ ...base, hplCodes: codes, edge: "edging", handle: "none", glass: "dark", lighting: "led_spot", accessoryMode: "plain" }),
+    ).toEqual([]);
   });
 });

@@ -7,6 +7,9 @@ import { SelectField, TextAreaField, TextField } from "@/components/kerjaku/form
 import {
   ACCESSORIES,
   defaultModules,
+  hplPurchaseList,
+  missingFinalSpec,
+  type HplCodes,
   SHAPE_LABEL,
   SHAPES,
   SPEC_OPTIONS,
@@ -89,13 +92,33 @@ export function InteriorRender({
     }));
   };
   const setValue = (
-    key: "material" | "outside" | "inside" | "hinge" | "slide" | "glue",
+    key: "material" | "outside" | "inside" | "hinge" | "slide" | "glue" | "edge" | "handle" | "glass" | "lighting",
     value: string,
   ) => {
     const selected = specHintsSchema.shape[key].parse(value);
     setSpec((s) => ({ ...s, [key]: selected }));
     setPreview("");
   };
+  const codes: HplCodes = spec.hplCodes ?? {
+    lower: "", upperSame: true, upper: "", top: "", hasAccent: false, accent: "", accentNote: "",
+  };
+  const setCodes = (patch: Partial<HplCodes>) => {
+    setPreview("");
+    setSpec((s) => {
+      const next = { ...codes, ...(s.hplCodes ?? {}), ...patch };
+      const upper = next.upperSame ? next.lower : next.upper;
+      return {
+        ...s,
+        hplCodes: next,
+        // Kode modul ikut slot agar SME memakai satu sumber.
+        modules: (s.modules ?? []).map((m) =>
+          m.level === "upper" ? { ...m, finish: upper } : { ...m, finish: next.lower },
+        ),
+      };
+    });
+  };
+  const missing = missingFinalSpec(spec);
+  const sheets = hplPurchaseList(spec.hplCodes);
   const save = async () => {
     setSaving(true);
     setError("");
@@ -115,6 +138,7 @@ export function InteriorRender({
     setFinal(false);
     try {
       const chosen = specHintsSchema.parse(spec);
+      if (missing.length) throw new Error(`Lengkapi dulu: ${missing.join(", ")}`);
       if (scanning) throw new Error("Tunggu scan selesai.");
       const { data } = await supabase.auth.getSession();
       if (!data.session) throw new Error("Silakan login kembali.");
@@ -200,7 +224,7 @@ export function InteriorRender({
                   </Button>
                 </div>
                 <TextAreaField
-                  label="Finishing / HPL"
+                  label="Finishing / HPL (ikut slot kode di bawah)"
                   name={`fin-${i}`}
                   maxLength={160}
                   rows={2}
@@ -250,9 +274,77 @@ export function InteriorRender({
             />
           ))}
         </div>
+        <div className="space-y-3 rounded-lg border border-border/60 p-3">
+          <p className="text-xs font-medium text-muted-foreground">
+            Kode HPL TACO * — tiap kode beda dibeli minimal 1 lembar utuh
+          </p>
+          {spec.outside !== "duco" && (
+            <>
+              <TextField label="Kabinet bawah *" name="hpl-lower" placeholder="TH 5022 NT" value={codes.lower} onChange={(e) => setCodes({ lower: e.target.value })} />
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox checked={codes.upperSame} onCheckedChange={(c) => setCodes({ upperSame: !!c })} />
+                Kabinet atas sama dengan bawah
+              </label>
+              {!codes.upperSame && (
+                <TextField label="Kabinet atas *" name="hpl-upper" placeholder="TH 001 AA" value={codes.upper} onChange={(e) => setCodes({ upper: e.target.value })} />
+              )}
+            </>
+          )}
+          <TextField label="Top table *" name="hpl-top" placeholder="TH 003 AA" value={codes.top} onChange={(e) => setCodes({ top: e.target.value })} />
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox checked={codes.hasAccent} onCheckedChange={(c) => setCodes({ hasAccent: !!c })} />
+            Ada aksen / kombinasi warna lain
+          </label>
+          {codes.hasAccent && (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <TextField label="Kode HPL aksen *" name="hpl-accent" placeholder="TH 001 AA" value={codes.accent} onChange={(e) => setCodes({ accent: e.target.value })} />
+              <TextField label="Aksen di bagian" name="hpl-accent-note" placeholder="Rak terbuka putih" value={codes.accentNote} onChange={(e) => setCodes({ accentNote: e.target.value })} />
+            </div>
+          )}
+          {sheets.length > 0 && (
+            <ul className="space-y-1 text-xs text-muted-foreground">
+              {sheets.map((x) => (
+                <li key={x.code} className="break-words">
+                  {x.code} — min. 1 lembar · {x.parts.join(", ")}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {(["edge", "handle", "glass", "lighting"] as const).map((key) => (
+            <SelectField
+              key={key}
+              label={{ edge: "Pinggiran *", handle: "Handle *", glass: "Kaca *", lighting: "Lampu *" }[key]}
+              value={spec[key] ?? ""}
+              onValueChange={(v) => setValue(key, v)}
+              options={SPEC_OPTIONS[key]}
+            />
+          ))}
+        </div>
         <div className="space-y-3">
-          <p className="text-xs font-medium text-muted-foreground">Aksesori dalam</p>
-          {ACCESSORIES.map((a) => {
+          <p className="text-xs font-medium text-muted-foreground">Aksesori dalam *</p>
+          <div className="flex flex-wrap gap-2">
+            {(["plain", "selected"] as const).map((mode) => (
+              <Button
+                key={mode}
+                type="button"
+                size="sm"
+                variant={spec.accessoryMode === mode ? "default" : "outline"}
+                onClick={() => {
+                  setPreview("");
+                  setSpec((s) => ({
+                    ...s,
+                    accessoryMode: mode,
+                    accessories: mode === "plain" ? [] : s.accessories,
+                  }));
+                }}
+              >
+                {mode === "plain" ? "Polos (tanpa aksesori)" : "Pakai aksesori"}
+              </Button>
+            ))}
+          </div>
+          {spec.accessoryMode === "selected" && ACCESSORIES.map((a) => {
             const chosen = spec.accessories.find((x) => x.id === a.id);
             return (
               <div key={a.id} className="space-y-2">
@@ -306,6 +398,9 @@ export function InteriorRender({
         Konsep visual, bukan gambar kerja. Ukuran tetap dari ukur workshop. Periksa engsel, rel, dan
         posisi aksesori sebelum produksi.
       </p>
+      {missing.length > 0 && (
+        <p className="break-words text-xs text-destructive">Belum lengkap: {missing.join(", ")}</p>
+      )}
       {error && (
         <p role="alert" className="break-words text-sm text-destructive">
           {error}
@@ -323,7 +418,7 @@ export function InteriorRender({
           <Save className="size-4" />
           {saving ? "Menyimpan…" : "Simpan spek"}
         </Button>
-        <Button disabled={busy || saving} onClick={() => void generate()}>
+        <Button disabled={busy || saving || missing.length > 0} onClick={() => void generate()}>
           <Wand2 className="size-4" />
           {busy ? "Membuka kabinet…" : "Buat tampak dalam (AI)"}
         </Button>
