@@ -75,3 +75,13 @@ describe("layout handoff", () => {
     expect(url.searchParams.get("shape")).toBe("L");
   });
 });
+
+import { toSmeSpec as _toSme } from "./interior-spec";
+describe("toSmeSpec", () => {
+  it("maps modules to SME categories with TACO defaults", () => {
+    const s = _toSme({ outside: "hpl", inside: "blockmin", hinge: "slowmo", slide: "tandem", accessories: [], modules: defaultModules("single") });
+    expect(s.material).toBe("pvc-board-18");
+    expect(s.brand).toBe("TACO");
+    expect(s.modules.map((m) => m.category)).toEqual(["kitchen-base", "kitchen-upper"]);
+  });
+});

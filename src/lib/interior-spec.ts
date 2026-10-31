@@ -11,7 +11,9 @@ export const moduleSchema = z.object({
 });
 export type CabinetModule = z.infer<typeof moduleSchema>;
 
+export const MATERIALS = ["pvc-board-18", "eco-pvc-18", "multiplek-18", "blockboard-18"] as const;
 export const specHintsSchema = z.object({
+  material: z.enum(MATERIALS).optional(),
   outside: z.enum(["hpl", "hpl_premium", "duco"]),
   inside: z.enum(["blockmin", "tacosheet", "hpl"]),
   hinge: z.enum(["slowmo", "biasa"]),
@@ -68,6 +70,12 @@ export function parseInteriorRecord(raw: string | null): InteriorRecord | null {
 }
 
 export const SPEC_OPTIONS = {
+  material: [
+    { value: "pvc-board-18", label: "TACO PVC Board 18mm" },
+    { value: "eco-pvc-18", label: "TACO ECO PVC Board 18mm" },
+    { value: "multiplek-18", label: "Multiplek 18mm" },
+    { value: "blockboard-18", label: "Blockboard 18mm" },
+  ],
   outside: [
     { value: "hpl", label: "HPL" },
     { value: "hpl_premium", label: "HPL Premium" },
@@ -115,4 +123,18 @@ export function buildInteriorPrompt(spec: SpecHints, note = ""): string {
   ]
     .filter(Boolean)
     .join(" ");
+}
+
+/** SME contract (1 Jalur, full TACO): explicit name/category per module + brand fields. */
+export function toSmeSpec(spec: SpecHints) {
+  const cat = { lower: "kitchen-base", upper: "kitchen-upper", tall: "kitchen-tall" } as const;
+  return {
+    ...spec,
+    brand: "TACO",
+    material: spec.material ?? "pvc-board-18",
+    hardware: spec.hinge === "slowmo" ? "taco-hinge-slowmo" : "taco-hinge",
+    drawerSlide: spec.slide,
+    glue: "taco-active",
+    modules: (spec.modules ?? []).map((m) => ({ ...m, name: m.label, category: cat[m.level] })),
+  };
 }
