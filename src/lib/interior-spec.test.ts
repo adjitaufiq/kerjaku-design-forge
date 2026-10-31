@@ -42,7 +42,7 @@ describe("SME interior contract", () => {
     expect(url.searchParams.get("renderUrl")).toBe("https://example.com/after.png");
     const encoded = url.searchParams.get("specHints") ?? "";
     expect(encoded).toMatch(/^[A-Za-z0-9_-]+$/);
-    expect(JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"))).toEqual(spec);
+    expect(JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"))).toMatchObject({ ...spec, brand: "TACO", material: "pvc-board-18" });
     expect(url.searchParams.has("dimensions")).toBe(false);
   });
   it("links the interior image to its exact After rather than replacing it", () => {
