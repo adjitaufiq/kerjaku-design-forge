@@ -68,7 +68,18 @@ export const specHintsSchema = z.object({
   glass: z.enum(GLASSES).optional(),
   lighting: z.enum(LIGHTINGS).optional(),
   accessoryMode: z.enum(["plain", "selected"]).optional(),
+  // Master spec version: 1 = "Spek Final 1", n>1 = "Spek Revisi n-1".
+  version: z.number().int().min(1).max(999).optional(),
 });
+
+export const specVersionLabel = (version: number | undefined) =>
+  !version || version <= 1 ? "Spek Final 1" : `Spek Revisi ${version - 1}`;
+
+/** Next version when saving: unchanged spec keeps its version, any change bumps it. */
+export const nextSpecVersion = (
+  saved: { version?: number | undefined } | undefined,
+  changed: boolean,
+) => (!saved ? 1 : changed ? (saved.version ?? 1) + 1 : (saved.version ?? 1));
 
 export const SHAPE_LABEL: Record<(typeof SHAPES)[number], string> = {
   single: "Lurus (single line)",
