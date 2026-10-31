@@ -28,6 +28,7 @@ export function InteriorRender({
   name,
   initialSpec,
   interiorImage,
+  exteriorImage,
   summary,
   onSave,
 }: {
@@ -36,7 +37,8 @@ export function InteriorRender({
   name: string;
   initialSpec?: SpecHints | undefined;
   interiorImage?: string | undefined;
-  onSave: (spec: SpecHints, image?: string) => Promise<void>;
+  exteriorImage?: string | undefined;
+  onSave: (spec: SpecHints, interior?: string, exterior?: string) => Promise<void>;
 }) {
   const [spec, setSpec] = useState<SpecHints>(
     initialSpec ?? {
@@ -50,6 +52,9 @@ export function InteriorRender({
   const [note, setNote] = useState("");
   const [preview, setPreview] = useState(interiorImage ?? "");
   const [final, setFinal] = useState(true);
+  const [outside, setOutside] = useState(exteriorImage ?? "");
+  const [outsideFinal, setOutsideFinal] = useState(true);
+  const [view, setView] = useState<"interior" | "exterior" | null>(null);
   const [busy, setBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -121,10 +126,14 @@ export function InteriorRender({
       const master = specHintsSchema.parse({ ...spec, version });
       // Spek berubah = gambar lama tidak berlaku lagi.
       const keepImage = !changed && preview && final ? preview : undefined;
-      await onSave(master, keepImage);
+      const keepOut = !changed && outside && outsideFinal ? outside : undefined;
+      await onSave(master, keepImage, keepOut);
       setSpec(master);
       setSaved(master);
-      if (changed) setPreview("");
+      if (changed) {
+        setPreview("");
+        setOutside("");
+      }
       setEditing(false);
       toast.success(`${specVersionLabel(version)} tersimpan — tanpa kredit AI`);
     } catch (e) {
@@ -133,11 +142,14 @@ export function InteriorRender({
       setSaving(false);
     }
   };
-  const generate = async () => {
+  const generate = async (kind: "interior" | "exterior") => {
+    const setImg = kind === "exterior" ? setOutside : setPreview;
+    const setDone = kind === "exterior" ? setOutsideFinal : setFinal;
     setBusy(true);
+    setView(kind);
     setError("");
-    setPreview("");
-    setFinal(false);
+    setImg("");
+    setDone(false);
     try {
       if (!saved || editing) throw new Error("Simpan data spek master dulu.");
       const chosen = specHintsSchema.parse(saved);
@@ -155,26 +167,29 @@ export function InteriorRender({
       );
       form.set("specHints", JSON.stringify(chosen));
       form.set("note", note);
+      form.set("view", kind);
       let result = "";
       await streamImage(
         "/api/render-interior",
         form,
         (url, done) => {
-          setPreview(url);
-          setFinal(done);
+          setImg(url);
+          setDone(done);
           if (done) result = url;
         },
         undefined,
         { Authorization: `Bearer ${data.session.access_token}` },
       );
       if (!result) throw new Error("Gambar belum selesai.");
-      await onSave(chosen, result);
-      toast.success("Tampak dalam tersimpan; After tetap utuh");
+      if (kind === "exterior") await onSave(chosen, final && preview ? preview : undefined, result);
+      else await onSave(chosen, result, outsideFinal && outside ? outside : undefined);
+      toast.success(kind === "exterior" ? "Final tampak luar tersimpan" : "Final tampak dalam tersimpan");
     } catch (e) {
-      setPreview("");
-      setError(e instanceof Error ? e.message : "Gagal membuat tampak dalam");
+      setImg("");
+      setError(e instanceof Error ? e.message : "Gagal membuat gambar");
     } finally {
       setBusy(false);
+      setView(null);
     }
   };
   const review = saved && !editing ? saved : undefined;
@@ -419,12 +434,39 @@ export function InteriorRender({
           {error}
         </p>
       )}
-      {preview && (
-        <img
-          src={preview}
-          alt={`${name} — pintu terbuka`}
-          className={`w-full rounded-lg object-contain transition-[filter] ${final ? "blur-0" : "blur-2xl"}`}
-        />
+      {(outside || preview) && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {outside && (
+            <figure className="space-y-1">
+              <figcaption className="text-xs font-medium text-muted-foreground">Final tampak luar</figcaption>
+              <img
+                src={outside}
+                alt={`${name} — final tampak luar`}
+                className={`w-full rounded-lg object-contain transition-[filter] ${outsideFinal ? "blur-0" : "blur-2xl"}`}
+              />
+              {outsideFinal && !busy && (
+                <a href={outside} download={`${name}-final-tampak-luar.png`} className="inline-flex items-center gap-1 text-xs text-primary">
+                  <Download className="size-3" /> Download
+                </a>
+              )}
+            </figure>
+          )}
+          {preview && (
+            <figure className="space-y-1">
+              <figcaption className="text-xs font-medium text-muted-foreground">Final tampak dalam</figcaption>
+              <img
+                src={preview}
+                alt={`${name} — pintu terbuka`}
+                className={`w-full rounded-lg object-contain transition-[filter] ${final ? "blur-0" : "blur-2xl"}`}
+              />
+              {final && !busy && (
+                <a href={preview} download={`${name}-final-tampak-dalam.png`} className="inline-flex items-center gap-1 text-xs text-primary">
+                  <Download className="size-3" /> Download
+                </a>
+              )}
+            </figure>
+          )}
+        </div>
       )}
       <div className="flex flex-wrap gap-2">
         {!review && scanned && (
@@ -441,23 +483,21 @@ export function InteriorRender({
           </>
         )}
         {review && (
-          <Button disabled={busy || saving} onClick={() => void generate()}>
-            <Wand2 className="size-4" />
-            {busy ? "Membuka kabinet…" : preview ? "Buat ulang tampak dalam (AI)" : "Buat tampak dalam (AI)"}
-          </Button>
-        )}
-        {preview && final && !busy && (
-          <Button variant="outline" asChild>
-            <a href={preview} download={`${name}-tampak-dalam.png`}>
-              <Download className="size-4" />
-              Download
-            </a>
-          </Button>
+          <>
+            <Button disabled={busy || saving} onClick={() => void generate("exterior")}>
+              <Wand2 className="size-4" />
+              {view === "exterior" ? "Menerapkan spek…" : outside ? "Buat ulang tampak luar (AI)" : "Buat tampak luar (AI)"}
+            </Button>
+            <Button disabled={busy || saving} onClick={() => void generate("interior")}>
+              <Wand2 className="size-4" />
+              {view === "interior" ? "Membuka kabinet…" : preview ? "Buat ulang tampak dalam (AI)" : "Buat tampak dalam (AI)"}
+            </Button>
+          </>
         )}
       </div>
       {review && (
         <p className="text-xs text-muted-foreground">
-          Gambar opsional (pakai kredit AI) dan hanya mengikuti {specVersionLabel(review.version)}. Ukuran tetap dari ukur workshop.
+          Tampak luar menerapkan spek yang terlihat (HPL, kaca, handle, lampu) tanpa mengubah Before/After di atas. Gambar opsional (pakai kredit AI) dan hanya mengikuti {specVersionLabel(review.version)}. Ukuran tetap dari ukur workshop.
         </p>
       )}
     </div>

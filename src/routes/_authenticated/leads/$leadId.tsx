@@ -258,13 +258,16 @@ function LeadDetailPage() {
         throw new Error(`Spek belum lengkap, isi dulu: ${missing.join(", ")}`);
       }
       const win = window.open("about:blank", "_blank");
-      const interiorIds = new Set(records.map((r) => r?.interiorAssetId));
+      const interiorIds = new Set(records.flatMap((r) => [r?.interiorAssetId, r?.exteriorAssetId]));
       const record = records[0];
       const latest = (type: string) => {
         const a = assets.find((x) => x.type === type && !interiorIds.has(x.id));
         return a ? data.assets.getViewUrl(a.url) : Promise.resolve(null);
       };
-      const base = assets.find((a) => a.id === record?.baseAssetId);
+      // Final tampak luar (spek diterapkan) diutamakan; jika belum ada pakai After.
+      const base =
+        assets.find((a) => a.id === record?.exteriorAssetId) ??
+        assets.find((a) => a.id === record?.baseAssetId);
       const inside = assets.find((a) => a.id === record?.interiorAssetId);
       const [beforeUrl, renderUrl, interiorUrl] = await Promise.all([
         latest("CLIENT_PHOTO"),
