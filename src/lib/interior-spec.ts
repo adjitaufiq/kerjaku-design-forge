@@ -11,13 +11,23 @@ export const moduleSchema = z.object({
 });
 export type CabinetModule = z.infer<typeof moduleSchema>;
 
-export const MATERIALS = ["pvc-board-18", "eco-pvc-18", "multiplek-18", "blockboard-18"] as const;
+export const MATERIALS = [
+  "pvc-board-18",
+  "eco-pvc-18",
+  "multiplek-18",
+  "blockboard-18",
+  "blockmin-1s-18",
+  "blockmin-2s-18",
+  "hybrid",
+] as const;
+export const GLUES = ["active", "starmax"] as const;
 export const specHintsSchema = z.object({
   material: z.enum(MATERIALS).optional(),
   outside: z.enum(["hpl", "hpl_premium", "duco"]),
   inside: z.enum(["blockmin", "tacosheet", "hpl"]),
-  hinge: z.enum(["slowmo", "biasa"]),
-  slide: z.enum(["dt_slowmo", "dt_biasa", "push", "tandem"]),
+  hinge: z.enum(["slowmo", "slowmo_stainless", "biasa"]),
+  slide: z.enum(["dt_slowmo", "dt_biasa", "dt_eco", "push", "tandem", "roller"]),
+  glue: z.enum(GLUES).optional(),
   accessories: z
     .array(
       z.object({
