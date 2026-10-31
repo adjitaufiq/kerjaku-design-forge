@@ -18,6 +18,17 @@ export interface RoomCategory {
 export const APPLIANCE_TAG_KEEP = "Pakai peralatan asli Before";
 export const APPLIANCE_TAG_UPGRADE = "Upgrade alat ikut referensi";
 export const APPLIANCE_TAG_CLEAN = "Kitchen set bersih (tanpa alat)";
+/**
+ * Optional add-on items. Nothing is added unless the tag is ticked;
+ * each tag carries the AI's recommended standard placement.
+ */
+export const ADDON_PLACEMENTS: Record<string, string> = {
+  "+ List gold di pintu": "thin brushed-gold trim lines on the cabinet door edges / handle profiles of the upper and base doors",
+  "+ Kaca gelap pintu atas": "dark smoked tinted glass inserts in a few upper cabinet doors (symmetrical, e.g. the end doors), with soft interior light",
+  "+ Ventilasi kabinet bawah": "slim ventilation slot grille in the plinth / kick-board under the base cabinets near the stove",
+  "+ Ambalan terbuka": "one open floating shelf section at the end of the upper cabinet run, same finish as the cabinets",
+  "+ LED sorot plafon kabinet": "small recessed downlights in the underside / crown of the upper cabinets, warm white, on",
+};
 
 
 export const ROOMS: RoomCategory[] = [
@@ -51,6 +62,7 @@ export const ROOMS: RoomCategory[] = [
       "Tanpa wastafel / keran",
       "Tanpa oven tanam",
       "Tambah wastafel baru",
+      ...Object.keys(ADDON_PLACEMENTS),
     ],
   },
   {
