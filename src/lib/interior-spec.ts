@@ -83,7 +83,7 @@ export const SPEC_OPTIONS = {
   material: [
     { value: "pvc-board-18", label: "TACO PVC Board 18mm (TPB-18)" },
     { value: "eco-pvc-18", label: "TACO ECO PVC Board 18mm (ECB-18)" },
-    { value: "multiplek-18", label: "Multiplek 18mm" },
+    { value: "multiplek-18", label: "Triplek / Multiplek 18mm" },
     { value: "blockboard-18", label: "Blockboard 18mm" },
     { value: "blockmin-1s-18", label: "Blockmin putih 1 sisi 18mm" },
     { value: "blockmin-2s-18", label: "Blockmin putih 2 sisi 18mm" },
@@ -170,9 +170,9 @@ const SME_BODY: Record<(typeof MATERIALS)[number], string> = {
   "pvc-board-18": "pvc",
   "eco-pvc-18": "pvc_eco",
   "multiplek-18": "ply",
-  "blockboard-18": "ply",
-  "blockmin-1s-18": "ply",
-  "blockmin-2s-18": "ply",
+  "blockboard-18": "blockboard",
+  "blockmin-1s-18": "blockmin_1s",
+  "blockmin-2s-18": "blockmin_2s",
   hybrid: "hybrid",
 };
 const HINGE_CODE = { slowmo: "ET-01", slowmo_stainless: "ET-02", biasa: "ET-06" } as const;
@@ -182,7 +182,7 @@ export function toSmeSpec(spec: SpecHints) {
     ...spec,
     brand: "TACO",
     material: spec.material ?? "pvc-board-18",
-    // SME vocab (quick-spec): body ply|pvc|pvc_eco|hybrid; hinge/slide/glue keys are shared.
+    // SME vocab: body ply|blockboard|blockmin_1s|blockmin_2s|pvc|pvc_eco|hybrid.
     body: SME_BODY[spec.material ?? "pvc-board-18"],
     hardware: HINGE_CODE[spec.hinge],
     drawerSlide: spec.slide,
