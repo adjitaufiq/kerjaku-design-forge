@@ -81,32 +81,62 @@ export function parseInteriorRecord(raw: string | null): InteriorRecord | null {
 
 export const SPEC_OPTIONS = {
   material: [
-    { value: "pvc-board-18", label: "TACO PVC Board 18mm" },
-    { value: "eco-pvc-18", label: "TACO ECO PVC Board 18mm" },
+    { value: "pvc-board-18", label: "TACO PVC Board 18mm (TPB-18)" },
+    { value: "eco-pvc-18", label: "TACO ECO PVC Board 18mm (ECB-18)" },
     { value: "multiplek-18", label: "Multiplek 18mm" },
     { value: "blockboard-18", label: "Blockboard 18mm" },
+    { value: "blockmin-1s-18", label: "Blockmin putih 1 sisi 18mm" },
+    { value: "blockmin-2s-18", label: "Blockmin putih 2 sisi 18mm" },
+    { value: "hybrid", label: "Hybrid (sink PVC Board, lainnya multiplek)" },
   ],
   outside: [
     { value: "hpl", label: "HPL" },
-    { value: "hpl_premium", label: "HPL Premium" },
+    { value: "hpl_premium", label: "HPL Premium / high gloss" },
     { value: "duco", label: "Duco" },
   ],
   inside: [
     { value: "blockmin", label: "Blockmin putih polos" },
-    { value: "tacosheet", label: "Tacosheet" },
+    { value: "tacosheet", label: "TACO Sheet" },
     { value: "hpl", label: "HPL" },
   ],
   hinge: [
-    { value: "slowmo", label: "Slow motion" },
-    { value: "biasa", label: "Biasa" },
+    { value: "slowmo", label: "TACO ET-01 slowmotion (zinc)" },
+    { value: "slowmo_stainless", label: "TACO ET-02 slowmotion stainless (area sink)" },
+    { value: "biasa", label: "TACO ET-06 engsel biasa" },
   ],
   slide: [
-    { value: "dt_slowmo", label: "Double track slow motion" },
-    { value: "dt_biasa", label: "Double track biasa" },
-    { value: "push", label: "Push" },
-    { value: "tandem", label: "Tandem" },
+    { value: "dt_slowmo", label: "TACO BBS 008 SC double track slowmo" },
+    { value: "dt_biasa", label: "TACO BBS 006 FE double track biasa" },
+    { value: "dt_eco", label: "TACO FE BBS 010 double track ekonomis" },
+    { value: "push", label: "TACO BBS 009 PO push to open" },
+    { value: "tandem", label: "TACO US 001 SC tandem slowmo" },
+    { value: "roller", label: "TACO RLT roller putih" },
+  ],
+  glue: [
+    { value: "active", label: "Lem kuning TACO Active" },
+    { value: "starmax", label: "Lem kuning TACO Starmax" },
   ],
 };
+
+/** Kode HPL TACO, mis. "TH 825 NT" / "TACO TH-L 001 AA" — wajib ada nomor + huruf akhir (penentu harga). */
+export function hasTacoHplCode(text: string): boolean {
+  const c = text.toUpperCase().replace(/TACO|HPL/g, " ");
+  return /\bTH[\s-]*L?[\s-]*\d{3,5}[\s-]*[A-Z]{1,3}\b/.test(c) || /\b\d{3,5}[\s-]*[A-Z]{1,3}\b/.test(c);
+}
+
+/** Yang belum diisi sebelum boleh dikirim ke SME (kosong = lengkap). */
+export function missingForEstimate(spec: SpecHints | null | undefined): string[] {
+  if (!spec) return ["Simpan dulu spek di Tampak dalam / spek material"];
+  const miss: string[] = [];
+  if (!spec.material) miss.push("Bahan bodi");
+  if (!spec.glue) miss.push("Jenis lem (Active / Starmax)");
+  const mods = spec.modules ?? [];
+  if (!mods.length) miss.push("Daftar kabinet (modul)");
+  if (spec.outside !== "duco")
+    for (const m of mods) if (!hasTacoHplCode(m.finish)) miss.push(`Kode HPL ${m.label}`);
+  return miss;
+}
+
 export const ACCESSORIES = [
   { id: "rak-piring", label: "Rak piring" },
   { id: "rak-gelas", label: "Rak gelas" },
@@ -136,15 +166,27 @@ export function buildInteriorPrompt(spec: SpecHints, note = ""): string {
 }
 
 /** SME contract (1 Jalur, full TACO): explicit name/category per module + brand fields. */
+const SME_BODY: Record<(typeof MATERIALS)[number], string> = {
+  "pvc-board-18": "pvc",
+  "eco-pvc-18": "pvc_eco",
+  "multiplek-18": "ply",
+  "blockboard-18": "ply",
+  "blockmin-1s-18": "ply",
+  "blockmin-2s-18": "ply",
+  hybrid: "hybrid",
+};
+const HINGE_CODE = { slowmo: "ET-01", slowmo_stainless: "ET-02", biasa: "ET-06" } as const;
 export function toSmeSpec(spec: SpecHints) {
   const cat = { lower: "kitchen-base", upper: "kitchen-upper", tall: "kitchen-tall" } as const;
   return {
     ...spec,
     brand: "TACO",
     material: spec.material ?? "pvc-board-18",
-    hardware: spec.hinge === "slowmo" ? "taco-hinge-slowmo" : "taco-hinge",
+    // SME vocab (quick-spec): body ply|pvc|pvc_eco|hybrid; hinge/slide/glue keys are shared.
+    body: SME_BODY[spec.material ?? "pvc-board-18"],
+    hardware: HINGE_CODE[spec.hinge],
     drawerSlide: spec.slide,
-    glue: "taco-active",
+    glue: spec.glue,
     modules: (spec.modules ?? []).map((m) => ({ ...m, name: m.label, category: cat[m.level] })),
   };
 }
