@@ -106,7 +106,10 @@ describe("estimate gate (spek wajib lengkap sebelum ke SME)", () => {
   });
   it("sends SME body/hinge codes", () => {
     const s = _toSme(specHintsSchema.parse({ ...full, material: "blockmin-1s-18", hinge: "slowmo_stainless" }));
-    expect(s.body).toBe("ply");
+    expect(s.body).toBe("blockmin_1s");
+    expect(_toSme(specHintsSchema.parse({ ...full, material: "blockmin-2s-18" })).body).toBe("blockmin_2s");
+    expect(_toSme(specHintsSchema.parse({ ...full, material: "blockboard-18" })).body).toBe("blockboard");
+    expect(_toSme(specHintsSchema.parse({ ...full, material: "multiplek-18" })).body).toBe("ply");
     expect(s.hardware).toBe("ET-02");
     expect(s.glue).toBe("active");
   });
