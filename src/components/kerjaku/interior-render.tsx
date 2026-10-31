@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Download, ScanSearch, Save, Trash2, Wand2 } from "lucide-react";
+import { useState } from "react";
+import { CheckCircle2, Download, Loader2, Pencil, ScanSearch, Save, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -9,12 +9,14 @@ import {
   defaultModules,
   hplPurchaseList,
   missingFinalSpec,
+  nextSpecVersion,
   type HplCodes,
   SHAPE_LABEL,
   SHAPES,
   SPEC_OPTIONS,
   specHintsSchema,
-  type CabinetModule,
+  specReviewRows,
+  specVersionLabel,
   type SpecHints,
 } from "@/lib/interior-spec";
 import { scanInterior } from "@/lib/interior-scan.functions";
@@ -323,9 +325,10 @@ export function InteriorRender({
           )}
           {sheets.length > 0 && (
             <ul className="space-y-1 text-xs text-muted-foreground">
+              <li className="font-medium">{sheets.length} motif HPL dipakai:</li>
               {sheets.map((x) => (
                 <li key={x.code} className="break-words">
-                  {x.code} — min. 1 lembar · {x.parts.join(", ")}
+                  {x.code} — {x.parts.join(", ")}
                 </li>
               ))}
             </ul>
@@ -414,11 +417,8 @@ export function InteriorRender({
           placeholder="Rak piring di kabinet atas tepat di atas sink"
         />
       </fieldset>
-      <p className="text-xs text-muted-foreground">
-        Konsep visual, bukan gambar kerja. Ukuran tetap dari ukur workshop. Periksa engsel, rel, dan
-        posisi aksesori sebelum produksi.
-      </p>
-      {missing.length > 0 && (
+      )}
+      {!review && scanned && missing.length > 0 && (
         <p className="break-words text-xs text-destructive">Belum lengkap: {missing.join(", ")}</p>
       )}
       {error && (
@@ -434,14 +434,25 @@ export function InteriorRender({
         />
       )}
       <div className="flex flex-wrap gap-2">
-        <Button variant="outline" disabled={busy || saving} onClick={() => void save()}>
-          <Save className="size-4" />
-          {saving ? "Menyimpan…" : "Simpan spek"}
-        </Button>
-        <Button disabled={busy || saving || missing.length > 0} onClick={() => void generate()}>
-          <Wand2 className="size-4" />
-          {busy ? "Membuka kabinet…" : "Buat tampak dalam (AI)"}
-        </Button>
+        {!review && scanned && (
+          <>
+            <Button disabled={busy || saving || missing.length > 0} onClick={() => void save()}>
+              <Save className="size-4" />
+              {saving ? "Menyimpan…" : "Simpan data spek master"}
+            </Button>
+            {saved && (
+              <Button variant="ghost" onClick={() => { setSpec(saved); setEditing(false); }}>
+                Batal
+              </Button>
+            )}
+          </>
+        )}
+        {review && (
+          <Button disabled={busy || saving} onClick={() => void generate()}>
+            <Wand2 className="size-4" />
+            {busy ? "Membuka kabinet…" : preview ? "Buat ulang tampak dalam (AI)" : "Buat tampak dalam (AI)"}
+          </Button>
+        )}
         {preview && final && !busy && (
           <Button variant="outline" asChild>
             <a href={preview} download={`${name}-tampak-dalam.png`}>
@@ -451,6 +462,11 @@ export function InteriorRender({
           </Button>
         )}
       </div>
+      {review && (
+        <p className="text-xs text-muted-foreground">
+          Gambar opsional (pakai kredit AI) dan hanya mengikuti {specVersionLabel(review.version)}. Ukuran tetap dari ukur workshop.
+        </p>
+      )}
     </div>
   );
 }
