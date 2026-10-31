@@ -47,7 +47,7 @@ const schema = {
         properties: {
           id: {
             type: "string",
-            enum: ["rak-piring", "rak-gelas", "rak-sayur", "rak-bumbu", "tray-sendok", "keranjang-tarik", "hidrolik"],
+            enum: ["rak-piring", "rak-gelas", "rak-sayur", "rak-bumbu", "tray-sendok", "keranjang-tarik", "hidrolik", "ventilasi"],
           },
           position: str,
         },
@@ -75,7 +75,7 @@ export const scanInterior = createServerFn({ method: "POST" })
       "accessories: centang rak-piring (posisi kabinet atas tepat di atas sink jika ada sink), tray-sendok + rel laci jika ada laci, rak-bumbu jika ada rak bumbu/terbuka. position wajib diisi, menyebut modul dihitung dari kiri.",
       "slide dt_slowmo jika ada laci. hinge slowmo. outside hpl kecuali terlihat cat duco. inside blockmin kecuali disebut lain.",
       "Deteksi komponen: handle (none jika bevel/tanpa pegangan, profile_j, push, handle luar), glass (dark jika pintu kaca gelap/riben, clear, fluted, none), lighting (led strip bawah kabinet, spot kecil, keduanya, none), edge edging, kecuali terlihat list logam tipis di tepi pintu/frame: list_gold, list_chrome, atau list_black. hasAccent true jika ada panel/rak/lis warna lain (mis. aksen putih) — accentNote singkat misal 'rak terbuka putih'.",
-      "Logika workshop wajib: (1) handle none jika muka pintu rata tanpa pegangan terlihat — jangan menebak handle luar. (2) Pintu kabinet atas yang horizontal / pintu kaca / flap angkat WAJIB aksesori hidrolik dengan position 'pintu angkat kabinet atas'. (3) Jika terlihat LED di bawah kabinet DAN lampu sorot kecil di topi/plafon kabinet, lighting = led_spot (paket LED strip + sorot + profil + trafo).",
+      "Logika workshop wajib: (1) handle none jika muka pintu rata tanpa pegangan terlihat — jangan menebak handle luar. (2) Pintu kabinet atas yang horizontal / pintu kaca / flap angkat WAJIB aksesori hidrolik dengan position 'pintu angkat kabinet atas'. (3) Jika terlihat LED di bawah kabinet DAN lampu sorot kecil di topi/plafon kabinet, lighting = led_spot (paket LED strip + sorot + profil + trafo). (4) Centang ventilasi HANYA jika kisi/lubang ventilasi terlihat di pintu/plint kabinet bawah atau ringkasan menyebut tabung gas/ventilasi; position misal 'pintu kabinet tabung gas'.",
       "DILARANG menulis ukuran/angka cm. Ini draft yang akan direview workshop.",
       `Ringkasan konsultasi: ${input.summary || "-"}`,
     ].join("\n");
