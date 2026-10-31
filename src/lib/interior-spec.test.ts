@@ -92,13 +92,15 @@ describe("estimate gate (spek wajib lengkap sebelum ke SME)", () => {
     material: "pvc-board-18", outside: "hpl", inside: "blockmin", hinge: "slowmo",
     slide: "dt_slowmo", glue: "active", accessories: [],
     modules: defaultModules("single").map((m) => ({ ...m, finish: "TACO TH 825 NT" })),
+    hplCodes: { lower: "TH 825 NT", upperSame: true, upper: "", top: "TH 003 AA", hasAccent: false, accent: "", accentNote: "" },
+    edge: "edging", handle: "profile_j", glass: "none", lighting: "led", accessoryMode: "plain",
   } as const;
   it("passes when body, glue and every HPL code are filled", () => {
     expect(missingForEstimate(specHintsSchema.parse(full))).toEqual([]);
   });
   it("blocks when a cabinet has no HPL code with a suffix", () => {
-    const s = specHintsSchema.parse({ ...full, modules: [full.modules[0], { ...full.modules[1], finish: "HPL putih" }] });
-    expect(missingForEstimate(s)).toEqual(["Kode HPL Kabinet atas"]);
+    const s = specHintsSchema.parse({ ...full, hplCodes: { ...full.hplCodes, upperSame: false, upper: "HPL putih" } });
+    expect(missingForEstimate(s)).toEqual(["Kode HPL kabinet atas"]);
   });
   it("blocks when body or glue is not chosen", () => {
     const { material: _m, glue: _g, ...rest } = full;
