@@ -76,7 +76,7 @@ describe("layout handoff", () => {
   });
 });
 
-import { toSmeSpec as _toSme } from "./interior-spec";
+import { toSmeSpec as _toSme, defaultModules } from "./interior-spec";
 describe("toSmeSpec", () => {
   it("maps modules to SME categories with TACO defaults", () => {
     const s = _toSme({ outside: "hpl", inside: "blockmin", hinge: "slowmo", slide: "tandem", accessories: [], modules: defaultModules("single") });
