@@ -123,6 +123,7 @@ export const scanInterior = createServerFn({ method: "POST" })
     const { hasAccent, accentNote, ...rest } = json;
     const parsed = specHintsSchema.safeParse({
       ...rest,
+      ...(acc.length ? { accessoryMode: "selected" } : {}),
       // Kode HPL tidak pernah ditebak dari foto; hanya dari ringkasan, sisanya workshop isi.
       hplCodes: {
         lower: fromSummary,
