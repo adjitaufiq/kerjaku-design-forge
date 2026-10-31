@@ -3,7 +3,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   ALL_ITEMS,
-  APPLIANCE_TAG_UPGRADE,
+  APPLIANCE_TAG_CLEAN,
+  APPLIANCE_TAG_KEEP,
   CEILING_ITEM_ID,
   RESKIN_TARGETS,
   type ReskinTarget,
@@ -26,30 +27,48 @@ interface ReskinInput {
   colorText?: string | null; // e.g. "putih matte"
 }
 
-/** Kitchen appliance rule: by default keep the client's real appliances from IMAGE 1. */
+/**
+ * Kitchen appliance rule (3 modes):
+ * - default: appliances may follow IMAGE 2.
+ * - KEEP ("Pakai peralatan asli Before"): only IMAGE 1 appliances, nothing added.
+ * - CLEAN ("Kitchen set bersih"): cabinetry only, zero appliances.
+ */
 export function applianceRule(input: { items: string[]; note?: string | null }): string {
   if (!input.items.includes("KITCHEN_SET")) return "";
   const note = input.note ?? "";
-  const upgrade = note.includes(APPLIANCE_TAG_UPGRADE);
+  const keep = note.includes(APPLIANCE_TAG_KEEP);
+  const clean = note.includes(APPLIANCE_TAG_CLEAN);
+  const hood = note.includes("Ada cooker hood");
   const noSink = note.includes("Tanpa wastafel / keran");
   const noOven = note.includes("Tanpa oven tanam");
   const addSink = note.includes("Tambah wastafel baru");
   const rules: string[] = [];
-  if (upgrade) {
+  const solidUppers =
+    "UPPER CABINETS (STRICT): one continuous run of identical full-height closed doors from end to end. NO cooker-hood niche, NO shortened cabinet, NO gap, NO open shelf above the stove — even if IMAGE 2 has one. Ignore that part of IMAGE 2 and fill it with normal doors.";
+  if (clean) {
     rules.push(
-      "APPLIANCES: upgrade the kitchen appliances to follow IMAGE 2 — built-in hob / induction cooktop, oven, cooker hood, sink and tap as shown in IMAGE 2, integrated into the new cabinets.",
+      "APPLIANCES (STRICT — CABINETRY ONLY): IMAGE 2 is ONLY a reference for cabinet style, doors, colours, HPL finish, handles and countertop material.",
+      "The result shows ONLY the new kitchen set (base cabinets, upper cabinets, countertop, backsplash). NO stove, NO hob, NO induction, NO cooker hood, NO oven, NO fridge, NO microwave, NO sink, NO tap, NO kettle, NO utensils, NO bottles, NO decorations — the countertop is clean and empty.",
+      "Remove the old stove and clutter from IMAGE 1 too; do not copy any appliance or object from IMAGE 2.",
+      hood ? "" : solidUppers,
+    );
+  } else if (keep) {
+    rules.push(
+      "APPLIANCES (STRICT — KEEP BEFORE): IMAGE 2 is ONLY a reference for cabinet style, doors, colours, HPL finish, handles and countertop material. Copy ZERO appliances or objects from IMAGE 2.",
+      "Keep exactly the client's real appliances from IMAGE 1 (e.g. a freestanding tabletop gas stove stays the same tabletop gas stove, same position, now on the new countertop). Do not upgrade, replace or restyle them.",
+      "Do NOT add anything that is not in IMAGE 1: no cooker hood, no chimney, no exhaust, no built-in hob, no induction, no oven, no fridge, no microwave, no sink or tap unless IMAGE 1 already has one.",
+      hood ? "" : solidUppers,
     );
   } else {
     rules.push(
-      "APPLIANCES (STRICT): IMAGE 2 is ONLY a reference for cabinetry (layout style, doors, colours, HPL finish, handles, countertop material). Do NOT copy any appliance, sink, tap, oven, built-in hob, cooker hood or gadget from IMAGE 2.",
-      "Keep the client's real appliances from IMAGE 1: the same stove type (e.g. a freestanding tabletop gas stove stays a tabletop gas stove), in the same position, now standing on the new countertop.",
-      "Only include a sink and tap if IMAGE 1 already has a sink or tap; otherwise the countertop is solid with no sink cut-out and no tap. Only include an oven or cooker hood if IMAGE 1 already has one.",
+      "APPLIANCES: appliances may follow IMAGE 2 (hob, cooker hood, oven, sink and tap as shown in IMAGE 2), integrated into the new cabinets.",
     );
   }
+  if (hood) rules.push("Include one cooker hood above the stove, integrated into the upper cabinets.");
   if (noSink) rules.push("No sink and no tap anywhere.");
   if (noOven) rules.push("No built-in oven anywhere.");
-  if (addSink) rules.push("Add one new undermount sink with a tap in the countertop.");
-  return rules.join(" ");
+  if (addSink && !clean) rules.push("Add one new undermount sink with a tap in the countertop.");
+  return rules.filter(Boolean).join(" ");
 }
 
 function buildPromptOnly(input: QuickInput): string {

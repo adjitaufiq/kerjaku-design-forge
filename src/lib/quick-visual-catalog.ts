@@ -17,6 +17,7 @@ export interface RoomCategory {
 /** Kitchen appliance mode tags. Default (no tag) behaves like KEEP. */
 export const APPLIANCE_TAG_KEEP = "Pakai peralatan asli Before";
 export const APPLIANCE_TAG_UPGRADE = "Upgrade alat ikut referensi";
+export const APPLIANCE_TAG_CLEAN = "Kitchen set bersih (tanpa alat)";
 
 
 export const ROOMS: RoomCategory[] = [
@@ -45,6 +46,7 @@ export const ROOMS: RoomCategory[] = [
       "Ada cooker hood",
       "Sisakan space kulkas",
       APPLIANCE_TAG_KEEP,
+      APPLIANCE_TAG_CLEAN,
       APPLIANCE_TAG_UPGRADE,
       "Tanpa wastafel / keran",
       "Tanpa oven tanam",
