@@ -115,12 +115,23 @@ export function InteriorRender({
   };
   const missing = missingFinalSpec(spec);
   const sheets = hplPurchaseList(spec.hplCodes);
+  const strip = (s: SpecHints | undefined) => (s ? JSON.stringify({ ...s, version: undefined }) : "");
   const save = async () => {
     setSaving(true);
     setError("");
     try {
-      await onSave(specHintsSchema.parse(spec), preview && final ? preview : undefined);
-      toast.success("Spek tersimpan");
+      if (missing.length) throw new Error(`Lengkapi dulu: ${missing.join(", ")}`);
+      const changed = strip(spec) !== strip(saved);
+      const version = nextSpecVersion(saved, changed);
+      const master = specHintsSchema.parse({ ...spec, version });
+      // Spek berubah = gambar lama tidak berlaku lagi.
+      const keepImage = !changed && preview && final ? preview : undefined;
+      await onSave(master, keepImage);
+      setSpec(master);
+      setSaved(master);
+      if (changed) setPreview("");
+      setEditing(false);
+      toast.success(`${specVersionLabel(version)} tersimpan — tanpa kredit AI`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Gagal menyimpan spek");
     } finally {
@@ -133,9 +144,9 @@ export function InteriorRender({
     setPreview("");
     setFinal(false);
     try {
-      const chosen = specHintsSchema.parse(spec);
-      if (missing.length) throw new Error(`Lengkapi dulu: ${missing.join(", ")}`);
-      if (scanning) throw new Error("Tunggu scan selesai.");
+      if (!saved || editing) throw new Error("Simpan data spek master dulu.");
+      const chosen = specHintsSchema.parse(saved);
+      if (missingFinalSpec(chosen).length) throw new Error("Spek master belum lengkap.");
       const { data } = await supabase.auth.getSession();
       if (!data.session) throw new Error("Silakan login kembali.");
       const source = await fetch(image);
