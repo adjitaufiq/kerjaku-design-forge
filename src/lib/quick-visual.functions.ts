@@ -105,6 +105,7 @@ function buildPrompt(input: QuickInput): string {
     "matching the existing light in IMAGE 1. Do not copy the room, walls, floor or lighting of IMAGE 2.",
     "CABINET RULES (custom workshop quality): every cabinet run must be one clean, straight, continuous rectangular block.",
     "Upper / wall cabinets must have one perfectly level top line and one level bottom line across the whole run, with all doors the same height.",
+    "UPPER LENGTH = BASE LENGTH (DEFAULT, STRICT): the upper cabinet run must span exactly the same horizontal length as the base cabinet run below it — its left end vertically aligned with the left end of the base cabinets and its right end aligned with the right end. Never stop the uppers short or leave bare wall above the countertop. IMAGE 2 is ONLY a design reference (style, doors, niche, colours, handles, lights), NOT a reference for length or number of modules: if the wall in IMAGE 1 is longer, repeat / widen the same module design from IMAGE 2 until the uppers match the base length, without changing the design. Only make upper and base lengths differ if the workshop note explicitly gives different measurements for them.",
     "NEVER notch, step, cut out or shorten a cabinet to avoid a vent, small window opening, glass block, pipe, cable, hook, shelf or rough wall patch.",
     "Instead, keep the cabinet at its normal full size and build it straight in front of the obstacle so the cabinet simply covers and hides it.",
     "Remove old shelves, racks, curtains and clutter in the installation area.",
