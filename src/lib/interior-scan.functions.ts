@@ -13,8 +13,8 @@ const schema = {
   properties: {
     outside: { type: "string", enum: ["hpl", "hpl_premium", "duco"] },
     inside: { type: "string", enum: ["blockmin", "tacosheet", "hpl"] },
-    hinge: { type: "string", enum: ["slowmo", "biasa"] },
-    slide: { type: "string", enum: ["dt_slowmo", "dt_biasa", "push", "tandem"] },
+    hinge: { type: "string", enum: ["slowmo", "slowmo_stainless", "biasa"] },
+    slide: { type: "string", enum: ["dt_slowmo", "dt_biasa", "dt_eco", "push", "tandem", "roller"] },
     shape: { type: "string", enum: ["single", "L", "U"] },
     modules: {
       type: "array",
