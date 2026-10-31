@@ -93,7 +93,7 @@ describe("estimate gate (spek wajib lengkap sebelum ke SME)", () => {
     slide: "dt_slowmo", glue: "active", accessories: [],
     modules: defaultModules("single").map((m) => ({ ...m, finish: "TACO TH 825 NT" })),
     hplCodes: { lower: "TH 825 NT", upperSame: true, upper: "", top: "TH 003 AA", hasAccent: false, accent: "", accentNote: "" },
-    edge: "edging", handle: "profile_j", glass: "none", lighting: "led", accessoryMode: "plain",
+    topLayers: "2", edge: "edging", handle: "profile_j", glass: "none", lighting: "led", accessoryMode: "plain",
   } as const;
   it("passes when body, glue and every HPL code are filled", () => {
     expect(missingForEstimate(specHintsSchema.parse(full))).toEqual([]);
@@ -129,8 +129,13 @@ describe("final spec HPL sheets", () => {
     const base: SpecHints = { outside: "hpl", inside: "blockmin", hinge: "slowmo", slide: "tandem", accessories: [] };
     expect(missingFinalSpec({ ...base, hplCodes: { ...codes, top: "" } })).toContain("Kode HPL top table");
     expect(
-      missingFinalSpec({ ...base, hplCodes: codes, edge: "edging", handle: "none", glass: "dark", lighting: "led_spot", accessoryMode: "plain" }),
+      missingFinalSpec({ ...base, hplCodes: codes, topLayers: "2", edge: "edging", handle: "none", glass: "dark", lighting: "led_spot", accessoryMode: "plain" }),
     ).toEqual([]);
+  });
+  it("requires choosing 1 or 2 layer top table", () => {
+    const base: SpecHints = { outside: "hpl", inside: "blockmin", hinge: "slowmo", slide: "tandem", accessories: [] };
+    expect(missingFinalSpec(base)).toContain("Top table 1 / 2 lapis");
+    expect(missingFinalSpec({ ...base, topLayers: "1" })).not.toContain("Top table 1 / 2 lapis");
   });
 });
 

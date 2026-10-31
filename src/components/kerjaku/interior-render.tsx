@@ -83,7 +83,7 @@ export function InteriorRender({
   };
   const modules = spec.modules ?? [];
   const setValue = (
-    key: "material" | "outside" | "inside" | "hinge" | "slide" | "glue" | "edge" | "handle" | "glass" | "lighting",
+    key: "material" | "outside" | "inside" | "hinge" | "slide" | "glue" | "edge" | "handle" | "glass" | "lighting" | "topLayers",
     value: string,
   ) => {
     const selected = specHintsSchema.shape[key].parse(value);
@@ -328,10 +328,10 @@ export function InteriorRender({
           )}
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {(["edge", "handle", "glass", "lighting"] as const).map((key) => (
+          {(["topLayers", "edge", "handle", "glass", "lighting"] as const).map((key) => (
             <SelectField
               key={key}
-              label={{ edge: "Pinggiran *", handle: "Handle *", glass: "Kaca *", lighting: "Lampu *" }[key]}
+              label={{ topLayers: "Top table 1 / 2 lapis *", edge: "Pinggiran *", handle: "Handle *", glass: "Kaca *", lighting: "Lampu *" }[key]}
               value={spec[key] ?? ""}
               onValueChange={(v) => setValue(key, v)}
               options={SPEC_OPTIONS[key]}

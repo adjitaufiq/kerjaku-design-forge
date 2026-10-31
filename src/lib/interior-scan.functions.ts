@@ -19,7 +19,7 @@ const schema = {
     handle: { type: "string", enum: ["none", "profile_j", "push", "handle"] },
     glass: { type: "string", enum: ["none", "dark", "clear", "fluted"] },
     lighting: { type: "string", enum: ["none", "led", "spot", "led_spot"] },
-    edge: { type: "string", enum: ["edging", "tusir"] },
+    edge: { type: "string", enum: ["edging", "tusir", "list_gold", "list_chrome", "list_black"] },
     hasAccent: { type: "boolean" },
     accentNote: str,
     modules: {
@@ -47,7 +47,7 @@ const schema = {
         properties: {
           id: {
             type: "string",
-            enum: ["rak-piring", "rak-gelas", "rak-sayur", "rak-bumbu", "tray-sendok", "keranjang-tarik"],
+            enum: ["rak-piring", "rak-gelas", "rak-sayur", "rak-bumbu", "tray-sendok", "keranjang-tarik", "hidrolik"],
           },
           position: str,
         },
@@ -74,7 +74,8 @@ export const scanInterior = createServerFn({ method: "POST" })
       "contents: isi dalam modul dalam Bahasa Indonesia sesuai yang terlihat, misal 'pintu swing bawah sink, siphon', 'modul kompor', '3 laci susun di tengah', 'rak terbuka bumbu'.",
       "accessories: centang rak-piring (posisi kabinet atas tepat di atas sink jika ada sink), tray-sendok + rel laci jika ada laci, rak-bumbu jika ada rak bumbu/terbuka. position wajib diisi, menyebut modul dihitung dari kiri.",
       "slide dt_slowmo jika ada laci. hinge slowmo. outside hpl kecuali terlihat cat duco. inside blockmin kecuali disebut lain.",
-      "Deteksi komponen: handle (none jika bevel/tanpa pegangan, profile_j, push, handle luar), glass (dark jika pintu kaca gelap/riben, clear, fluted, none), lighting (led strip bawah kabinet, spot kecil, keduanya, none), edge selalu edging. hasAccent true jika ada panel/rak/lis warna lain (mis. aksen putih) — accentNote singkat misal 'rak terbuka putih'.",
+      "Deteksi komponen: handle (none jika bevel/tanpa pegangan, profile_j, push, handle luar), glass (dark jika pintu kaca gelap/riben, clear, fluted, none), lighting (led strip bawah kabinet, spot kecil, keduanya, none), edge edging, kecuali terlihat list logam tipis di tepi pintu/frame: list_gold, list_chrome, atau list_black. hasAccent true jika ada panel/rak/lis warna lain (mis. aksen putih) — accentNote singkat misal 'rak terbuka putih'.",
+      "Logika workshop wajib: (1) handle none jika muka pintu rata tanpa pegangan terlihat — jangan menebak handle luar. (2) Pintu kabinet atas yang horizontal / pintu kaca / flap angkat WAJIB aksesori hidrolik dengan position 'pintu angkat kabinet atas'. (3) Jika terlihat LED di bawah kabinet DAN lampu sorot kecil di topi/plafon kabinet, lighting = led_spot (paket LED strip + sorot + profil + trafo).",
       "DILARANG menulis ukuran/angka cm. Ini draft yang akan direview workshop.",
       `Ringkasan konsultasi: ${input.summary || "-"}`,
     ].join("\n");
@@ -124,6 +125,7 @@ export const scanInterior = createServerFn({ method: "POST" })
     const parsed = specHintsSchema.safeParse({
       ...rest,
       ...(acc.length ? { accessoryMode: "selected" } : {}),
+      topLayers: "2",
       // Kode HPL tidak pernah ditebak dari foto; hanya dari ringkasan, sisanya workshop isi.
       hplCodes: {
         lower: fromSummary,
