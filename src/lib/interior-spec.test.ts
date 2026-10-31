@@ -93,7 +93,7 @@ describe("estimate gate (spek wajib lengkap sebelum ke SME)", () => {
     slide: "dt_slowmo", glue: "active", accessories: [],
     modules: defaultModules("single").map((m) => ({ ...m, finish: "TACO TH 825 NT" })),
     hplCodes: { lower: "TH 825 NT", upperSame: true, upper: "", top: "TH 003 AA", hasAccent: false, accent: "", accentNote: "" },
-    edge: "edging", handle: "profile_j", glass: "none", lighting: "led", accessoryMode: "plain",
+    topLayers: "2", edge: "edging", handle: "profile_j", glass: "none", lighting: "led", accessoryMode: "plain",
   } as const;
   it("passes when body, glue and every HPL code are filled", () => {
     expect(missingForEstimate(specHintsSchema.parse(full))).toEqual([]);
