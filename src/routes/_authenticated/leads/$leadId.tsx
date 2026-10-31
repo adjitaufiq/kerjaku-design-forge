@@ -14,7 +14,7 @@ import { toast } from "sonner";
 
 import { EstimateSummary } from "@/components/kerjaku/estimate-summary";
 import { ProjectInterior } from "@/components/kerjaku/project-interior";
-import { INTERIOR_ACTIVITY_TITLE, parseInteriorRecord } from "@/lib/interior-spec";
+import { INTERIOR_ACTIVITY_TITLE, missingForEstimate, parseInteriorRecord } from "@/lib/interior-spec";
 import {
   buildEstimatorUrl,
   ESTIMATE_ACTIVITY_TITLE,
@@ -245,7 +245,6 @@ function LeadDetailPage() {
     mutationFn: async (p: (typeof projects)[number]) => {
       const current = leadQuery.data;
       if (!current || !workspaceId) throw new Error("Data klien belum siap");
-      const win = window.open("about:blank", "_blank");
       const [assets, activities] = await Promise.all([
         data.assets.listByProject(p.id),
         data.activities.listByLead(leadId),
@@ -254,6 +253,11 @@ function LeadDetailPage() {
         .filter((a) => a.title === INTERIOR_ACTIVITY_TITLE)
         .map((a) => parseInteriorRecord(a.body))
         .filter((r) => r !== null && r.projectId === p.id);
+      const missing = missingForEstimate(records[0]?.specHints);
+      if (missing.length) {
+        throw new Error(`Spek belum lengkap, isi dulu: ${missing.join(", ")}`);
+      }
+      const win = window.open("about:blank", "_blank");
       const interiorIds = new Set(records.map((r) => r?.interiorAssetId));
       const record = records[0];
       const latest = (type: string) => {
