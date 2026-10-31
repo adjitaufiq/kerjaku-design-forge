@@ -71,6 +71,18 @@ export function applianceRule(input: { items: string[]; note?: string | null }):
   return rules.filter(Boolean).join(" ");
 }
 
+/** Add-on items: none unless ticked; ticked ones use recommended placement. */
+export function addOnRule(note?: string | null): string {
+  const n = note ?? "";
+  const picked = Object.entries(ADDON_PLACEMENTS).filter(([tag]) => n.includes(tag));
+  const base =
+    "NO INVENTED EXTRAS: do not add any decoration, trim, glass, lights, vents, shelves or objects that are not in IMAGE 1, IMAGE 2 or explicitly requested below. Never redesign the cabinets on your own.";
+  if (!picked.length) return base;
+  return `${base} ADD ONLY these requested items, at their recommended standard position (unless the workshop note gives another position): ${picked
+    .map(([, p]) => p)
+    .join("; ")}. Everything else stays exactly as the design above.`;
+}
+
 function buildPromptOnly(input: QuickInput): string {
   const chosen = ALL_ITEMS.filter((i) => input.items.includes(i.id));
   const what = chosen.map((i) => i.prompt).join(", ") || "furniture";
@@ -114,6 +126,7 @@ function buildPrompt(input: QuickInput): string {
     "Base cabinets: one straight, level plinth and countertop line; the countertop is one continuous slab.",
     "The 'LOCKED' list applies to the room outside the cabinet area; elements behind the new cabinets may be covered.",
     applianceRule(input),
+    addOnRule(input.note),
     input.note ? `Extra note from the workshop: ${input.note}` : "",
     "Output a single photorealistic photo with the same aspect ratio as IMAGE 1. No text, no watermark, no collage.",
   ]
