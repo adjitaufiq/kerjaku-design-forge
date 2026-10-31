@@ -417,10 +417,11 @@ function QuickVisualPage() {
 
   const run = useMutation({
     mutationFn: async () => {
-      if (!session.roomImage || !reference)
-        throw new Error("Upload foto ruangan dan foto referensi dulu");
+      if (!session.roomImage) throw new Error("Upload foto ruangan dulu");
+      if (!reference && !note.trim())
+        throw new Error("Tanpa foto referensi, tulis dulu catatan / prompt desainnya");
       if (!items.length) throw new Error("Centang minimal satu item yang dipasang");
-      const referenceImage = await toCompressedDataUrl(reference);
+      const referenceImage = reference ? await toCompressedDataUrl(reference) : null;
       const res = await quickVisualize({
         data: { roomImage: session.roomImage, referenceImage, items, note: note || null },
       });
@@ -536,7 +537,7 @@ function QuickVisualPage() {
               />
               <PhotoPicker
                 label="Foto referensi"
-                hint="Contoh model"
+                hint="Opsional — atau tulis prompt di Catatan"
                 src={referenceUrl}
                 onPick={setReference}
               />
@@ -563,7 +564,7 @@ function QuickVisualPage() {
 
             <Button
               className="w-full bg-cta text-cta-foreground hover:bg-cta/90"
-              disabled={!session.roomImage || !reference || !items.length || run.isPending}
+              disabled={!session.roomImage || (!reference && !note.trim()) || !items.length || run.isPending}
               onClick={() => run.mutate()}
             >
               <Wand2 className="size-4" />
