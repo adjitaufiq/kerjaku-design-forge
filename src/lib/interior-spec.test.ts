@@ -177,7 +177,7 @@ describe("spec master versioning", () => {
 
 import { countertopRule as _ct, missingFinalSpec as _mfs } from "./interior-spec";
 describe("top table material", () => {
-  const base = { outside: "hpl", inside: "blockmin", hinge: "slowmo", slide: "tandem", accessories: [] } as const;
+  const base: SpecHints = { outside: "hpl", inside: "blockmin", hinge: "slowmo", slide: "tandem", accessories: [] };
   const codes = { lower: "TH 1205 FC", upperSame: true, upper: "", top: "TH 003 AA", hasAccent: false, accent: "", accentNote: "" };
   it("HPL top forbids granite in the render prompt", () => {
     expect(_ct({ ...base, hplCodes: codes })).toContain("NOT granite");
