@@ -432,7 +432,7 @@ const SME_BODY: Record<(typeof MATERIALS)[number], string> = {
 };
 const HINGE_CODE = { slowmo: "ET-01", slowmo_stainless: "ET-02", biasa: "ET-06" } as const;
 function smeHplFields(c: HplCodes | undefined, info?: SpecHints["hplInfo"]) {
-  if (!c) return { hplMotifs: [] as { code: string; usage: string }[] };
+  if (!c) return { hplMotifs: [] as { code: string; usage: string; isWorkshopHpl: true; name?: string; texture?: string; swatchUrl?: string }[] };
   const outside = c.lower.trim();
   const upper = c.upperSame ? outside : c.upper.trim();
   const top = c.top.trim();
