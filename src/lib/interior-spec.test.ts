@@ -174,3 +174,17 @@ describe("spec master versioning", () => {
     expect(nsv({ version: 2 }, false)).toBe(2);
   });
 });
+
+import { countertopRule as _ct, missingFinalSpec as _mfs } from "./interior-spec";
+describe("top table material", () => {
+  const base: SpecHints = { outside: "hpl", inside: "blockmin", hinge: "slowmo", slide: "tandem", accessories: [] };
+  const codes = { lower: "TH 1205 FC", upperSame: true, upper: "", top: "TH 003 AA", hasAccent: false, accent: "", accentNote: "" };
+  it("HPL top forbids granite in the render prompt", () => {
+    expect(_ct({ ...base, hplCodes: codes })).toContain("NOT granite");
+  });
+  it("granite top needs no HPL top code and is sent as granite", () => {
+    const s = { ...base, topMaterial: "granite" as const, hplCodes: { ...codes, top: "" } };
+    expect(_mfs(s)).not.toContain("Kode HPL top table");
+    expect(_toSme(specHintsSchema.parse(s))).toMatchObject({ topMaterial: "granite", top: "none" });
+  });
+});

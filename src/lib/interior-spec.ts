@@ -73,6 +73,8 @@ export const specHintsSchema = z.object({
   glass: z.enum(GLASSES).optional(),
   lighting: z.enum(LIGHTINGS).optional(),
   topLayers: z.enum(TOP_LAYERS).optional(),
+  // Bahan top table: HPL TACO (pakai kode) atau granit (vendor batu, bukan HPL).
+  topMaterial: z.enum(["hpl", "granite"]).optional(),
   accessoryMode: z.enum(["plain", "selected"]).optional(),
   // Master spec version: 1 = "Spek Final 1", n>1 = "Spek Revisi n-1".
   version: z.number().int().min(1).max(999).optional(),
@@ -223,7 +225,7 @@ export function missingFinalSpec(spec: SpecHints): string[] {
     if (!c || !hasTacoHplCode(c.lower)) miss.push("Kode HPL kabinet bawah");
     if (c && !c.upperSame && !hasTacoHplCode(c.upper)) miss.push("Kode HPL kabinet atas");
   }
-  if (!c || !hasTacoHplCode(c.top)) miss.push("Kode HPL top table");
+  if (spec.topMaterial !== "granite" && (!c || !hasTacoHplCode(c.top))) miss.push("Kode HPL top table");
   if (c?.hasAccent && !hasTacoHplCode(c.accent)) miss.push("Kode HPL aksen");
   if (!spec.topLayers) miss.push("Top table 1 / 2 lapis");
   if (!spec.edge) miss.push("Edging / tusiran");
@@ -286,7 +288,7 @@ export function specReviewRows(spec: SpecHints): { label: string; value: string 
     { label: "Finishing luar", value: optLabel("outside", spec.outside) },
     { label: `Motif HPL (${motifs.length})`, value: motifs.join("\n") },
     { label: "Finishing dalam", value: optLabel("inside", spec.inside) },
-    { label: "Top table", value: optLabel("topLayers", spec.topLayers) },
+    { label: "Top table", value: spec.topMaterial === "granite" ? "Granit (vendor batu, bukan HPL)" : optLabel("topLayers", spec.topLayers) },
     { label: "Pinggiran", value: optLabel("edge", spec.edge) },
     { label: "Handle", value: optLabel("handle", spec.handle) },
     { label: "Kaca", value: optLabel("glass", spec.glass) },
@@ -299,6 +301,15 @@ export function specReviewRows(spec: SpecHints): { label: string; value: string 
 }
 
 
+/** Countertop follows the spec, never the reference photo's stone/colour. */
+export function countertopRule(spec: SpecHints): string {
+  if (spec.topMaterial === "granite") return "COUNTERTOP: polished black granite stone slab (natural stone, not HPL).";
+  const top = spec.hplCodes?.top?.trim();
+  return top
+    ? `COUNTERTOP (STRICT): the countertop is HPL TACO ${top} laminate on board, NOT granite, NOT marble, NOT stone. Replace any granite/stone countertop in IMAGE 1 with this HPL colour and pattern.`
+    : "";
+}
+
 /** Final closed-door exterior: IMAGE 1 geometry locked, only spec-visible finishes applied. */
 export function buildExteriorPrompt(spec: SpecHints, note = ""): string {
   const c = spec.hplCodes;
@@ -307,7 +318,8 @@ export function buildExteriorPrompt(spec: SpecHints, note = ""): string {
     "IMAGE 1 is the client's approved After render. Produce ONE photorealistic FINAL EXTERIOR view (all doors closed) from exactly the same camera, framing, perspective and aspect ratio.",
     "LOCK everything in IMAGE 1: room walls, tiles, ceiling, floor, windows, room lights, appliances, sink, objects, cabinet length, height, module count, door split, open niches and positions. Never resize, add or remove modules, never extend to the ceiling unless IMAGE 1 already does.",
     "ONLY update the visible cabinet finishes so they match this final material specification:",
-    c ? `Base cabinet fronts HPL TACO ${c.lower}; upper cabinet fronts HPL TACO ${upper}; countertop HPL TACO ${c.top}.${c.hasAccent ? ` Accent (${c.accentNote || "accent parts"}) HPL TACO ${c.accent}.` : ""} Keep the colour/motif family already shown in IMAGE 1 for each part.` : "",
+    c ? `Base cabinet fronts HPL TACO ${c.lower}; upper cabinet fronts HPL TACO ${upper}; ${c.hasAccent ? ` Accent (${c.accentNote || "accent parts"}) HPL TACO ${c.accent}.` : ""} Keep the colour/motif family already shown in IMAGE 1 for the cabinet fronts.` : "",
+    countertopRule(spec),
     spec.topLayers ? `Countertop front edge: ${spec.topLayers === "2" ? "thick double layer (about 36mm)" : "single 18mm"}.` : "",
     spec.edge ? `Door edges: ${optLabel("edge", spec.edge)}.` : "",
     spec.handle ? `Handles: ${optLabel("handle", spec.handle)}.` : "",
@@ -332,6 +344,7 @@ export function buildInteriorPrompt(spec: SpecHints, note = "", angle: "front" |
     "ONLY articulate the existing upper and lower cabinet doors open on their hinges, realistically avoiding collisions; pull existing drawers out so their runners can be seen. Do not invent drawers where there were doors, or change panel widths. Open doors retain their original exterior finish.",
     `Selected outside specification: ${label("outside", spec.outside)}; retain IMAGE 1's exact outside appearance. Selected interior finish: ${label("inside", spec.inside)}. Hinge: ${label("hinge", spec.hinge)}. Drawer runners: ${label("slide", spec.slide)}. Show realistic shelving inside existing modules.`,
     [
+      countertopRule(spec),
       spec.topLayers ? `Countertop thickness: ${spec.topLayers === "2" ? "thick double-layer slab (about 36mm front edge)" : "single-layer slab (18mm)"}.` : "",
       spec.edge?.startsWith("list_") ? `Thin decorative ${spec.edge === "list_gold" ? "gold" : spec.edge === "list_chrome" ? "polished chrome / stainless" : "matte black"} aluminium trim lines on door/frame edges exactly where visible in IMAGE 1; never add new trim.` : "",
       spec.handle ? `Handles: ${optLabel("handle", spec.handle)}.` : "",
@@ -406,7 +419,9 @@ export function toSmeSpec(spec: SpecHints) {
     // SME 1:1 field names. Codes are sent as written; SME must not replace them.
     ...smeHplFields(spec.hplCodes),
     // "single" (18mm) belum ada di SME: SME wajib menambah, jangan dianggap "none".
-    top: spec.topLayers === "2" ? "double" : spec.topLayers === "1" ? "single" : undefined,
+    topMaterial: spec.topMaterial ?? "hpl",
+    top: spec.topMaterial === "granite" ? "none" : spec.topLayers === "2" ? "double" : spec.topLayers === "1" ? "single" : undefined,
+    ...(spec.topMaterial === "granite" ? { hplTop: undefined } : {}),
     accessories: spec.accessories.map((a) =>
       a.id === "hidrolik"
         ? { id: "gas-spring", position: a.position, doors: a.doors, qty: (a.doors ?? 0) * 2, unit: "pcs" }
