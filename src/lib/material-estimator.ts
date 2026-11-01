@@ -82,7 +82,7 @@ export function buildEstimatorUrl(input: {
   // Single-param payload requested by SME; individual params stay as fallback.
   const payload: Record<string, unknown> = { leadId: input.leadId, returnUrl };
   for (const [k, v] of p.entries()) if (k !== "specHints") payload[k] = v;
-  if (smeSpec) payload.specHints = smeSpec;
+  if (smeSpec) payload["specHints"] = smeSpec;
   p.set("data", toBase64Url(payload));
   return `${ESTIMATOR_BASE_URL}?${p.toString()}`;
 }
