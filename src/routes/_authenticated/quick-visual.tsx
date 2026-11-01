@@ -228,14 +228,14 @@ function CompareSlider({ before, after }: { before: string; after: string }) {
       <img
         src={after}
         alt="Sesudah"
-        className="mx-auto block max-h-[60dvh] w-full object-contain"
+        className="block aspect-4/5 w-full object-cover"
         draggable={false}
       />
       <img
         src={before}
         alt="Sebelum"
         draggable={false}
-        className="absolute inset-0 size-full object-contain"
+        className="absolute inset-0 size-full object-cover"
         style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}
       />
       <div className="absolute inset-y-0 w-0.5 bg-primary" style={{ left: `${pos}%` }}>
@@ -488,7 +488,7 @@ function QuickVisualPage() {
         </Fold>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+      <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
         <SectionCard title="1. Pilih project" description="Lalu upload foto dan konfirmasi">
           <div className="space-y-5">
             <div className="grid grid-cols-3 gap-2">
@@ -582,10 +582,10 @@ function QuickVisualPage() {
           </div>
         </SectionCard>
 
-        <div className="space-y-6">
-          <GlassCard>
+        <div className="min-w-0 space-y-6">
+          <GlassCard className="min-w-0">
             {session.options.length > 0 && (
-              <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+              <div className="mb-3 flex max-w-full min-w-0 gap-2 overflow-x-auto pb-1">
                 {session.options.map((o) => (
                   <button
                     key={o.id}
