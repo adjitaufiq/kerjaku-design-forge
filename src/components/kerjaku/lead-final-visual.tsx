@@ -1,5 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { INTERIOR_ACTIVITY_TITLE, parseInteriorRecord, specReviewRows, specVersionLabel } from "@/lib/interior-spec";
+import {
+  INTERIOR_ACTIVITY_TITLE,
+  parseInteriorRecord,
+  specReviewRows,
+  specVersionLabel,
+} from "@/lib/interior-spec";
 import { data } from "@/services/data";
 
 /** Clean lead view: final exterior, final interior and the material recap of one project. */
@@ -43,7 +48,11 @@ export function LeadFinalVisual({ leadId, projectId }: { leadId: string; project
             <figcaption className="mb-1 text-xs text-muted-foreground">{label}</figcaption>
             {src ? (
               <a href={src} target="_blank" rel="noreferrer">
-                <img src={src} alt={label ?? ""} className="aspect-[4/5] w-full rounded-lg object-cover" />
+                <img
+                  src={src}
+                  alt={label ?? ""}
+                  className="aspect-[4/5] w-full rounded-lg object-cover"
+                />
               </a>
             ) : (
               <div className="flex aspect-[4/5] items-center justify-center rounded-lg border border-dashed border-border text-xs text-muted-foreground">
@@ -62,7 +71,9 @@ export function LeadFinalVisual({ leadId, projectId }: { leadId: string; project
             {rows.map((r) => (
               <div key={r.label} className="grid grid-cols-[7rem_1fr] gap-2 text-xs">
                 <dt className="text-muted-foreground">{r.label}</dt>
-                <dd className="min-w-0 break-words whitespace-pre-line text-foreground">{r.value}</dd>
+                <dd className="min-w-0 break-words whitespace-pre-line text-foreground">
+                  {r.value}
+                </dd>
               </div>
             ))}
           </dl>

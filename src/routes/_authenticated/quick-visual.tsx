@@ -564,7 +564,9 @@ function QuickVisualPage() {
 
             <Button
               className="w-full bg-cta text-cta-foreground hover:bg-cta/90"
-              disabled={!session.roomImage || (!reference && !note.trim()) || !items.length || run.isPending}
+              disabled={
+                !session.roomImage || (!reference && !note.trim()) || !items.length || run.isPending
+              }
               onClick={() => run.mutate()}
             >
               <Wand2 className="size-4" />
@@ -662,7 +664,11 @@ function QuickVisualPage() {
                 interiorImage={active.interiorImage}
                 exteriorImage={active.exteriorImage}
                 onSave={async (specHints, image, exterior) => {
-                  updateOption(active.id, { specHints, interiorImage: image, exteriorImage: exterior });
+                  updateOption(active.id, {
+                    specHints,
+                    interiorImage: image,
+                    exteriorImage: exterior,
+                  });
                 }}
               />
             </Fold>
@@ -1167,13 +1173,22 @@ function SurveyForm({
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    [`Tampak luar · ${finalOption.name}`, finalOption.exteriorImage ?? finalOption.image],
+                    [
+                      `Tampak luar · ${finalOption.name}`,
+                      finalOption.exteriorImage ?? finalOption.image,
+                    ],
                     ["Tampak dalam", finalOption.interiorImage],
                   ].map(([label, src]) => (
                     <figure key={label} className="min-w-0">
-                      <figcaption className="mb-1 truncate text-xs text-muted-foreground">{label}</figcaption>
+                      <figcaption className="mb-1 truncate text-xs text-muted-foreground">
+                        {label}
+                      </figcaption>
                       {src ? (
-                        <img src={src} alt={label ?? ""} className="aspect-[4/5] w-full rounded-lg object-cover" />
+                        <img
+                          src={src}
+                          alt={label ?? ""}
+                          className="aspect-[4/5] w-full rounded-lg object-cover"
+                        />
                       ) : (
                         <div className="flex aspect-[4/5] items-center justify-center rounded-lg border border-dashed border-border text-xs text-muted-foreground">
                           Belum dibuat
@@ -1190,7 +1205,9 @@ function SurveyForm({
                     {specReviewRows(finalOption.specHints).map((r) => (
                       <div key={r.label} className="grid grid-cols-[6rem_1fr] gap-2 text-xs">
                         <dt className="text-muted-foreground">{r.label}</dt>
-                        <dd className="min-w-0 break-words whitespace-pre-line text-foreground">{r.value}</dd>
+                        <dd className="min-w-0 break-words whitespace-pre-line text-foreground">
+                          {r.value}
+                        </dd>
                       </div>
                     ))}
                   </dl>
@@ -1203,10 +1220,7 @@ function SurveyForm({
             )}
             <AlertDialogFooter>
               <AlertDialogCancel>Batal</AlertDialogCancel>
-              <AlertDialogAction
-                disabled={!finalOption?.specHints}
-                onClick={() => save.mutate()}
-              >
+              <AlertDialogAction disabled={!finalOption?.specHints} onClick={() => save.mutate()}>
                 Oke, simpan ke Lead
               </AlertDialogAction>
             </AlertDialogFooter>

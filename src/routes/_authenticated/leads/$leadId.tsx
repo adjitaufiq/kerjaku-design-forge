@@ -14,7 +14,11 @@ import { toast } from "sonner";
 
 import { EstimateSummary } from "@/components/kerjaku/estimate-summary";
 import { LeadFinalVisual } from "@/components/kerjaku/lead-final-visual";
-import { INTERIOR_ACTIVITY_TITLE, missingForEstimate, parseInteriorRecord } from "@/lib/interior-spec";
+import {
+  INTERIOR_ACTIVITY_TITLE,
+  missingForEstimate,
+  parseInteriorRecord,
+} from "@/lib/interior-spec";
 import {
   buildEstimatorUrl,
   ESTIMATE_ACTIVITY_TITLE,
@@ -84,7 +88,9 @@ const ACTIVITY_TYPES: ActivityType[] = [
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-start justify-between gap-4 border-b border-border/60 py-2 last:border-0">
-      <span className="shrink-0 text-xs tracking-wide text-muted-foreground uppercase">{label}</span>
+      <span className="shrink-0 text-xs tracking-wide text-muted-foreground uppercase">
+        {label}
+      </span>
       <span className="min-w-0 break-words text-right text-sm text-foreground">{value}</span>
     </div>
   );
