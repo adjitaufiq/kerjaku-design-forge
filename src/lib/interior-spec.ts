@@ -456,6 +456,23 @@ function smeHplFields(c: HplCodes | undefined, info?: SpecHints["hplInfo"]) {
     hplMotifs: motifs,
   };
 }
+/**
+ * SME `finishExtras`. Only facts KIS owns: qty null = SME counts from the survey/scan
+ * (KIS never guesses door counts, LED metres or spot points).
+ */
+export function smeFinishExtras(spec: SpecHints) {
+  const glass = spec.glass && spec.glass !== "none" ? spec.glass : undefined;
+  const led = spec.lighting === "led" || spec.lighting === "led_spot";
+  const spot = spec.lighting === "spot" || spec.lighting === "led_spot";
+  const lift = spec.accessories.filter((a) => a.id === "hidrolik");
+  const liftDoors = lift.reduce((n, a) => n + (a.doors ?? 0), 0);
+  return {
+    glassDoors: glass ? { type: glass, qty: null } : { type: "none", qty: 0 },
+    gasSprings: lift.length ? { doors: liftDoors, qty: liftDoors * 2, unit: "pcs" } : { doors: 0, qty: 0, unit: "pcs" },
+    ledRun: led ? { meters: null, transformers: null } : { meters: 0, transformers: 0 },
+    spotlights: spot ? { qty: null } : { qty: 0 },
+  };
+}
 export function toSmeSpec(spec: SpecHints) {
   const cat = { lower: "kitchen-base", upper: "kitchen-upper", tall: "kitchen-tall" } as const;
   return {
@@ -486,5 +503,6 @@ export function toSmeSpec(spec: SpecHints) {
         : { id: a.id, position: a.position, qty: 1 },
     ),
     modules: (spec.modules ?? []).map((m) => ({ ...m, name: m.label, category: cat[m.level] })),
+    finishExtras: smeFinishExtras(spec),
   };
 }

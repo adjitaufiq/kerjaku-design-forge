@@ -88,6 +88,22 @@ describe("toSmeSpec", () => {
     expect(s.brand).toBe("TACO");
     expect(s.modules.map((m) => m.category)).toEqual(["kitchen-base", "kitchen-upper"]);
   });
+  it("finishExtras: 2 pintu angkat = 4 pcs gas spring, qty kaca/LED/spot tidak ditebak", () => {
+    const s = _toSme({
+      outside: "hpl", inside: "blockmin", hinge: "slowmo", slide: "tandem", glass: "fluted", lighting: "led_spot",
+      accessories: [{ id: "hidrolik", position: "atas", doors: 2 }],
+    });
+    expect(s.finishExtras.gasSprings).toEqual({ doors: 2, qty: 4, unit: "pcs" });
+    expect(s.finishExtras.glassDoors).toEqual({ type: "fluted", qty: null });
+    expect(s.finishExtras.ledRun.meters).toBeNull();
+    expect(s.finishExtras.spotlights.qty).toBeNull();
+  });
+  it("finishExtras: tanpa kaca/lampu/hidrolik = 0", () => {
+    const s = _toSme({ outside: "hpl", inside: "blockmin", hinge: "slowmo", slide: "tandem", glass: "none", lighting: "none", accessories: [] });
+    expect(s.finishExtras.glassDoors.qty).toBe(0);
+    expect(s.finishExtras.gasSprings.qty).toBe(0);
+    expect(s.finishExtras.spotlights.qty).toBe(0);
+  });
 });
 
 import { missingForEstimate } from "./interior-spec";
