@@ -47,9 +47,30 @@ export const hplCodesSchema = z.object({
   accentNote: z.string().trim().max(120),
 });
 export type HplCodes = z.infer<typeof hplCodesSchema>;
+export const tacoInfoSchema = z.object({
+  code: z.string().max(30),
+  name: z.string().max(80),
+  texture: z.string().max(40),
+  image: z.string().max(400).optional(),
+});
+export type TacoInfo = z.infer<typeof tacoInfoSchema>;
+/** "th 1205-fc" -> "1205 FC" (key shared by UI, prompt and SME). */
+export function normTacoCode(text: string): string {
+  const m = /(\d{3,5})[\s-]*([A-Z]{1,3})\b/.exec(text.toUpperCase().replace(/TACO|HPL/g, " "));
+  return m ? `${m[1]} ${m[2]}` : "";
+}
+export function tacoInfoFor(spec: SpecHints, code: string): TacoInfo | undefined {
+  const k = normTacoCode(code);
+  return k ? spec.hplInfo?.[k] : undefined;
+}
+/** Prompt text for one code: official name + texture, never a guess. */
+export function tacoDesc(spec: SpecHints, code: string): string {
+  const i = tacoInfoFor(spec, code);
+  return i ? `TACO ${i.code} "${i.name}" (${i.texture})` : `TACO ${code}`;
+}
 export const specHintsSchema = z.object({
   material: z.enum(MATERIALS).optional(),
-  outside: z.enum(["hpl", "hpl_premium", "duco"]),
+  outside: z.enum(["hpl", "hpl_premium", "tacosheet", "duco"]),
   inside: z.enum(["blockmin", "tacosheet", "hpl"]),
   hinge: z.enum(["slowmo", "slowmo_stainless", "biasa"]),
   slide: z.enum(["dt_slowmo", "dt_biasa", "dt_eco", "push", "tandem", "roller"]),
@@ -68,6 +89,11 @@ export const specHintsSchema = z.object({
   shape: z.enum(SHAPES).optional(),
   modules: z.array(moduleSchema).max(12).optional(),
   hplCodes: hplCodesSchema.optional(),
+  // Official TACO catalogue data per normalized code (validated from taco.co.id).
+  hplInfo: z.record(z.string().max(20), tacoInfoSchema).optional(),
+  // Duco: workshop uploads a paint sample; colour is read from the photo pixels.
+  ducoColor: z.string().trim().max(80).optional(),
+  ducoHex: z.string().regex(/^#[0-9a-f]{6}$/i).optional(),
   edge: z.enum(EDGES).optional(),
   handle: z.enum(HANDLES).optional(),
   glass: z.enum(GLASSES).optional(),
@@ -142,6 +168,7 @@ export const SPEC_OPTIONS = {
   outside: [
     { value: "hpl", label: "HPL" },
     { value: "hpl_premium", label: "HPL Premium / high gloss" },
+    { value: "tacosheet", label: "TACO Sheet (PVC) — pakai kode" },
     { value: "duco", label: "Duco" },
   ],
   inside: [
@@ -221,10 +248,17 @@ export function missingForEstimate(spec: SpecHints | null | undefined): string[]
 export function missingFinalSpec(spec: SpecHints): string[] {
   const miss: string[] = [];
   const c = spec.hplCodes;
+  const unchecked = (code: string, label: string) => {
+    if (hasTacoHplCode(code) && !tacoInfoFor(spec, code)) miss.push(`${label} belum dicek di katalog TACO`);
+  };
   if (spec.outside !== "duco") {
     if (!c || !hasTacoHplCode(c.lower)) miss.push("Kode HPL kabinet bawah");
     if (c && !c.upperSame && !hasTacoHplCode(c.upper)) miss.push("Kode HPL kabinet atas");
-  }
+    if (c) unchecked(c.lower, "Kode kabinet bawah");
+    if (c && !c.upperSame) unchecked(c.upper, "Kode kabinet atas");
+  } else if (!spec.ducoHex) miss.push("Foto sampel warna Duco");
+  if (c && spec.topMaterial !== "granite") unchecked(c.top, "Kode top table");
+  if (c?.hasAccent) unchecked(c.accent, "Kode aksen");
   if (spec.topMaterial !== "granite" && (!c || !hasTacoHplCode(c.top))) miss.push("Kode HPL top table");
   if (c?.hasAccent && !hasTacoHplCode(c.accent)) miss.push("Kode HPL aksen");
   if (!spec.topLayers) miss.push("Top table 1 / 2 lapis");
@@ -275,7 +309,10 @@ export function hplPurchaseList(codes: HplCodes | undefined) {
 /** Rekap master spek untuk review workshop (tanpa jumlah lembar). */
 export function specReviewRows(spec: SpecHints): { label: string; value: string }[] {
   const c = spec.hplCodes;
-  const motifs = hplPurchaseList(c).map((x) => `${x.code} — ${x.parts.join(", ")}`);
+  const motifs = hplPurchaseList(c).map((x) => {
+    const i = tacoInfoFor(spec, x.code);
+    return `${x.code}${i ? ` (${i.name}, ${i.texture})` : ""} — ${x.parts.join(", ")}`;
+  });
   const accessories =
     spec.accessoryMode === "plain"
       ? "Polos (hanya ambalan)"
@@ -306,8 +343,26 @@ export function countertopRule(spec: SpecHints): string {
   if (spec.topMaterial === "granite") return "COUNTERTOP: polished black granite stone slab (natural stone, not HPL).";
   const top = spec.hplCodes?.top?.trim();
   return top
-    ? `COUNTERTOP (STRICT): the countertop is HPL TACO ${top} laminate on board, NOT granite, NOT marble, NOT stone. Replace any granite/stone countertop in IMAGE 1 with this HPL colour and pattern.`
+    ? `COUNTERTOP (STRICT): the countertop is HPL ${tacoDesc(spec, top)} laminate on board, NOT granite, NOT marble, NOT stone. Replace any granite/stone countertop in IMAGE 1 with this HPL colour and pattern.`
     : "";
+}
+
+/** Cabinet finish lock: the spec (official TACO data / Duco sample) overrides IMAGE 1 colours. */
+export function frontsRule(spec: SpecHints): string {
+  const c = spec.hplCodes;
+  if (spec.outside === "duco") {
+    return spec.ducoHex
+      ? `FINISH RULE (STRICT): all cabinet fronts and visible side panels are smooth spray-painted DUCO lacquer in colour ${spec.ducoHex}${spec.ducoColor ? ` (${spec.ducoColor})` : ""}, no woodgrain, no HPL pattern. Recolour IMAGE 1's cabinets to this exact colour.`
+      : "";
+  }
+  if (!c) return "";
+  const upper = c.upperSame ? c.lower : c.upper;
+  const kind = spec.outside === "tacosheet" ? "TACO Sheet (PVC)" : "HPL";
+  return [
+    `FINISH RULE (STRICT, overrides IMAGE 1 colours): base cabinet fronts and side panels = ${kind} ${tacoDesc(spec, c.lower)}; upper cabinet fronts = ${kind} ${tacoDesc(spec, upper)}.`,
+    c.hasAccent && c.accent ? `Accent parts (${c.accentNote || "accent panels"}) = HPL ${tacoDesc(spec, c.accent)}.` : "",
+    "Reproduce each official TACO motif's real colour and texture (woodgrain direction, solid colour, stone or pattern) faithfully. Change ONLY the surface finish; never change shape, size, modules or anything else.",
+  ].filter(Boolean).join(" ");
 }
 
 /** Final closed-door exterior: IMAGE 1 geometry locked, only spec-visible finishes applied. */
@@ -318,7 +373,7 @@ export function buildExteriorPrompt(spec: SpecHints, note = ""): string {
     "IMAGE 1 is the client's approved After render. Produce ONE photorealistic FINAL EXTERIOR view (all doors closed) from exactly the same camera, framing, perspective and aspect ratio.",
     "LOCK everything in IMAGE 1: room walls, tiles, ceiling, floor, windows, room lights, appliances, sink, objects, cabinet length, height, module count, door split, open niches and positions. Never resize, add or remove modules, never extend to the ceiling unless IMAGE 1 already does.",
     "ONLY update the visible cabinet finishes so they match this final material specification:",
-    c ? `Base cabinet fronts HPL TACO ${c.lower}; upper cabinet fronts HPL TACO ${upper}; ${c.hasAccent ? ` Accent (${c.accentNote || "accent parts"}) HPL TACO ${c.accent}.` : ""} Keep the colour/motif family already shown in IMAGE 1 for the cabinet fronts.` : "",
+    frontsRule(spec),
     countertopRule(spec),
     spec.topLayers ? `Countertop front edge: ${spec.topLayers === "2" ? "thick double layer (about 36mm)" : "single 18mm"}.` : "",
     spec.edge ? `Door edges: ${optLabel("edge", spec.edge)}.` : "",
@@ -342,7 +397,7 @@ export function buildInteriorPrompt(spec: SpecHints, note = "", angle: "front" |
     camera,
     "LOCK the cabinet carcass dimensions, module count, positions, outside colours, outside HPL grain, materials, handles, countertop, sink, appliances, walls, ceiling, floor and lighting. Never resize, remove, redesign or add cabinet modules. No full-ceiling extension.",
     "ONLY articulate the existing upper and lower cabinet doors open on their hinges, realistically avoiding collisions; pull existing drawers out so their runners can be seen. Do not invent drawers where there were doors, or change panel widths. Open doors retain their original exterior finish.",
-    `Selected outside specification: ${label("outside", spec.outside)}; retain IMAGE 1's exact outside appearance. Selected interior finish: ${label("inside", spec.inside)}. Hinge: ${label("hinge", spec.hinge)}. Drawer runners: ${label("slide", spec.slide)}. Show realistic shelving inside existing modules.`,
+    `Selected outside specification: ${label("outside", spec.outside)}; keep the outside finishes exactly as the FINISH RULE below. Selected interior finish: ${label("inside", spec.inside)}. Hinge: ${label("hinge", spec.hinge)}. Drawer runners: ${label("slide", spec.slide)}. Show realistic shelving inside existing modules.`,
     [
       countertopRule(spec),
       spec.topLayers ? `Countertop thickness: ${spec.topLayers === "2" ? "thick double-layer slab (about 36mm front edge)" : "single-layer slab (18mm)"}.` : "",
@@ -352,9 +407,7 @@ export function buildInteriorPrompt(spec: SpecHints, note = "", angle: "front" |
         ? `Glass doors exactly as in IMAGE 1, glass type: ${optLabel("glass", spec.glass)}; keep glass where IMAGE 1 has it, never add new glass doors.`
         : "",
       spec.lighting ? `Lighting: ${optLabel("lighting", spec.lighting)}; keep exactly as visible in IMAGE 1.` : "",
-      spec.hplCodes
-        ? `Countertop HPL ${spec.hplCodes.top}; keep IMAGE 1 countertop colour.${spec.hplCodes.hasAccent ? ` Accent panels (${spec.hplCodes.accentNote || "accent"}) HPL ${spec.hplCodes.accent}, keep as in IMAGE 1.` : ""}`
-        : "",
+      frontsRule(spec),
     ].join(" "),
     spec.accessories.length
       ? `ONLY these selected accessories, in exactly these workshop-specified positions: ${spec.accessories.map((a) => `${ACCESSORIES.find((x) => x.id === a.id)?.label}: ${a.position}`).join("; ")}.${spec.accessories.some((a) => a.id === "ventilasi") ? " Ventilation grille = a small slatted aluminium louver vent on that base cabinet door or plinth." : ""} Do not add any unselected accessory, and never draw a ventilation grille unless it is selected.`
@@ -378,7 +431,7 @@ const SME_BODY: Record<(typeof MATERIALS)[number], string> = {
   hybrid: "hybrid",
 };
 const HINGE_CODE = { slowmo: "ET-01", slowmo_stainless: "ET-02", biasa: "ET-06" } as const;
-function smeHplFields(c: HplCodes | undefined) {
+function smeHplFields(c: HplCodes | undefined, info?: SpecHints["hplInfo"]) {
   if (!c) return { hplMotifs: [] as { code: string; usage: string }[] };
   const outside = c.lower.trim();
   const upper = c.upperSame ? outside : c.upper.trim();
@@ -389,7 +442,12 @@ function smeHplFields(c: HplCodes | undefined) {
     ...(upper && upper.toUpperCase() !== outside.toUpperCase() ? [{ code: upper, usage: "kabinet_atas" }] : []),
     { code: top, usage: "top" },
     { code: accent, usage: "aksen" },
-  ].filter((m) => m.code);
+  ]
+    .filter((m) => m.code)
+    .map((m) => {
+      const i = info?.[normTacoCode(m.code)];
+      return i ? { ...m, name: i.name, texture: i.texture } : m;
+    });
   return {
     hplOutside: outside || undefined,
     hplUpper: upper || undefined,
@@ -417,7 +475,7 @@ export function toSmeSpec(spec: SpecHints) {
     // Tiap kode HPL berbeda dibeli minimal 1 lembar utuh walau dipakai sedikit.
     hplSheets: hplPurchaseList(spec.hplCodes),
     // SME 1:1 field names. Codes are sent as written; SME must not replace them.
-    ...smeHplFields(spec.hplCodes),
+    ...smeHplFields(spec.hplCodes, spec.hplInfo),
     // "single" (18mm) belum ada di SME: SME wajib menambah, jangan dianggap "none".
     topMaterial: spec.topMaterial ?? "hpl",
     top: spec.topMaterial === "granite" ? "none" : spec.topLayers === "2" ? "double" : spec.topLayers === "1" ? "single" : undefined,

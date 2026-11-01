@@ -72,3 +72,43 @@ export const fetchTacoSwatch = createServerFn({ method: "POST" })
       bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
     return { dataUrl: `data:${type};base64,${btoa(bin)}` };
   });
+
+/** Validate one HPL / TACO Sheet code against the official catalogue (exact code match). */
+export const lookupTacoCode = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { code: string }) => {
+    const m = /(\d{3,5})[\s-]*([A-Za-z]{1,3})\b/.exec(input?.code ?? "");
+    if (!m) throw new Error("Format kode TACO tidak dikenali");
+    return { num: m[1]!, suffix: m[2]!.toUpperCase() };
+  })
+  .handler(async ({ data }) => {
+    const res = await fetch(
+      `https://taco.co.id/en/search?keywords=${encodeURIComponent(data.num)}&from=%2Fcatalog`,
+      { headers: { "User-Agent": UA } },
+    );
+    if (!res.ok) throw new Error(`Website TACO tidak merespons (${res.status})`);
+    const html = await res.text();
+    for (const part of html.split('href="/en/products/laminates/').slice(1)) {
+      const chunk = part.slice(0, 6000);
+      const path = chunk.slice(0, chunk.indexOf('"'));
+      const ps = [...chunk.matchAll(/<p[^>]*>([^<]*)<\/p>/g)].map((x) => decode(x[1] ?? ""));
+      const code = ps[0] ?? "";
+      const norm = code.toUpperCase().replace(/[\s-]+/g, " ");
+      if (!new RegExp(`(^|\\D)${data.num} ${data.suffix}$`).test(norm)) continue;
+      // Sheets only (TH = HPL, TS = TACO Sheet); skip edging.
+      if (!/^(TH|TS|TI)\b/.test(norm)) continue;
+      const img = /url=(https%3A%2F%2Fmanage\.taco\.co\.id[^&"]+)/.exec(chunk);
+      const seg = path.split("/");
+      const texture = (seg[seg.length - 2] ?? "").replace(/-/g, " ");
+      return {
+        found: true as const,
+        info: {
+          code,
+          name: ps[1] ?? "",
+          texture: texture || "motif",
+          image: img ? decodeURIComponent(img[1] ?? "") : undefined,
+        },
+      };
+    }
+    return { found: false as const };
+  });
