@@ -36,7 +36,7 @@ import { toast } from "sonner";
 
 import { GlassCard, SectionCard } from "@/components/kerjaku/glass-card";
 import { InteriorRender } from "@/components/kerjaku/interior-render";
-import { INTERIOR_ACTIVITY_TITLE } from "@/lib/interior-spec";
+import { INTERIOR_ACTIVITY_TITLE, specReviewRows, specVersionLabel } from "@/lib/interior-spec";
 import { TextAreaField, TextField } from "@/components/kerjaku/form-fields";
 import { ExistingClientPicker } from "@/components/kerjaku/existing-client-picker";
 import { resolveClientLead, resolveClientProject } from "@/lib/client-folder";
@@ -564,7 +564,9 @@ function QuickVisualPage() {
 
             <Button
               className="w-full bg-cta text-cta-foreground hover:bg-cta/90"
-              disabled={!session.roomImage || (!reference && !note.trim()) || !items.length || run.isPending}
+              disabled={
+                !session.roomImage || (!reference && !note.trim()) || !items.length || run.isPending
+              }
               onClick={() => run.mutate()}
             >
               <Wand2 className="size-4" />
@@ -652,6 +654,25 @@ function QuickVisualPage() {
             </Fold>
           )}
 
+          {active && (roomId === "KITCHEN" || roomId === "BEDROOM") && (
+            <Fold title="Spek material · final tampak luar & dalam">
+              <InteriorRender
+                key={active.id}
+                image={active.image}
+                name={active.name}
+                initialSpec={active.specHints}
+                interiorImage={active.interiorImage}
+                exteriorImage={active.exteriorImage}
+                onSave={async (specHints, image, exterior) => {
+                  updateOption(active.id, {
+                    specHints,
+                    interiorImage: image,
+                    exteriorImage: exterior,
+                  });
+                }}
+              />
+            </Fold>
+          )}
           {session.options.length > 0 && (
             <div ref={formRef}>
               <Fold
@@ -690,21 +711,6 @@ function QuickVisualPage() {
                 />
               </Fold>
             </div>
-          )}
-          {active && (roomId === "KITCHEN" || roomId === "BEDROOM") && (
-            <Fold title="Spek material · final tampak luar & dalam">
-              <InteriorRender
-                key={active.id}
-                image={active.image}
-                name={active.name}
-                initialSpec={active.specHints}
-                interiorImage={active.interiorImage}
-                exteriorImage={active.exteriorImage}
-                onSave={async (specHints, image, exterior) => {
-                  updateOption(active.id, { specHints, interiorImage: image, exteriorImage: exterior });
-                }}
-              />
-            </Fold>
           )}
         </div>
       </div>
@@ -965,11 +971,10 @@ function SurveyForm({
 }) {
   const [f, setF] = useState({ name: "", location: "", phone: "", p: "", l: "", t: "" });
   const [existingId, setExistingId] = useState<string | null>(null);
-  const [finalId, setFinalId] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setF({ ...f, [k]: e.target.value });
   const finalOption =
-    session.options.find((o) => o.id === finalId) ??
     session.options.find((o) => o.id === session.activeId) ??
     session.options[session.options.length - 1];
 
@@ -1070,32 +1075,12 @@ function SurveyForm({
   return (
     <SectionCard
       title="💾 Simpan hasil survei"
-      description="Pilih 1 visual final, lalu simpan ke data klien. Draft lain tetap di folder ini."
+      description="Visual yang sedang dibuka jadi visual final. Tampak luar = foto After kalau belum dibuat ulang."
     >
       <div className="space-y-3">
-        <div>
-          <p className="mb-2 text-xs tracking-wide text-muted-foreground uppercase">
-            ⭐ Visual final (masuk ke Leads)
-          </p>
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {session.options.map((o) => (
-              <button
-                key={o.id}
-                type="button"
-                onClick={() => setFinalId(o.id)}
-                className={`relative w-20 shrink-0 overflow-hidden rounded-xl border-2 ${
-                  finalOption?.id === o.id ? "border-primary" : "border-transparent opacity-60"
-                }`}
-              >
-                <img src={o.image} alt={o.name} className="aspect-square w-full object-cover" />
-                <span className="block truncate px-1 py-0.5 text-[10px] text-foreground">
-                  {finalOption?.id === o.id ? "⭐ " : ""}
-                  {o.name}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
+        {finalOption && (
+          <p className="text-sm text-foreground">⭐ Visual final: {finalOption.name}</p>
+        )}
         <ExistingClientPicker
           workspaceId={workspaceId}
           value={existingId}
@@ -1171,11 +1156,76 @@ function SurveyForm({
             save.isPending ||
             (session.saved && !!savedLeadId)
           }
-          onClick={() => save.mutate()}
+          onClick={() => setConfirmOpen(true)}
         >
           <Save className="size-4" />
-          {save.isPending ? "Menyimpan…" : "Simpan visual final ke klien"}
+          {save.isPending ? "Menyimpan…" : "⭐ Jadikan visual final & simpan ke Lead"}
         </Button>
+        <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <AlertDialogContent className="max-h-[90vh] overflow-y-auto">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Konfirmasi visual final</AlertDialogTitle>
+              <AlertDialogDescription>
+                {f.name} · {f.location} — data ini masuk ke Lead.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            {finalOption && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    [
+                      `Tampak luar · ${finalOption.name}`,
+                      finalOption.exteriorImage ?? finalOption.image,
+                    ],
+                    ["Tampak dalam", finalOption.interiorImage],
+                  ].map(([label, src]) => (
+                    <figure key={label} className="min-w-0">
+                      <figcaption className="mb-1 truncate text-xs text-muted-foreground">
+                        {label}
+                      </figcaption>
+                      {src ? (
+                        <img
+                          src={src}
+                          alt={label ?? ""}
+                          className="aspect-[4/5] w-full rounded-lg object-cover"
+                        />
+                      ) : (
+                        <div className="flex aspect-[4/5] items-center justify-center rounded-lg border border-dashed border-border text-xs text-muted-foreground">
+                          Belum dibuat
+                        </div>
+                      )}
+                    </figure>
+                  ))}
+                </div>
+                {finalOption.specHints ? (
+                  <dl className="space-y-1 rounded-lg border border-border p-2">
+                    <p className="text-xs font-medium text-foreground">
+                      Rekap spek — {specVersionLabel(finalOption.specHints.version)}
+                    </p>
+                    {specReviewRows(finalOption.specHints).map((r) => (
+                      <div key={r.label} className="grid grid-cols-[6rem_1fr] gap-2 text-xs">
+                        <dt className="text-muted-foreground">{r.label}</dt>
+                        <dd className="min-w-0 break-words whitespace-pre-line text-foreground">
+                          {r.value}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                ) : (
+                  <p className="text-xs text-destructive">
+                    Spek material belum disimpan — simpan dulu di “Spek material”.
+                  </p>
+                )}
+              </div>
+            )}
+            <AlertDialogFooter>
+              <AlertDialogCancel>Batal</AlertDialogCancel>
+              <AlertDialogAction disabled={!finalOption?.specHints} onClick={() => save.mutate()}>
+                Oke, simpan ke Lead
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         {savedLeadId && (
           <Button asChild variant="outline" className="w-full">
             <Link to="/leads/$leadId" params={{ leadId: savedLeadId }}>
