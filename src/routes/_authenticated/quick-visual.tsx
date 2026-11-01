@@ -225,12 +225,17 @@ function CompareSlider({ before, after }: { before: string; after: string }) {
       onPointerMove={(e) => !locked && dragging.current && move(e.clientX)}
       onPointerUp={() => (dragging.current = false)}
     >
-      <img src={after} alt="Sesudah" className="block w-full" draggable={false} />
+      <img
+        src={after}
+        alt="Sesudah"
+        className="mx-auto block max-h-[60dvh] w-full object-contain"
+        draggable={false}
+      />
       <img
         src={before}
         alt="Sebelum"
         draggable={false}
-        className="absolute inset-0 size-full object-cover"
+        className="absolute inset-0 size-full object-contain"
         style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}
       />
       <div className="absolute inset-y-0 w-0.5 bg-primary" style={{ left: `${pos}%` }}>
@@ -451,14 +456,14 @@ function QuickVisualPage() {
 
       {history.length > 0 && (
         <Fold title={`📂 Klien tersimpan (${history.length})`}>
-          <div className="flex gap-2 overflow-x-auto pb-1">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {history.map((h) => (
               <button
                 key={h.id}
                 type="button"
                 onClick={() => openSaved(h)}
                 className={cn(
-                  "flex shrink-0 items-center gap-2 rounded-xl border p-1 pr-3 text-left text-xs",
+                  "flex min-w-0 items-center gap-3 rounded-xl border p-2 text-left text-sm",
                   h.id === currentId
                     ? "border-primary bg-primary/15 text-foreground"
                     : "border-border text-muted-foreground",
@@ -468,12 +473,14 @@ function QuickVisualPage() {
                   <img
                     src={h.session.options[0].image}
                     alt=""
-                    className="size-10 rounded-lg object-cover"
+                    className="size-12 shrink-0 rounded-lg object-cover"
                   />
                 )}
-                <span>
-                  <span className="block font-medium text-foreground">{h.clientName}</span>
-                  {roomName(h.roomId)} · {h.location} · {h.session.options.length} visual
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-base font-medium text-foreground">{h.clientName}</span>
+                  <span className="block truncate">
+                    {roomName(h.roomId)} · {h.location} · {h.session.options.length} visual
+                  </span>
                 </span>
               </button>
             ))}
@@ -484,7 +491,7 @@ function QuickVisualPage() {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
         <SectionCard title="1. Pilih project" description="Lalu upload foto dan konfirmasi">
           <div className="space-y-5">
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {ROOMS.map((r) => {
                 const active = r.id === roomId;
                 return (
@@ -492,7 +499,7 @@ function QuickVisualPage() {
                     key={r.id}
                     type="button"
                     onClick={() => pickCategory(r.id)}
-                    className={`flex w-[calc(33.333%-0.34rem)] flex-col items-center gap-1 rounded-2xl border p-2 transition ${
+                    className={`flex min-w-0 flex-col items-center gap-1 overflow-hidden rounded-2xl border p-2 transition ${
                       active
                         ? "border-primary bg-primary/15 shadow-lg"
                         : "border-border bg-card/40 hover:border-primary/50"
@@ -504,10 +511,10 @@ function QuickVisualPage() {
                       width={816}
                       height={816}
                       loading="lazy"
-                      className="aspect-square w-full max-w-20 object-contain drop-shadow-xl"
+                      className="size-14 shrink-0 object-contain drop-shadow-xl sm:size-16"
                     />
                     <span
-                      className={`text-xs font-medium ${active ? "text-primary" : "text-foreground"}`}
+                      className={`w-full text-center text-sm leading-tight font-medium break-words ${active ? "text-primary" : "text-foreground"}`}
                     >
                       {r.label}
                     </span>
