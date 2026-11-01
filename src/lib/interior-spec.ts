@@ -258,7 +258,7 @@ export function hplPurchaseList(codes: HplCodes | undefined) {
   ];
   const map = new Map<string, string[]>();
   for (const p of parts) {
-    const key = p.code.trim().toUpperCase();
+    const key = (p.code ?? "").trim().toUpperCase();
     if (!key) continue;
     map.set(key, [...(map.get(key) ?? []), p.part]);
   }
