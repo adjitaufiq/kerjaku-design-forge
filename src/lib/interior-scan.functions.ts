@@ -11,7 +11,7 @@ const schema = {
   additionalProperties: false,
   required: ["outside", "inside", "hinge", "slide", "shape", "modules", "accessories", "handle", "glass", "lighting", "hasAccent", "accentNote", "edge"],
   properties: {
-    outside: { type: "string", enum: ["hpl", "hpl_premium", "duco"] },
+    outside: { type: "string", enum: ["hpl", "hpl_premium", "tacosheet", "duco"] },
     inside: { type: "string", enum: ["blockmin", "tacosheet", "hpl"] },
     hinge: { type: "string", enum: ["slowmo", "slowmo_stainless", "biasa"] },
     slide: { type: "string", enum: ["dt_slowmo", "dt_biasa", "dt_eco", "push", "tandem", "roller"] },
