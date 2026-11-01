@@ -1198,12 +1198,12 @@ function SurveyForm({
                   ))}
                 </div>
                 {finalOption.specHints ? (
-                  <dl className="space-y-1 rounded-lg border border-border p-2">
-                    <p className="text-xs font-medium text-foreground">
-                      Rekap spek — {specVersionLabel(finalOption.specHints.version)}
+                  <dl className="space-y-1.5 rounded-xl border border-border bg-surface/40 p-3">
+                    <p className="mb-2 text-sm font-medium text-foreground">
+                      Rekap spek material — {specVersionLabel(finalOption.specHints.version)}
                     </p>
                     {specReviewRows(finalOption.specHints).map((r) => (
-                      <div key={r.label} className="grid grid-cols-[6rem_1fr] gap-2 text-xs">
+                      <div key={r.label} className="grid grid-cols-[7rem_1fr] gap-2 text-sm">
                         <dt className="text-muted-foreground">{r.label}</dt>
                         <dd className="min-w-0 break-words whitespace-pre-line text-foreground">
                           {r.value}
@@ -1218,9 +1218,13 @@ function SurveyForm({
                 )}
               </div>
             )}
-            <AlertDialogFooter>
-              <AlertDialogCancel>Batal</AlertDialogCancel>
-              <AlertDialogAction disabled={!finalOption?.specHints} onClick={() => save.mutate()}>
+            <AlertDialogFooter className="gap-2">
+              <AlertDialogCancel className="h-12 w-full sm:w-auto">Batal</AlertDialogCancel>
+              <AlertDialogAction
+                className="h-12 w-full text-base sm:w-auto"
+                disabled={!finalOption?.specHints}
+                onClick={() => save.mutate()}
+              >
                 Oke, simpan ke Lead
               </AlertDialogAction>
             </AlertDialogFooter>
