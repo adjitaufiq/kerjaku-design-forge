@@ -95,6 +95,8 @@ describe("toSmeSpec", () => {
     });
     expect(s.finishExtras.gasSprings).toEqual({ doors: 2, qty: 4, unit: "pcs" });
     expect(s.finishExtras.glassDoors).toMatchObject({ type: "fluted", frame: "wood_hpl", qty: null });
+    expect(s.finishExtras.ledRun.meters).toBeNull();
+    expect(s.finishExtras.spotlights.qty).toBeNull();
   });
   it("HPL motif (termasuk motif marmer) selalu ditandai HPL workshop, bukan batu asli", () => {
     const s = _toSme({
@@ -104,8 +106,6 @@ describe("toSmeSpec", () => {
     expect(s.topMaterial).toBe("hpl");
     expect(s.hplMotifs.every((m) => m.isWorkshopHpl)).toBe(true);
     expect(s.finishExtras.glassDoors).toMatchObject({ frame: "wood_hpl", hplCode: "TH 001 AA" });
-    expect(s.finishExtras.ledRun.meters).toBeNull();
-    expect(s.finishExtras.spotlights.qty).toBeNull();
   });
   it("finishExtras: tanpa kaca/lampu/hidrolik = 0", () => {
     const s = _toSme({ outside: "hpl", inside: "blockmin", hinge: "slowmo", slide: "tandem", glass: "none", lighting: "none", accessories: [] });
