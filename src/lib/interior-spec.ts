@@ -59,6 +59,8 @@ export const specHintsSchema = z.object({
       z.object({
         id: z.enum(ACCESSORY_IDS),
         position: z.string().trim().min(1, "Isi posisi setiap aksesori").max(300),
+        // Hidrolik: jumlah daun pintu angkat (1 daun = 2 pcs gas spring).
+        doors: z.number().int().min(1).max(20).optional(),
       }),
     )
     .max(20),
@@ -231,6 +233,8 @@ export function missingFinalSpec(spec: SpecHints): string[] {
   if (!spec.accessoryMode) miss.push("Aksesori dalam: polos atau pakai aksesori");
   if (spec.accessoryMode === "selected" && !spec.accessories.length)
     miss.push("Centang minimal 1 aksesori");
+  if (spec.accessories.some((a) => a.id === "hidrolik" && !a.doors))
+    miss.push("Jumlah daun pintu angkat (hidrolik)");
   return miss;
 }
 
@@ -361,6 +365,26 @@ const SME_BODY: Record<(typeof MATERIALS)[number], string> = {
   hybrid: "hybrid",
 };
 const HINGE_CODE = { slowmo: "ET-01", slowmo_stainless: "ET-02", biasa: "ET-06" } as const;
+function smeHplFields(c: HplCodes | undefined) {
+  if (!c) return { hplMotifs: [] as { code: string; usage: string }[] };
+  const outside = c.lower.trim();
+  const upper = c.upperSame ? outside : c.upper.trim();
+  const top = c.top.trim();
+  const accent = c.hasAccent ? c.accent.trim() : "";
+  const motifs = [
+    { code: outside, usage: "kabinet" },
+    ...(upper && upper.toUpperCase() !== outside.toUpperCase() ? [{ code: upper, usage: "kabinet_atas" }] : []),
+    { code: top, usage: "top" },
+    { code: accent, usage: "aksen" },
+  ].filter((m) => m.code);
+  return {
+    hplOutside: outside || undefined,
+    hplUpper: upper || undefined,
+    hplTop: top || undefined,
+    hplAccent: accent || undefined,
+    hplMotifs: motifs,
+  };
+}
 export function toSmeSpec(spec: SpecHints) {
   const cat = { lower: "kitchen-base", upper: "kitchen-upper", tall: "kitchen-tall" } as const;
   return {
@@ -379,6 +403,15 @@ export function toSmeSpec(spec: SpecHints) {
     topLayers: spec.topLayers === "1" ? 1 : spec.topLayers === "2" ? 2 : undefined,
     // Tiap kode HPL berbeda dibeli minimal 1 lembar utuh walau dipakai sedikit.
     hplSheets: hplPurchaseList(spec.hplCodes),
+    // SME 1:1 field names. Codes are sent as written; SME must not replace them.
+    ...smeHplFields(spec.hplCodes),
+    // "single" (18mm) belum ada di SME: SME wajib menambah, jangan dianggap "none".
+    top: spec.topLayers === "2" ? "double" : spec.topLayers === "1" ? "single" : undefined,
+    accessories: spec.accessories.map((a) =>
+      a.id === "hidrolik"
+        ? { id: "gas-spring", position: a.position, doors: a.doors, qty: (a.doors ?? 0) * 2, unit: "pcs" }
+        : { id: a.id, position: a.position, qty: 1 },
+    ),
     modules: (spec.modules ?? []).map((m) => ({ ...m, name: m.label, category: cat[m.level] })),
   };
 }
