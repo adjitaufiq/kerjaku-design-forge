@@ -607,6 +607,7 @@ function QuickVisualPage() {
             {active && (active.before ?? session.roomImage) ? (
               <div className="space-y-3">
                 <CompareSlider
+                  key={active.id}
                   before={(active.before ?? session.roomImage)!}
                   after={active.image}
                 />
