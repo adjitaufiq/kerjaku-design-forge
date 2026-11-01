@@ -365,6 +365,26 @@ const SME_BODY: Record<(typeof MATERIALS)[number], string> = {
   hybrid: "hybrid",
 };
 const HINGE_CODE = { slowmo: "ET-01", slowmo_stainless: "ET-02", biasa: "ET-06" } as const;
+function smeHplFields(c: HplCodes | undefined) {
+  if (!c) return { hplMotifs: [] as { code: string; usage: string }[] };
+  const outside = c.lower.trim();
+  const upper = c.upperSame ? outside : c.upper.trim();
+  const top = c.top.trim();
+  const accent = c.hasAccent ? c.accent.trim() : "";
+  const motifs = [
+    { code: outside, usage: "kabinet" },
+    ...(upper && upper.toUpperCase() !== outside.toUpperCase() ? [{ code: upper, usage: "kabinet_atas" }] : []),
+    { code: top, usage: "top" },
+    { code: accent, usage: "aksen" },
+  ].filter((m) => m.code);
+  return {
+    hplOutside: outside || undefined,
+    hplUpper: upper || undefined,
+    hplTop: top || undefined,
+    hplAccent: accent || undefined,
+    hplMotifs: motifs,
+  };
+}
 export function toSmeSpec(spec: SpecHints) {
   const cat = { lower: "kitchen-base", upper: "kitchen-upper", tall: "kitchen-tall" } as const;
   return {
@@ -383,6 +403,14 @@ export function toSmeSpec(spec: SpecHints) {
     topLayers: spec.topLayers === "1" ? 1 : spec.topLayers === "2" ? 2 : undefined,
     // Tiap kode HPL berbeda dibeli minimal 1 lembar utuh walau dipakai sedikit.
     hplSheets: hplPurchaseList(spec.hplCodes),
+    // SME 1:1 field names. Codes are sent as written; SME must not replace them.
+    ...smeHplFields(spec.hplCodes),
+    top: spec.topLayers === "2" ? "double" : "none",
+    accessories: spec.accessories.map((a) =>
+      a.id === "hidrolik"
+        ? { id: "gas-spring", position: a.position, doors: a.doors, qty: (a.doors ?? 0) * 2, unit: "pcs" }
+        : { id: a.id, position: a.position, qty: 1 },
+    ),
     modules: (spec.modules ?? []).map((m) => ({ ...m, name: m.label, category: cat[m.level] })),
   };
 }
