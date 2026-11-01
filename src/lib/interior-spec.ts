@@ -59,6 +59,8 @@ export const specHintsSchema = z.object({
       z.object({
         id: z.enum(ACCESSORY_IDS),
         position: z.string().trim().min(1, "Isi posisi setiap aksesori").max(300),
+        // Hidrolik: jumlah daun pintu angkat (1 daun = 2 pcs gas spring).
+        doors: z.number().int().min(1).max(20).optional(),
       }),
     )
     .max(20),
@@ -231,6 +233,8 @@ export function missingFinalSpec(spec: SpecHints): string[] {
   if (!spec.accessoryMode) miss.push("Aksesori dalam: polos atau pakai aksesori");
   if (spec.accessoryMode === "selected" && !spec.accessories.length)
     miss.push("Centang minimal 1 aksesori");
+  if (spec.accessories.some((a) => a.id === "hidrolik" && !a.doors))
+    miss.push("Jumlah daun pintu angkat (hidrolik)");
   return miss;
 }
 
