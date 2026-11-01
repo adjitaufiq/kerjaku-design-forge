@@ -14,6 +14,9 @@ export type ShoppingItem = {
 export type EstimatePayload = {
   projectId: string;
   materialCost?: number;
+  /** Perintilan workshop (paku, sekrup, fischer, pin) dihitung SME, terpisah dari shoppingList. */
+  workshopConsumablesCost?: number;
+  workshopConsumables?: ShoppingItem[];
   workdays?: number;
   shoppingList?: ShoppingItem[];
   estimateId?: string;
