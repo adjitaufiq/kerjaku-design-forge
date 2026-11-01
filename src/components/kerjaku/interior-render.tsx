@@ -29,6 +29,7 @@ export function InteriorRender({
   initialSpec,
   interiorImage,
   exteriorImage,
+  interiorSideImage,
   summary,
   onSave,
 }: {
@@ -38,7 +39,8 @@ export function InteriorRender({
   initialSpec?: SpecHints | undefined;
   interiorImage?: string | undefined;
   exteriorImage?: string | undefined;
-  onSave: (spec: SpecHints, interior?: string, exterior?: string) => Promise<void>;
+  interiorSideImage?: string | undefined;
+  onSave: (spec: SpecHints, interior?: string, exterior?: string, interiorSide?: string) => Promise<void>;
 }) {
   const [spec, setSpec] = useState<SpecHints>(
     initialSpec ?? {
@@ -52,6 +54,8 @@ export function InteriorRender({
   const [note, setNote] = useState("");
   const [preview, setPreview] = useState(interiorImage ?? "");
   const [final, setFinal] = useState(true);
+  const [side, setSide] = useState(interiorSideImage ?? "");
+  const [sideFinal, setSideFinal] = useState(true);
   const [outside, setOutside] = useState(exteriorImage ?? "");
   const [outsideFinal, setOutsideFinal] = useState(true);
   const [view, setView] = useState<"interior" | "exterior" | null>(null);
@@ -127,12 +131,14 @@ export function InteriorRender({
       // Spek berubah = gambar lama tidak berlaku lagi.
       const keepImage = !changed && preview && final ? preview : undefined;
       const keepOut = !changed && outside && outsideFinal ? outside : undefined;
-      await onSave(master, keepImage, keepOut);
+      const keepSide = !changed && side && sideFinal ? side : undefined;
+      await onSave(master, keepImage, keepOut, keepSide);
       setSpec(master);
       setSaved(master);
       if (changed) {
         setPreview("");
         setOutside("");
+        setSide("");
       }
       setEditing(false);
       toast.success(`${specVersionLabel(version)} tersimpan — tanpa kredit AI`);
@@ -143,13 +149,14 @@ export function InteriorRender({
     }
   };
   const generate = async (kind: "interior" | "exterior") => {
-    const setImg = kind === "exterior" ? setOutside : setPreview;
-    const setDone = kind === "exterior" ? setOutsideFinal : setFinal;
     setBusy(true);
     setView(kind);
     setError("");
-    setImg("");
-    setDone(false);
+    if (kind === "exterior") setOutside("");
+    else {
+      setPreview("");
+      setSide("");
+    }
     try {
       if (!saved || editing) throw new Error("Simpan data spek master dulu.");
       const chosen = specHintsSchema.parse(saved);
@@ -158,34 +165,46 @@ export function InteriorRender({
       if (!data.session) throw new Error("Silakan login kembali.");
       const source = await fetch(image);
       if (!source.ok) throw new Error("Foto After tidak bisa dibuka. Buka ulang data klien.");
-      const form = new FormData();
-      form.set(
-        "image",
-        new File([await source.blob()], "after.png", {
-          type: source.headers.get("content-type")?.split(";")[0] ?? "image/png",
-        }),
-      );
-      form.set("specHints", JSON.stringify(chosen));
-      form.set("note", note);
-      form.set("view", kind);
-      let result = "";
-      await streamImage(
-        "/api/render-interior",
-        form,
-        (url, done) => {
-          setImg(url);
-          setDone(done);
-          if (done) result = url;
-        },
-        undefined,
-        { Authorization: `Bearer ${data.session.access_token}` },
-      );
-      if (!result) throw new Error("Gambar belum selesai.");
-      if (kind === "exterior") await onSave(chosen, final && preview ? preview : undefined, result);
-      else await onSave(chosen, result, outsideFinal && outside ? outside : undefined);
-      toast.success(kind === "exterior" ? "Final tampak luar tersimpan" : "Final tampak dalam tersimpan");
+      const file = new File([await source.blob()], "after.png", {
+        type: source.headers.get("content-type")?.split(";")[0] ?? "image/png",
+      });
+      const run = async (
+        v: "interior" | "interior_side" | "exterior",
+        setImg: (u: string) => void,
+        setDone: (d: boolean) => void,
+      ) => {
+        const form = new FormData();
+        form.set("image", file);
+        form.set("specHints", JSON.stringify(chosen));
+        form.set("note", note);
+        form.set("view", v);
+        let result = "";
+        await streamImage(
+          "/api/render-interior",
+          form,
+          (url, done) => {
+            setImg(url);
+            setDone(done);
+            if (done) result = url;
+          },
+          undefined,
+          { Authorization: `Bearer ${data.session.access_token}` },
+        );
+        if (!result) throw new Error("Gambar belum selesai.");
+        return result;
+      };
+      if (kind === "exterior") {
+        const out = await run("exterior", setOutside, setOutsideFinal);
+        await onSave(chosen, final && preview ? preview : undefined, out, sideFinal && side ? side : undefined);
+        toast.success("Final tampak luar tersimpan");
+      } else {
+        // Tampak dalam selalu 2 sudut: depan wide-angle + serong 3/4 untuk QC hardware.
+        const front = await run("interior", setPreview, setFinal);
+        const angle = await run("interior_side", setSide, setSideFinal);
+        await onSave(chosen, front, outsideFinal && outside ? outside : undefined, angle);
+        toast.success("2 foto tampak dalam tersimpan (depan + serong)");
+      }
     } catch (e) {
-      setImg("");
       setError(e instanceof Error ? e.message : "Gagal membuat gambar");
     } finally {
       setBusy(false);
