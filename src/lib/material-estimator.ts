@@ -72,13 +72,22 @@ export function buildEstimatorUrl(input: {
   set("renderUrl", input.renderUrl);
   set("interiorUrl", input.interiorUrl);
   set("shape", input.specHints?.shape);
-  if (input.specHints) {
-    const bytes = new TextEncoder().encode(JSON.stringify(toSmeSpec(input.specHints)));
-    const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join("");
-    set("specHints", btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""));
-  }
-  set("returnUrl", `${input.origin}/leads/${input.leadId}`);
+  const smeSpec = input.specHints ? toSmeSpec(input.specHints) : undefined;
+  if (smeSpec) set("specHints", toBase64Url(smeSpec));
+  const returnUrl = `${input.origin}/leads/${input.leadId}`;
+  set("returnUrl", returnUrl);
+  // Single-param payload requested by SME; individual params stay as fallback.
+  const payload: Record<string, unknown> = { leadId: input.leadId, returnUrl };
+  for (const [k, v] of p.entries()) if (k !== "specHints") payload[k] = v;
+  if (smeSpec) payload.specHints = smeSpec;
+  p.set("data", toBase64Url(payload));
   return `${ESTIMATOR_BASE_URL}?${p.toString()}`;
+}
+
+function toBase64Url(value: unknown): string {
+  const bytes = new TextEncoder().encode(JSON.stringify(value));
+  const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join("");
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 /** Decode `?estimate=` (JSON or base64/base64url JSON) sent back by SME. */
