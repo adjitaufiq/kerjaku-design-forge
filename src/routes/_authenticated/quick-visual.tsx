@@ -443,7 +443,7 @@ function QuickVisualPage() {
     ROOMS.find((r) => r.id === id)?.label.replace(/^\S+\s/, "") ?? id;
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-full min-w-0 space-y-6 overflow-x-hidden text-base [&_.text-xs]:text-sm [&_input]:text-base [&_select]:text-base [&_textarea]:text-base">
       <PageHeader
         title="Quick Visual"
         subtitle="Pilih project → upload foto → konfirmasi. Tembok, lampu, lantai tetap."
@@ -1162,7 +1162,7 @@ function SurveyForm({
           {save.isPending ? "Menyimpan…" : "⭐ Jadikan visual final & simpan ke Lead"}
         </Button>
         <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-          <AlertDialogContent className="max-h-[92dvh] w-[calc(100vw-1rem)] max-w-2xl overflow-y-auto rounded-2xl p-4 sm:p-6">
+          <AlertDialogContent className="h-[100dvh] max-h-[100dvh] w-screen max-w-none translate-y-0 top-0 overflow-y-auto rounded-none p-4 text-base sm:top-[50%] sm:h-auto sm:max-h-[92dvh] sm:max-w-3xl sm:-translate-y-1/2 sm:rounded-2xl sm:p-6">
             <AlertDialogHeader>
               <AlertDialogTitle>Konfirmasi visual final</AlertDialogTitle>
               <AlertDialogDescription>
@@ -1171,7 +1171,7 @@ function SurveyForm({
             </AlertDialogHeader>
             {finalOption && (
               <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   {[
                     [
                       `Tampak luar · ${finalOption.name}`,
@@ -1180,7 +1180,7 @@ function SurveyForm({
                     ["Tampak dalam", finalOption.interiorImage],
                   ].map(([label, src]) => (
                     <figure key={label} className="min-w-0">
-                      <figcaption className="mb-1 truncate text-xs text-muted-foreground">
+                      <figcaption className="mb-1.5 truncate text-base font-medium text-foreground">
                         {label}
                       </figcaption>
                       {src ? (
@@ -1199,11 +1199,11 @@ function SurveyForm({
                 </div>
                 {finalOption.specHints ? (
                   <dl className="space-y-1.5 rounded-xl border border-border bg-surface/40 p-3">
-                    <p className="mb-2 text-sm font-medium text-foreground">
+                    <p className="mb-2 text-lg font-semibold text-foreground">
                       Rekap spek material — {specVersionLabel(finalOption.specHints.version)}
                     </p>
                     {specReviewRows(finalOption.specHints).map((r) => (
-                      <div key={r.label} className="grid grid-cols-[7rem_1fr] gap-2 text-sm">
+                      <div key={r.label} className="grid grid-cols-[8.5rem_1fr] gap-2 border-b border-border/50 py-1.5 text-base last:border-0">
                         <dt className="text-muted-foreground">{r.label}</dt>
                         <dd className="min-w-0 break-words whitespace-pre-line text-foreground">
                           {r.value}
