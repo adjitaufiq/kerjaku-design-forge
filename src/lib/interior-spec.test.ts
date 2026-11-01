@@ -119,6 +119,23 @@ describe("estimate gate (spek wajib lengkap sebelum ke SME)", () => {
     expect(s.hardware).toBe("ET-02");
     expect(s.glue).toBe("active");
   });
+  it("sends all 3 HPL motifs 1:1 with SME field names", () => {
+    const s = _toSme(specHintsSchema.parse({ ...full, hplCodes: { lower: "1205 FC", upperSame: true, upper: "", top: "003 AA", hasAccent: true, accent: "001 AA", accentNote: "" } }));
+    expect([s.hplOutside, s.hplTop, s.hplAccent]).toEqual(["1205 FC", "003 AA", "001 AA"]);
+    expect(s.hplMotifs.map((m) => m.usage)).toEqual(["kabinet", "top", "aksen"]);
+  });
+  it("top table 2 lapis = double, 1 lapis = single (bukan none)", () => {
+    expect(_toSme(specHintsSchema.parse(full)).top).toBe("double");
+    expect(_toSme(specHintsSchema.parse({ ...full, topLayers: "1" })).top).toBe("single");
+  });
+  it("hidrolik: 2 daun pintu angkat = 4 pcs gas spring", () => {
+    const s = _toSme(specHintsSchema.parse({ ...full, accessoryMode: "selected", accessories: [{ id: "hidrolik", position: "kabinet atas", doors: 2 }] }));
+    expect(s.accessories[0]).toMatchObject({ id: "gas-spring", qty: 4, unit: "pcs" });
+  });
+  it("blocks estimate when hidrolik door count is missing", () => {
+    const s = specHintsSchema.parse({ ...full, accessoryMode: "selected", accessories: [{ id: "hidrolik", position: "kabinet atas" }] });
+    expect(missingForEstimate(s)).toContain("Jumlah daun pintu angkat (hidrolik)");
+  });
 });
 
 import { hplPurchaseList, missingFinalSpec, type SpecHints } from "./interior-spec";

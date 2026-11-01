@@ -431,6 +431,30 @@ export function InteriorRender({
                     }}
                   />
                 )}
+                {chosen && a.id === "hidrolik" && (
+                  <TextField
+                    label="Jumlah daun pintu angkat (1 daun = 2 pcs hidrolik)"
+                    name="hidrolik-doors"
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={20}
+                    value={chosen.doors ? String(chosen.doors) : ""}
+                    onChange={(e) => {
+                      const n = Math.min(20, Math.max(0, Math.floor(Number(e.target.value) || 0)));
+                      setPreview("");
+                      setSpec((s) => ({
+                        ...s,
+                        accessories: s.accessories.map((x) =>
+                          x.id === a.id ? { ...x, doors: n || undefined } : x,
+                        ),
+                      }));
+                    }}
+                  />
+                )}
+                {chosen?.doors && a.id === "hidrolik" ? (
+                  <p className="text-sm text-muted-foreground">Belanja: {chosen.doors * 2} pcs hidrolik</p>
+                ) : null}
               </div>
             );
           })}
