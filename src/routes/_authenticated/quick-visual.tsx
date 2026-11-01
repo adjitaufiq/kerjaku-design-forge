@@ -652,6 +652,21 @@ function QuickVisualPage() {
             </Fold>
           )}
 
+          {active && (roomId === "KITCHEN" || roomId === "BEDROOM") && (
+            <Fold title="Spek material · final tampak luar & dalam">
+              <InteriorRender
+                key={active.id}
+                image={active.image}
+                name={active.name}
+                initialSpec={active.specHints}
+                interiorImage={active.interiorImage}
+                exteriorImage={active.exteriorImage}
+                onSave={async (specHints, image, exterior) => {
+                  updateOption(active.id, { specHints, interiorImage: image, exteriorImage: exterior });
+                }}
+              />
+            </Fold>
+          )}
           {session.options.length > 0 && (
             <div ref={formRef}>
               <Fold
@@ -690,21 +705,6 @@ function QuickVisualPage() {
                 />
               </Fold>
             </div>
-          )}
-          {active && (roomId === "KITCHEN" || roomId === "BEDROOM") && (
-            <Fold title="Spek material · final tampak luar & dalam">
-              <InteriorRender
-                key={active.id}
-                image={active.image}
-                name={active.name}
-                initialSpec={active.specHints}
-                interiorImage={active.interiorImage}
-                exteriorImage={active.exteriorImage}
-                onSave={async (specHints, image, exterior) => {
-                  updateOption(active.id, { specHints, interiorImage: image, exteriorImage: exterior });
-                }}
-              />
-            </Fold>
           )}
         </div>
       </div>
