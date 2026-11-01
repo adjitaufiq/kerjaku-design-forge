@@ -225,12 +225,7 @@ function CompareSlider({ before, after }: { before: string; after: string }) {
       onPointerMove={(e) => !locked && dragging.current && move(e.clientX)}
       onPointerUp={() => (dragging.current = false)}
     >
-      <img
-        src={after}
-        alt="Sesudah"
-        className="mx-auto block max-h-[65vh] w-full object-contain"
-        draggable={false}
-      />
+      <img src={after} alt="Sesudah" className="block w-full" draggable={false} />
       <img
         src={before}
         alt="Sebelum"
