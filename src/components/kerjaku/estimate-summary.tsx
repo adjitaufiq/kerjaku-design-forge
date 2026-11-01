@@ -67,6 +67,31 @@ export function EstimateSummary({ estimate }: { estimate: EstimatePayload }) {
         </div>
       )}
 
+      {(estimate.workshopConsumablesCost != null || (estimate.workshopConsumables?.length ?? 0) > 0) && (
+        <div className="mt-3 border-t border-border pt-2">
+          <p className="mb-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            Perintilan workshop (dihitung SME)
+          </p>
+          {(estimate.workshopConsumables ?? []).map(normalizeShopItem).map((it, i) => (
+            <div key={i} className="flex justify-between gap-2 border-b border-border/50 py-1 last:border-0">
+              <span className="min-w-0 break-words text-foreground">
+                {it.name}
+                <span className="block text-xs text-muted-foreground">
+                  {it.qty} {it.unit ?? ""}
+                </span>
+              </span>
+              <span className="shrink-0 text-foreground">{it.subtotal != null ? formatIDR(it.subtotal) : ""}</span>
+            </div>
+          ))}
+          {estimate.workshopConsumablesCost != null && (
+            <div className="flex justify-between gap-2 pt-1 font-medium">
+              <span className="text-muted-foreground">Total perintilan</span>
+              <span className="text-foreground">{formatIDR(estimate.workshopConsumablesCost)}</span>
+            </div>
+          )}
+        </div>
+      )}
+
       {estimate.deepLinkUrl && (
         <Button variant="outline" size="sm" className="mt-3 w-full" asChild>
           <a href={estimate.deepLinkUrl} target="_blank" rel="noopener noreferrer">
