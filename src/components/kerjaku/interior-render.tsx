@@ -19,6 +19,8 @@ import {
   specVersionLabel,
   type SpecHints,
 } from "@/lib/interior-spec";
+import { TacoCodeField } from "@/components/kerjaku/taco-code-field";
+import { tacoInfoFor, normTacoCode, type TacoInfo } from "@/lib/interior-spec";
 import { scanInterior } from "@/lib/interior-scan.functions";
 import { streamImage } from "@/lib/interior-stream";
 import { supabase } from "@/integrations/supabase/client";
@@ -116,6 +118,51 @@ export function InteriorRender({
         ),
       };
     });
+  };
+  const setInfo = (key: string, info: TacoInfo | null) => {
+    setPreview("");
+    setSpec((s) => {
+      const next = { ...(s.hplInfo ?? {}) };
+      if (info) next[key] = info;
+      else delete next[key];
+      return { ...s, hplInfo: next };
+    });
+  };
+  const codeProps = (field: "lower" | "upper" | "top" | "accent") => ({
+    value: codes[field],
+    info: tacoInfoFor(spec, codes[field]),
+    onChange: (v: string) => setCodes({ [field]: v }),
+    onInfo: setInfo,
+  });
+  const pickDuco = async (file: File | undefined) => {
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    try {
+      const img = new Image();
+      await new Promise((ok, bad) => {
+        img.onload = ok;
+        img.onerror = bad;
+        img.src = url;
+      });
+      const c = document.createElement("canvas");
+      c.width = c.height = 32;
+      const ctx = c.getContext("2d");
+      if (!ctx) return;
+      // Centre crop only: edges of a paint-sample photo are usually background.
+      const w = img.width * 0.5, h = img.height * 0.5;
+      ctx.drawImage(img, img.width * 0.25, img.height * 0.25, w, h, 0, 0, 32, 32);
+      const d = ctx.getImageData(0, 0, 32, 32).data;
+      let r = 0, g = 0, b = 0;
+      for (let i = 0; i < d.length; i += 4) { r += d[i]!; g += d[i + 1]!; b += d[i + 2]!; }
+      const n = d.length / 4;
+      const hex = "#" + [r, g, b].map((v) => Math.round(v / n).toString(16).padStart(2, "0")).join("");
+      setSpec((s) => ({ ...s, ducoHex: hex }));
+      setPreview("");
+    } catch {
+      toast.error("Foto warna tidak bisa dibaca");
+    } finally {
+      URL.revokeObjectURL(url);
+    }
   };
   const missing = missingFinalSpec(spec);
   const sheets = hplPurchaseList(spec.hplCodes);
@@ -329,15 +376,39 @@ export function InteriorRender({
           </p>
           {spec.outside !== "duco" && (
             <>
-              <TextField label="Kabinet bawah *" name="hpl-lower" placeholder="TH 5022 NT" value={codes.lower} onChange={(e) => setCodes({ lower: e.target.value })} />
+              <TacoCodeField label="Kabinet bawah *" name="hpl-lower" placeholder="TH 1205 FC" {...codeProps("lower")} />
               <label className="flex items-center gap-2 text-sm">
                 <Checkbox checked={codes.upperSame} onCheckedChange={(c) => setCodes({ upperSame: !!c })} />
                 Kabinet atas sama dengan bawah
               </label>
               {!codes.upperSame && (
-                <TextField label="Kabinet atas *" name="hpl-upper" placeholder="TH 001 AA" value={codes.upper} onChange={(e) => setCodes({ upper: e.target.value })} />
+                <TacoCodeField label="Kabinet atas *" name="hpl-upper" placeholder="TH 001 AA" {...codeProps("upper")} />
               )}
             </>
+          )}
+          {spec.outside === "duco" && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Foto sampel warna Duco *</p>
+              <input
+                type="file"
+                accept="image/*"
+                className="block w-full text-sm"
+                onChange={(e) => void pickDuco(e.target.files?.[0])}
+              />
+              {spec.ducoHex && (
+                <div className="flex items-center gap-3">
+                  <span className="size-10 shrink-0 rounded border border-border" style={{ backgroundColor: spec.ducoHex }} />
+                  <span className="text-sm text-muted-foreground">Warna terbaca {spec.ducoHex}</span>
+                </div>
+              )}
+              <TextField
+                label="Nama warna (opsional)"
+                name="duco-color"
+                placeholder="Sage green doff"
+                value={spec.ducoColor ?? ""}
+                onChange={(e) => setSpec((s) => ({ ...s, ducoColor: e.target.value }))}
+              />
+            </div>
           )}
           <SelectField
             label="Bahan top table *"
@@ -354,7 +425,7 @@ export function InteriorRender({
             ]}
           />
           {spec.topMaterial !== "granite" && (
-            <TextField label="Top table *" name="hpl-top" placeholder="TH 003 AA" value={codes.top} onChange={(e) => setCodes({ top: e.target.value })} />
+            <TacoCodeField label="Top table *" name="hpl-top" placeholder="TH 001 AA" {...codeProps("top")} />
           )}
           <label className="flex items-center gap-2 text-sm">
             <Checkbox checked={codes.hasAccent} onCheckedChange={(c) => setCodes({ hasAccent: !!c })} />
@@ -362,7 +433,7 @@ export function InteriorRender({
           </label>
           {codes.hasAccent && (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <TextField label="Kode HPL aksen *" name="hpl-accent" placeholder="TH 001 AA" value={codes.accent} onChange={(e) => setCodes({ accent: e.target.value })} />
+              <TacoCodeField label="Kode HPL aksen *" name="hpl-accent" placeholder="TH 001 AA" {...codeProps("accent")} />
               <TextField label="Aksen di bagian" name="hpl-accent-note" placeholder="Rak terbuka putih" value={codes.accentNote} onChange={(e) => setCodes({ accentNote: e.target.value })} />
             </div>
           )}
