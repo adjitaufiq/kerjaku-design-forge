@@ -446,7 +446,9 @@ function smeHplFields(c: HplCodes | undefined, info?: SpecHints["hplInfo"]) {
     .filter((m) => m.code)
     .map((m) => {
       const i = info?.[normTacoCode(m.code)];
-      return i ? { ...m, name: i.name, texture: i.texture } : m;
+      // isWorkshopHpl: marble/stone-look HPL is still a TACO sheet, never natural stone.
+      const base = { ...m, isWorkshopHpl: true as const };
+      return i ? { ...base, name: i.name, texture: i.texture, ...(i.image ? { swatchUrl: i.image } : {}) } : base;
     });
   return {
     hplOutside: outside || undefined,
@@ -467,7 +469,10 @@ export function smeFinishExtras(spec: SpecHints) {
   const lift = spec.accessories.filter((a) => a.id === "hidrolik");
   const liftDoors = lift.reduce((n, a) => n + (a.doors ?? 0), 0);
   return {
-    glassDoors: glass ? { type: glass, qty: null } : { type: "none", qty: 0 },
+    // Glass door frames are workshop plywood + HPL (accent code), never a separate aluminium profile.
+    glassDoors: glass
+      ? { type: glass, frame: "wood_hpl", hplCode: (spec.hplCodes?.hasAccent && spec.hplCodes.accent.trim()) || undefined, qty: null }
+      : { type: "none", qty: 0 },
     gasSprings: lift.length ? { doors: liftDoors, qty: liftDoors * 2, unit: "pcs" } : { doors: 0, qty: 0, unit: "pcs" },
     ledRun: led ? { meters: null, transformers: null } : { meters: 0, transformers: 0 },
     spotlights: spot ? { qty: null } : { qty: 0 },
