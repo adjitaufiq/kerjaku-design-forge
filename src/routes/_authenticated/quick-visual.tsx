@@ -201,7 +201,7 @@ function CompareSlider({ before, after }: { before: string; after: string }) {
   const [pos, setPos] = useState(50);
   const boxRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
-  const [locked, setLocked] = useState(false);
+  const [locked, setLocked] = useState(true);
 
   const move = (clientX: number) => {
     const box = boxRef.current?.getBoundingClientRect();
@@ -225,7 +225,12 @@ function CompareSlider({ before, after }: { before: string; after: string }) {
       onPointerMove={(e) => !locked && dragging.current && move(e.clientX)}
       onPointerUp={() => (dragging.current = false)}
     >
-      <img src={after} alt="Sesudah" className="block w-full" draggable={false} />
+      <img
+        src={after}
+        alt="Sesudah"
+        className="mx-auto block max-h-[65vh] w-full object-contain"
+        draggable={false}
+      />
       <img
         src={before}
         alt="Sebelum"
@@ -1162,7 +1167,7 @@ function SurveyForm({
           {save.isPending ? "Menyimpan…" : "⭐ Jadikan visual final & simpan ke Lead"}
         </Button>
         <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-          <AlertDialogContent className="max-h-[90vh] overflow-y-auto">
+          <AlertDialogContent className="max-h-[92dvh] w-[calc(100vw-1rem)] max-w-2xl overflow-y-auto rounded-2xl p-4 sm:p-6">
             <AlertDialogHeader>
               <AlertDialogTitle>Konfirmasi visual final</AlertDialogTitle>
               <AlertDialogDescription>
