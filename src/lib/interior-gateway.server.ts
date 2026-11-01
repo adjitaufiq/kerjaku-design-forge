@@ -57,9 +57,12 @@ export async function renderInterior(request: Request): Promise<Response> {
     });
   const payload = new FormData();
   payload.set("model", "openai/gpt-image-2.5-sunburst");
+  const view = form.get("view");
   payload.set(
     "prompt",
-    form.get("view") === "exterior" ? buildExteriorPrompt(spec, note) : buildInteriorPrompt(spec, note),
+    view === "exterior"
+      ? buildExteriorPrompt(spec, note)
+      : buildInteriorPrompt(spec, note, view === "interior_side" ? "side" : "front"),
   );
   payload.set("image", image);
   if (form.get("stream") !== "false") {

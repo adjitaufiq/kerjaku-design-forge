@@ -29,20 +29,26 @@ export function LeadFinalVisual({ leadId, projectId }: { leadId: string; project
         (await url(record?.exteriorAssetId)) ??
         (await url(record?.baseAssetId)) ??
         (fallback ? await data.assets.getViewUrl(fallback.url) : null);
-      return { record, outside, inside: await url(record?.interiorAssetId) };
+      return {
+        record,
+        outside,
+        inside: await url(record?.interiorAssetId),
+        side: await url(record?.interiorSideAssetId),
+      };
     },
   });
   if (query.isPending) return <p className="text-sm text-muted-foreground">Membuka visual…</p>;
   if (query.isError || !query.data)
     return <p className="text-sm text-destructive">Visual gagal dibuka</p>;
-  const { record, outside, inside } = query.data;
+  const { record, outside, inside, side } = query.data;
   const rows = record?.specHints ? specReviewRows(record.specHints) : [];
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {[
           ["Final tampak luar", outside],
-          ["Final tampak dalam", inside],
+          ["Tampak dalam depan", inside],
+          ["Tampak dalam serong 3/4", side],
         ].map(([label, src]) => (
           <figure key={label} className="min-w-0">
             <figcaption className="mb-1 text-xs text-muted-foreground">{label}</figcaption>

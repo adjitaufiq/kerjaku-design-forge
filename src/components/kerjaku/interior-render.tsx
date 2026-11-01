@@ -453,7 +453,7 @@ export function InteriorRender({
           {error}
         </p>
       )}
-      {(outside || preview) && (
+      {(outside || preview || side) && (
         <div className="grid gap-3 sm:grid-cols-2">
           {outside && (
             <figure className="space-y-1">
@@ -485,6 +485,21 @@ export function InteriorRender({
               )}
             </figure>
           )}
+          {side && (
+            <figure className="space-y-1">
+              <figcaption className="text-xs font-medium text-muted-foreground">Tampak dalam serong 3/4 (rel & engsel)</figcaption>
+              <img
+                src={side}
+                alt={`${name} — serong 3/4`}
+                className={`w-full rounded-lg object-contain transition-[filter] ${sideFinal ? "blur-0" : "blur-2xl"}`}
+              />
+              {sideFinal && !busy && (
+                <a href={side} download={`${name}-tampak-dalam-serong.png`} className="inline-flex items-center gap-1 text-xs text-primary">
+                  <Download className="size-3" /> Download
+                </a>
+              )}
+            </figure>
+          )}
         </div>
       )}
       <div className="flex flex-wrap gap-2">
@@ -509,7 +524,7 @@ export function InteriorRender({
             </Button>
             <Button disabled={busy || saving} onClick={() => void generate("interior")}>
               <Wand2 className="size-4" />
-              {view === "interior" ? "Membuka kabinet…" : preview ? "Buat ulang tampak dalam (AI)" : "Buat tampak dalam (AI)"}
+              {view === "interior" ? "Membuat 2 sudut tampak dalam…" : preview ? "Buat ulang tampak dalam — 2 sudut (AI)" : "Buat tampak dalam — 2 sudut (AI)"}
             </Button>
           </>
         )}
