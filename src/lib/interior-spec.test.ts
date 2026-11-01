@@ -35,10 +35,14 @@ describe("SME interior contract", () => {
         origin: "https://kerjaku-design-forge.lovable.app",
         renderUrl: "https://example.com/after.png",
         interiorUrl: "https://example.com/inside.png",
+        interiorSideUrl: "https://example.com/side.png",
         specHints: hints,
       }),
     );
     expect(url.searchParams.get("interiorUrl")).toBe("https://example.com/inside.png");
+    expect(url.searchParams.get("interiorSideUrl")).toBe("https://example.com/side.png");
+    const data = JSON.parse(Buffer.from(url.searchParams.get("data") ?? "", "base64url").toString("utf8"));
+    expect(data.interiorSideUrl).toBe("https://example.com/side.png");
     expect(url.searchParams.get("renderUrl")).toBe("https://example.com/after.png");
     const encoded = url.searchParams.get("specHints") ?? "";
     expect(encoded).toMatch(/^[A-Za-z0-9_-]+$/);
