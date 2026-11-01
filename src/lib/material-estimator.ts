@@ -56,6 +56,7 @@ export function buildEstimatorUrl(input: {
   beforeUrl?: string | null;
   renderUrl?: string | null;
   interiorUrl?: string | null;
+  interiorSideUrl?: string | null;
   specHints?: SpecHints | null | undefined;
   origin: string;
 }): string {
@@ -74,6 +75,7 @@ export function buildEstimatorUrl(input: {
   set("beforeUrl", input.beforeUrl);
   set("renderUrl", input.renderUrl);
   set("interiorUrl", input.interiorUrl);
+  set("interiorSideUrl", input.interiorSideUrl);
   set("shape", input.specHints?.shape);
   const smeSpec = input.specHints ? toSmeSpec(input.specHints) : undefined;
   if (smeSpec) set("specHints", toBase64Url(smeSpec));

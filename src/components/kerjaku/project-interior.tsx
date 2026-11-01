@@ -30,7 +30,7 @@ export function ProjectInterior({
         .map((a) => parseInteriorRecord(a.body))
         .filter((r) => r !== null && r.projectId === projectId);
       const interiors = new Set(
-        records.flatMap((r) => [r?.interiorAssetId, r?.exteriorAssetId]),
+        records.flatMap((r) => [r?.interiorAssetId, r?.exteriorAssetId, r?.interiorSideAssetId]),
       );
       return Promise.all(
         assets
@@ -38,12 +38,14 @@ export function ProjectInterior({
           .map(async (a) => {
             const record = records.find((r) => r?.baseAssetId === a.id);
             const inside = assets.find((x) => x.id === record?.interiorAssetId);
+            const sideA = assets.find((x) => x.id === record?.interiorSideAssetId);
             const outside = assets.find((x) => x.id === record?.exteriorAssetId);
             return {
               id: a.id,
               image: await data.assets.getViewUrl(a.url),
               record,
               interiorImage: inside ? await data.assets.getViewUrl(inside.url) : null,
+              interiorSideImage: sideA ? await data.assets.getViewUrl(sideA.url) : null,
               exteriorImage: outside ? await data.assets.getViewUrl(outside.url) : null,
             };
           }),
@@ -85,8 +87,9 @@ export function ProjectInterior({
         summary={summary}
         initialSpec={current.record?.specHints}
         interiorImage={current.interiorImage ?? undefined}
+        interiorSideImage={current.interiorSideImage ?? undefined}
         exteriorImage={current.exteriorImage ?? undefined}
-        onSave={async (specHints, image, exterior) => {
+        onSave={async (specHints, image, exterior, side) => {
           const keep = async (url: string | undefined, prev: string | null, id: string | undefined, file: string) => {
             if (!url) return undefined;
             if (url === prev) return id;
@@ -96,6 +99,7 @@ export function ProjectInterior({
             ).id;
           };
           const interiorAssetId = await keep(image, current.interiorImage, current.record?.interiorAssetId, "final-tampak-dalam.png");
+          const interiorSideAssetId = await keep(side, current.interiorSideImage, current.record?.interiorSideAssetId, "final-tampak-dalam-serong.png");
           const exteriorAssetId = await keep(exterior, current.exteriorImage, current.record?.exteriorAssetId, "final-tampak-luar.png");
           await data.activities.log(workspaceId, {
             leadId,
@@ -105,6 +109,7 @@ export function ProjectInterior({
               projectId,
               baseAssetId: current.id,
               ...(interiorAssetId ? { interiorAssetId } : {}),
+              ...(interiorSideAssetId ? { interiorSideAssetId } : {}),
               ...(exteriorAssetId ? { exteriorAssetId } : {}),
               specHints,
             }),

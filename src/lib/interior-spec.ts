@@ -111,6 +111,7 @@ export const interiorRecordSchema = z.object({
   projectId: z.string(),
   baseAssetId: z.string(),
   interiorAssetId: z.string().optional(),
+  interiorSideAssetId: z.string().optional(),
   exteriorAssetId: z.string().optional(),
   specHints: specHintsSchema,
 });
@@ -313,14 +314,18 @@ export function buildExteriorPrompt(spec: SpecHints, note = ""): string {
   ].filter(Boolean).join("\n");
 }
 
-export function buildInteriorPrompt(spec: SpecHints, note = ""): string {
+export function buildInteriorPrompt(spec: SpecHints, note = "", angle: "front" | "side" = "front"): string {
   const label = (key: keyof typeof SPEC_OPTIONS, value: string) =>
     SPEC_OPTIONS[key].find((o) => o.value === value)?.label ?? value;
+  const camera =
+    angle === "side"
+      ? "Create ONE additional photorealistic open-door interior view from a THREE-QUARTER (about 35-45 degree) oblique wide-angle camera standing at one end of the kitchen set, same aspect ratio. This angle exists for hardware QC: clearly show the side panels of the cabinets, the drawer boxes pulled far out with their runners visible on the drawer sides or underneath, door hinges (cup hinges on the inside of each open door), and any lift/gas-spring mechanism on upper flap doors."
+      : "Create ONE additional photorealistic open-door interior view from a frontal WIDE-ANGLE camera with the same framing centre and aspect ratio, slightly wider so the whole cabinet run is visible. This angle exists for module QC: clearly show every shelf, vertical divider, rack and drawer inside.";
   return [
     "IMAGE 1 is the client's selected finished After render, the immutable exterior design reference.",
-    "Create ONE additional photorealistic open-door interior view, from exactly the same camera, framing, perspective and aspect ratio.",
+    camera,
     "LOCK the cabinet carcass dimensions, module count, positions, outside colours, outside HPL grain, materials, handles, countertop, sink, appliances, walls, ceiling, floor and lighting. Never resize, remove, redesign or add cabinet modules. No full-ceiling extension.",
-    "ONLY articulate the existing upper and lower cabinet doors open on their hinges, realistically avoiding collisions; pull existing drawers partially out so their runners can be seen. Do not invent drawers where there were doors, or change panel widths. Open doors retain their original exterior finish.",
+    "ONLY articulate the existing upper and lower cabinet doors open on their hinges, realistically avoiding collisions; pull existing drawers out so their runners can be seen. Do not invent drawers where there were doors, or change panel widths. Open doors retain their original exterior finish.",
     `Selected outside specification: ${label("outside", spec.outside)}; retain IMAGE 1's exact outside appearance. Selected interior finish: ${label("inside", spec.inside)}. Hinge: ${label("hinge", spec.hinge)}. Drawer runners: ${label("slide", spec.slide)}. Show realistic shelving inside existing modules.`,
     [
       spec.topLayers ? `Countertop thickness: ${spec.topLayers === "2" ? "thick double-layer slab (about 36mm front edge)" : "single-layer slab (18mm)"}.` : "",

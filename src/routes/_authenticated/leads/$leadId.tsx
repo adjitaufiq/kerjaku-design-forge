@@ -264,7 +264,9 @@ function LeadDetailPage() {
         throw new Error(`Spek belum lengkap, isi dulu: ${missing.join(", ")}`);
       }
       const win = window.open("about:blank", "_blank");
-      const interiorIds = new Set(records.flatMap((r) => [r?.interiorAssetId, r?.exteriorAssetId]));
+      const interiorIds = new Set(
+        records.flatMap((r) => [r?.interiorAssetId, r?.exteriorAssetId, r?.interiorSideAssetId]),
+      );
       const record = records[0];
       const latest = (type: string) => {
         const a = assets.find((x) => x.type === type && !interiorIds.has(x.id));
@@ -275,10 +277,12 @@ function LeadDetailPage() {
         assets.find((a) => a.id === record?.exteriorAssetId) ??
         assets.find((a) => a.id === record?.baseAssetId);
       const inside = assets.find((a) => a.id === record?.interiorAssetId);
-      const [beforeUrl, renderUrl, interiorUrl] = await Promise.all([
+      const insideSide = assets.find((a) => a.id === record?.interiorSideAssetId);
+      const [beforeUrl, renderUrl, interiorUrl, interiorSideUrl] = await Promise.all([
         latest("CLIENT_PHOTO"),
         base ? data.assets.getViewUrl(base.url) : latest("SKETCHUP_RENDER"),
         inside ? data.assets.getViewUrl(inside.url) : Promise.resolve(null),
+        insideSide ? data.assets.getViewUrl(insideSide.url) : Promise.resolve(null),
       ]);
       const url = buildEstimatorUrl({
         projectId: p.id,
@@ -293,6 +297,7 @@ function LeadDetailPage() {
         beforeUrl,
         renderUrl,
         interiorUrl,
+        interiorSideUrl,
         specHints: record?.specHints,
         origin: window.location.origin,
       });
