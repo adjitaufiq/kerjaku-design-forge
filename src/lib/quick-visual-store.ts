@@ -10,6 +10,7 @@ export interface VisualOption {
   createdAt: number;
   interiorImage?: string | undefined;
   exteriorImage?: string | undefined;
+  interiorSideImage?: string | undefined;
   specHints?: SpecHints;
 }
 

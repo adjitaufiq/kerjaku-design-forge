@@ -671,11 +671,13 @@ function QuickVisualPage() {
                 initialSpec={active.specHints}
                 interiorImage={active.interiorImage}
                 exteriorImage={active.exteriorImage}
-                onSave={async (specHints, image, exterior) => {
+                interiorSideImage={active.interiorSideImage}
+                onSave={async (specHints, image, exterior, side) => {
                   updateOption(active.id, {
                     specHints,
                     interiorImage: image,
                     exteriorImage: exterior,
+                    interiorSideImage: side,
                   });
                 }}
               />
