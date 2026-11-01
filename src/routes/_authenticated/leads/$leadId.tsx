@@ -13,7 +13,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { EstimateSummary } from "@/components/kerjaku/estimate-summary";
-import { ProjectInterior } from "@/components/kerjaku/project-interior";
+import { LeadFinalVisual } from "@/components/kerjaku/lead-final-visual";
 import { INTERIOR_ACTIVITY_TITLE, missingForEstimate, parseInteriorRecord } from "@/lib/interior-spec";
 import {
   buildEstimatorUrl,
