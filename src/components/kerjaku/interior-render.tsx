@@ -339,7 +339,23 @@ export function InteriorRender({
               )}
             </>
           )}
-          <TextField label="Top table *" name="hpl-top" placeholder="TH 003 AA" value={codes.top} onChange={(e) => setCodes({ top: e.target.value })} />
+          <SelectField
+            label="Bahan top table *"
+            value={spec.topMaterial ?? "hpl"}
+            onValueChange={(v) => {
+              const topMaterial = v === "granite" ? "granite" : "hpl";
+              if (topMaterial === "granite") setCodes({ top: "" });
+              setSpec((s) => ({ ...s, topMaterial }));
+              setPreview("");
+            }}
+            options={[
+              { value: "hpl", label: "HPL TACO (pakai kode)" },
+              { value: "granite", label: "Granit (vendor batu, bukan HPL)" },
+            ]}
+          />
+          {spec.topMaterial !== "granite" && (
+            <TextField label="Top table *" name="hpl-top" placeholder="TH 003 AA" value={codes.top} onChange={(e) => setCodes({ top: e.target.value })} />
+          )}
           <label className="flex items-center gap-2 text-sm">
             <Checkbox checked={codes.hasAccent} onCheckedChange={(c) => setCodes({ hasAccent: !!c })} />
             Ada aksen / kombinasi warna lain
