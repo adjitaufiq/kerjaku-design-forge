@@ -1051,6 +1051,14 @@ function SurveyForm({
                 await dataUrlToFile(o.exteriorImage, `exterior-final.png`),
               )
             : null;
+          const insideSide = o.interiorSideImage
+            ? await data.assets.upload(
+                workspaceId,
+                project.id,
+                "SKETCHUP_RENDER",
+                await dataUrlToFile(o.interiorSideImage, `interior-side-final.png`),
+              )
+            : null;
           await data.activities.log(workspaceId, {
             leadId: lead.id,
             type: "NOTE",
@@ -1060,6 +1068,7 @@ function SurveyForm({
               baseAssetId: base.id,
               ...(inside ? { interiorAssetId: inside.id } : {}),
               ...(outside ? { exteriorAssetId: outside.id } : {}),
+              ...(insideSide ? { interiorSideAssetId: insideSide.id } : {}),
               specHints: o.specHints,
             }),
           });
@@ -1187,7 +1196,8 @@ function SurveyForm({
                       `Tampak luar · ${finalOption.name}`,
                       finalOption.exteriorImage ?? finalOption.image,
                     ],
-                    ["Tampak dalam", finalOption.interiorImage],
+                    ["Tampak dalam depan", finalOption.interiorImage],
+                    ["Tampak dalam samping", finalOption.interiorSideImage],
                   ].map(([label, src]) => (
                     <figure key={label} className="min-w-0">
                       <figcaption className="mb-1.5 truncate text-base font-medium text-foreground">
