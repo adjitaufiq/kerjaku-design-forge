@@ -309,7 +309,10 @@ export function hplPurchaseList(codes: HplCodes | undefined) {
 /** Rekap master spek untuk review workshop (tanpa jumlah lembar). */
 export function specReviewRows(spec: SpecHints): { label: string; value: string }[] {
   const c = spec.hplCodes;
-  const motifs = hplPurchaseList(c).map((x) => `${x.code} — ${x.parts.join(", ")}`);
+  const motifs = hplPurchaseList(c).map((x) => {
+    const i = tacoInfoFor(spec, x.code);
+    return `${x.code}${i ? ` (${i.name}, ${i.texture})` : ""} — ${x.parts.join(", ")}`;
+  });
   const accessories =
     spec.accessoryMode === "plain"
       ? "Polos (hanya ambalan)"

@@ -188,3 +188,32 @@ describe("top table material", () => {
     expect(_toSme(specHintsSchema.parse(s))).toMatchObject({ topMaterial: "granite", top: "none" });
   });
 });
+
+import { buildExteriorPrompt as _ext, missingFinalSpec as _mf2, normTacoCode as _norm, toSmeSpec as _sme2 } from "./interior-spec";
+describe("TACO catalogue validation", () => {
+  const base: SpecHints = { outside: "hpl", inside: "blockmin", hinge: "slowmo", slide: "tandem", accessories: [] };
+  const codes = { lower: "TH 1205 FC", upperSame: true, upper: "", top: "TH 001 AA", hasAccent: false, accent: "", accentNote: "" };
+  const info = {
+    "1205 FC": { code: "TH 1205 FC", name: "Scandinavia Walnut", texture: "woodgrain" },
+    "001 AA": { code: "TH 001 AA", name: "Porcelain White", texture: "solid" },
+  };
+  it("normalizes codes", () => expect(_norm("th 1205-fc")).toBe("1205 FC"));
+  it("blocks generate until each code is checked at TACO", () => {
+    expect(_mf2({ ...base, hplCodes: codes })).toContain("Kode kabinet bawah belum dicek di katalog TACO");
+    expect(_mf2({ ...base, hplCodes: codes, hplInfo: info }).some((m) => m.includes("TACO"))).toBe(false);
+  });
+  it("final prompt uses official motif names and overrides IMAGE 1 colours", () => {
+    const p = _ext({ ...base, hplCodes: codes, hplInfo: info });
+    expect(p).toContain("Scandinavia Walnut");
+    expect(p).toContain("Porcelain White");
+    expect(p).not.toContain("Keep the colour/motif family");
+  });
+  it("duco requires a colour sample", () => {
+    expect(_mf2({ ...base, outside: "duco" })).toContain("Foto sampel warna Duco");
+    expect(_ext({ ...base, outside: "duco", ducoHex: "#a1b2c3" })).toContain("#a1b2c3");
+  });
+  it("SME gets motif name + texture", () => {
+    const s = _sme2(specHintsSchema.parse({ ...base, hplCodes: codes, hplInfo: info }));
+    expect(s.hplMotifs[0]).toMatchObject({ code: "TH 1205 FC", name: "Scandinavia Walnut", texture: "woodgrain" });
+  });
+});

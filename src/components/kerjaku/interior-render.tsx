@@ -20,7 +20,7 @@ import {
   type SpecHints,
 } from "@/lib/interior-spec";
 import { TacoCodeField } from "@/components/kerjaku/taco-code-field";
-import { tacoInfoFor, normTacoCode, type TacoInfo } from "@/lib/interior-spec";
+import { tacoInfoFor, type TacoInfo } from "@/lib/interior-spec";
 import { scanInterior } from "@/lib/interior-scan.functions";
 import { streamImage } from "@/lib/interior-stream";
 import { supabase } from "@/integrations/supabase/client";
