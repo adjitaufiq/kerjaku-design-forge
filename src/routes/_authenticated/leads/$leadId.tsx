@@ -392,255 +392,51 @@ function LeadDetailPage() {
         }
       />
 
-      <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="min-w-0 space-y-6 lg:col-span-2">
-          <SectionCard title="Client information">
-            <div className="grid gap-x-8 sm:grid-cols-2">
-              <InfoRow label="Name" value={lead.clientName} />
-              <InfoRow label="Phone" value={lead.phone ?? "—"} />
-              <InfoRow label="Email" value={lead.email ?? "—"} />
-              <InfoRow label="Location" value={lead.location ?? "—"} />
-              <InfoRow label="Source" value={lead.source ?? "—"} />
-              <InfoRow label="Created" value={formatDate(lead.createdAt)} />
-            </div>
-          </SectionCard>
+      <div className="mx-auto min-w-0 max-w-3xl space-y-6">
+        <SectionCard title="Profil klien">
+          <div className="grid gap-x-8 sm:grid-cols-2">
+            <InfoRow label="Nama" value={lead.clientName} />
+            <InfoRow label="Lokasi" value={lead.location ?? "—"} />
+            <InfoRow label="No. WhatsApp" value={lead.phone ?? "—"} />
+          </div>
+        </SectionCard>
 
-          <SectionCard
-            title="Linked projects"
-            description="Every job scoped for this client."
-            action={
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/projects">All projects</Link>
-              </Button>
-            }
-          >
-            {projectsQuery.isLoading ? (
-              <Skeleton className="h-20 rounded-xl" />
-            ) : projects.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No project yet. Start one from the{" "}
-                <Link to="/consultation" className="text-primary-glow underline">
-                  consultation form
-                </Link>
-                .
-              </p>
-            ) : (
-              <ul className="space-y-2">
-                {projects.map((p) => (
-                  <li
-                    key={p.id}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface/40 px-4 py-3"
-                  >
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{p.projectName}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {PROJECT_TYPE_LABEL[p.projectType]} · {formatDate(p.createdAt)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm text-foreground">{formatIDR(p.estimatedValue)}</span>
-                      <ProjectStatusBadge status={p.status} />
-                    </div>
-                    <div className="w-full">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={openEstimator.isPending}
-                        onClick={() => openEstimator.mutate(p)}
-                      >
-                        <Calculator className="size-4" /> Hitung Estimasi Material
-                      </Button>
-                      {estimates.get(p.id) && <EstimateSummary estimate={estimates.get(p.id)!} />}
-                      {workspaceId && (
-                        <details className="mt-3 w-full">
-                          <summary className="cursor-pointer text-sm font-medium text-foreground">
-                            Tampak dalam / spek material
-                          </summary>
-                          <div className="mt-3">
-                            <ProjectInterior
-                              workspaceId={workspaceId}
-                              leadId={leadId}
-                              projectId={p.id}
-                              summary={[
-                                consultationQuery.data?.clientRequirement,
-                                consultationQuery.data?.stylePreference,
-                                consultationQuery.data?.colorPreference,
-                                consultationQuery.data?.specialRequest,
-                                consultationQuery.data?.notes,
-                              ]
-                                .filter(Boolean)
-                                .join(" | ")}
-                            />
-                          </div>
-                        </details>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
+        {projectsQuery.isLoading ? (
+          <Skeleton className="h-72 rounded-2xl" />
+        ) : projects.length === 0 ? (
+          <SectionCard title="Visual final">
+            <p className="text-sm text-muted-foreground">
+              Belum ada visual final. Simpan dari{" "}
+              <Link to="/quick-visual" className="text-primary-glow underline">
+                Quick Visual
+              </Link>
+              .
+            </p>
           </SectionCard>
-
-          <SectionCard title="Consultation summary">
-            {consultation ? (
-              <div className="grid gap-x-8 sm:grid-cols-2">
-                <InfoRow label="Requirement" value={consultation.clientRequirement ?? "—"} />
-                <InfoRow label="Budget" value={consultation.budgetRange ?? "—"} />
-                <InfoRow label="Style" value={consultation.stylePreference ?? "—"} />
-                <InfoRow label="Colour" value={consultation.colorPreference ?? "—"} />
-                <InfoRow label="Special request" value={consultation.specialRequest ?? "—"} />
-                <InfoRow label="Notes" value={consultation.notes ?? "—"} />
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No consultation recorded for this client yet.
-              </p>
-            )}
-          </SectionCard>
-
-          <SectionCard title="Activity timeline" description="Notes, calls and stage changes.">
-            {activitiesQuery.isLoading ? (
-              <Skeleton className="h-24 rounded-xl" />
-            ) : activities.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nothing logged yet.</p>
-            ) : (
-              <ol className="relative space-y-5 border-l border-border pl-5">
-                {activities.map((a) => (
-                  <li key={a.id} className="relative">
-                    <span className="absolute top-1.5 -left-[25px] size-2.5 rounded-full bg-primary" />
-                    <div className="flex flex-wrap items-center gap-2">
-                      <StatusBadge tone="info">{ACTIVITY_TYPE_LABEL[a.type]}</StatusBadge>
-                      <span className="text-xs text-muted-foreground">
-                        {formatDate(a.createdAt)}
-                      </span>
-                    </div>
-                    <p className="mt-1 break-words text-sm font-medium text-foreground">{a.title}</p>
-                    {a.body && a.title === ESTIMATE_ACTIVITY_TITLE ? (
-                      (() => {
-                        const e = parseEstimateParam(a.body);
-                        return (
-                          <p className="mt-0.5 text-sm text-muted-foreground">
-                            {e?.estimatedMaterialCost != null
-                              ? `Total material ${formatIDR(e.estimatedMaterialCost)}`
-                              : "Estimasi diterima"}
-                            {e?.summary?.estimatedDays ? ` · ±${e.summary.estimatedDays} hari kerja` : ""}
-                          </p>
-                        );
-                      })()
-                    ) : a.body && a.title !== INTERIOR_ACTIVITY_TITLE ? (
-                      <p className="mt-0.5 break-words text-sm text-muted-foreground">{a.body}</p>
-                    ) : null}
-                  </li>
-                ))}
-              </ol>
-            )}
-          </SectionCard>
-        </div>
-
-        <div className="min-w-0 space-y-6">
-          <SectionCard title="Pipeline stage">
-            <div className="space-y-3">
-              <LeadStatusBadge status={lead.status} />
-              <SelectField
-                label="Move to stage"
-                value={lead.status}
-                onValueChange={(v) => updateStatus.mutate(v)}
-                options={LEAD_STAGES.map((s) => ({ value: s, label: LEAD_STATUS_LABEL[s] }))}
-              />
-            </div>
-          </SectionCard>
-
-          <SectionCard
-            title="Follow up reminder"
-            description="Schedule the next touchpoint and nudge the client."
-            action={
-              followUpDue ? (
-                <StatusBadge tone="warning">Due</StatusBadge>
-              ) : lead.nextFollowUp ? (
-                <StatusBadge tone="info">Scheduled</StatusBadge>
-              ) : undefined
-            }
-          >
-            <div className="space-y-3">
-              <InfoRow label="Next follow up" value={formatDate(lead.nextFollowUp)} />
-              <TextField
-                label="Reminder date"
-                name="nextFollowUp"
-                type="date"
-                value={followUpDate}
-                onChange={(e) => setFollowUpDraft(e.target.value)}
-              />
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={!followUpDate || setFollowUp.isPending}
-                  onClick={() => setFollowUp.mutate(followUpDate)}
-                >
-                  <CalendarClock className="size-4" />
-                  {setFollowUp.isPending ? "Saving…" : "Set reminder"}
-                </Button>
-                {lead.nextFollowUp ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={setFollowUp.isPending}
-                    onClick={() => setFollowUp.mutate(null)}
-                  >
-                    Clear
+        ) : (
+          projects.map((p) => (
+            <SectionCard key={p.id} title={p.projectName}>
+              <div className="space-y-3">
+                <LeadFinalVisual leadId={leadId} projectId={p.id} />
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to="/quick-visual">
+                      <Pencil className="size-4" /> Edit di Quick Visual
+                    </Link>
                   </Button>
-                ) : null}
-                <Button
-                  size="sm"
-                  className="bg-cta text-cta-foreground hover:bg-cta/90"
-                  disabled={sendFollowUp.isPending}
-                  onClick={() => sendFollowUp.mutate()}
-                >
-                  <MessageCircle className="size-4" /> WhatsApp follow up
-                </Button>
-              </div>
-            </div>
-          </SectionCard>
-
-          <SectionCard title="Linked proposals">
-            {proposals.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No proposals yet.</p>
-            ) : (
-              <ul className="space-y-2">
-                {proposals.map((p) => (
-                  <li
-                    key={p.id}
-                    className="rounded-xl border border-border bg-surface/40 px-4 py-3"
+                  <Button
+                    size="sm"
+                    disabled={openEstimator.isPending}
+                    onClick={() => openEstimator.mutate(p)}
                   >
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-medium text-foreground">{p.title}</p>
-                      <StatusBadge tone="cta">{PROPOSAL_STATUS_LABEL[p.status]}</StatusBadge>
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {formatIDR(p.totalAmount)} · {formatDate(p.createdAt)}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </SectionCard>
-
-          <SectionCard
-            title="AI consultation"
-            description="Latest recommendation from the AI interior consultant."
-          >
-            <ConsultationSummary projectId={projectIds[0] ?? null} />
-          </SectionCard>
-
-          <LeadConceptCard projectIds={projectIds} leadId={leadId} />
-
-          <SectionCard
-            title="Approved AI concepts"
-            description="Designs signed off for this client."
-          >
-            <ApprovedConcepts workspaceId={workspaceId} projectIds={projectIds} />
-          </SectionCard>
-        </div>
+                    <Calculator className="size-4" /> Hitung Estimasi Material
+                  </Button>
+                </div>
+                {estimates.get(p.id) && <EstimateSummary estimate={estimates.get(p.id)!} />}
+              </div>
+            </SectionCard>
+          ))
+        )}
       </div>
 
       <Modal
