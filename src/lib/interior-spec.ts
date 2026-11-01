@@ -405,7 +405,8 @@ export function toSmeSpec(spec: SpecHints) {
     hplSheets: hplPurchaseList(spec.hplCodes),
     // SME 1:1 field names. Codes are sent as written; SME must not replace them.
     ...smeHplFields(spec.hplCodes),
-    top: spec.topLayers === "2" ? "double" : "none",
+    // "single" (18mm) belum ada di SME: SME wajib menambah, jangan dianggap "none".
+    top: spec.topLayers === "2" ? "double" : spec.topLayers === "1" ? "single" : undefined,
     accessories: spec.accessories.map((a) =>
       a.id === "hidrolik"
         ? { id: "gas-spring", position: a.position, doors: a.doors, qty: (a.doors ?? 0) * 2, unit: "pcs" }
