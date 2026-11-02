@@ -1,3 +1,4 @@
+import { fromFrontLayout, spatialHash } from "@/lib/spatial-blueprint";
 import { useState } from "react";
 import { CheckCircle2, Download, Loader2, Pencil, ScanSearch, Save, Wand2 } from "lucide-react";
 import { toast } from "sonner";
@@ -223,6 +224,12 @@ export function InteriorRender({
           blueprintVersion: chosen.version,
           blueprintHash: blueprintHash(gate.layout),
           frontLayout: structuredClone(gate.layout),
+          ...(kind === "interior"
+            ? (() => {
+                const bp = fromFrontLayout(gate.layout);
+                return { spatialBlueprint: bp, spatialHash: spatialHash(bp) };
+              })()
+            : {}),
           status: "GENERATED",
           createdAt: new Date().toISOString(),
         };
@@ -248,6 +255,10 @@ export function InteriorRender({
         if (record) {
           form.set("generationId", record.generationId);
           form.set("blueprintHash", record.blueprintHash);
+          if (record.spatialBlueprint && record.spatialHash) {
+            form.set("spatialBlueprint", JSON.stringify(record.spatialBlueprint));
+            form.set("spatialHash", record.spatialHash);
+          }
         }
         let result = "";
         await streamImage(

@@ -1,3 +1,10 @@
+import {
+  calculateSpatialTally,
+  fromFrontLayout,
+  spatialHash,
+  validateSpatialBlueprint,
+  type SpatialBlueprint,
+} from "./spatial-blueprint";
 import { createClient } from "@supabase/supabase-js";
 import {
   blueprintHash,
@@ -65,6 +72,7 @@ export async function renderInterior(request: Request): Promise<Response> {
   const payload = new FormData();
   payload.set("model", "openai/gpt-image-2.5-sunburst");
   const view = form.get("view");
+  let spatial: SpatialBlueprint | undefined;
   if (view !== "exterior") {
     // Backend is the authoritative gate: no interior image without a valid blueprint.
     const gate = validateInteriorBlueprint(spec.frontLayout);
@@ -73,6 +81,25 @@ export async function renderInterior(request: Request): Promise<Response> {
     const sent = String(form.get("blueprintHash") ?? "");
     if (sent && sent !== hash)
       return Response.json({ message: "Struktur pintu berubah saat dikirim. Coba lagi." }, { status: 400 });
+    if (view === "interior") {
+      // Single source: the browser's normalized v2 blueprint must equal the canonical adapter output.
+      let sentBp: unknown;
+      try {
+        sentBp = JSON.parse(String(form.get("spatialBlueprint") ?? ""));
+      } catch {
+        sentBp = undefined;
+      }
+      const v2 = validateSpatialBlueprint(sentBp);
+      if (!v2.valid) return Response.json({ message: "Blueprint ruang tidak valid." }, { status: 400 });
+      const sh = spatialHash(v2.blueprint);
+      if (sh !== spatialHash(fromFrontLayout(gate.layout)) || sh !== String(form.get("spatialHash") ?? ""))
+        return Response.json({ message: "Blueprint ruang tidak cocok dengan struktur pintu. Coba lagi." }, { status: 400 });
+      spatial = v2.blueprint;
+      const t = calculateSpatialTally(spatial);
+      console.log(
+        `[render-interior] spatial=${sh} swingLeaves=${t.swingLeaves} liftLeaves=${t.liftLeaves} drawers=${t.drawers} hingeSets=${t.hingeSets} slideSets=${t.slideSets} gasSpringPcs=${t.gasSpringPcs}`,
+      );
+    }
     const c = layoutCounts(gate.layout);
     console.log(
       `[render-interior] view=${view} generation=${String(form.get("generationId") ?? "")} blueprint=${hash} v=${spec.version ?? "-"} upper=${gate.layout.upper.length} lower=${gate.layout.lower.length} swing=${c.swing} drawers=${c.drawers} lift=${c.lift}`,
@@ -82,7 +109,7 @@ export async function renderInterior(request: Request): Promise<Response> {
     "prompt",
     view === "exterior"
       ? buildExteriorPrompt(spec, note)
-      : buildInteriorPrompt(spec, note, view === "interior_side" ? "side" : "front"),
+      : buildInteriorPrompt(spec, note, view === "interior_side" ? "side" : "front", spatial),
   );
   payload.set("image", image);
   if (form.get("stream") !== "false") {
