@@ -487,6 +487,9 @@ export function slideLook(slide: SpecHints["slide"]): string {
 }
 
 export function buildInteriorPrompt(spec: SpecHints, note = "", angle: "front" | "side" = "front"): string {
+  // Never build an interior prompt without a FRONT BLUEPRINT.
+  const gate = validateInteriorBlueprint(spec.frontLayout);
+  if (!gate.valid) throw new Error(gate.error);
   const label = (key: keyof typeof SPEC_OPTIONS, value: string) =>
     SPEC_OPTIONS[key].find((o) => o.value === value)?.label ?? value;
   const camera =
