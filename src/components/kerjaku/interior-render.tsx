@@ -726,7 +726,7 @@ export function InteriorRender({
       </div>
       {review && !blueprintGate.valid && (
         <p role="alert" className="text-xs text-destructive">
-          {blueprintGate.error} Klik "Ubah spek", isi "Struktur pintu per kolom", lalu simpan.
+          {blueprintGate.error} Klik "Edit / revisi spek", isi "Struktur pintu per kolom", lalu simpan.
         </p>
       )}
       {review && (
