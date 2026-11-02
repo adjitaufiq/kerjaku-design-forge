@@ -264,7 +264,7 @@ describe("LED strip jalur eksak", () => {
     expect(_mf3(base)).toContain("Jumlah jalur LED strip");
   });
   it("tampak dalam mengunci jumlah daun pintu bertingkat", () => {
-    expect(_ip3(base)).toContain("never merge fronts");
+    expect(_ip3({ ...(base as object), frontLayout: { upper: [{ fronts: ["swing"] }], lower: [] } } as never)).toContain("never merge fronts");
   });
 });
 
