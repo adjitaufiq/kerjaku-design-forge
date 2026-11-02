@@ -305,7 +305,7 @@ describe("Fase 1 — blueprint gate", () => {
   it("menerima blueprint valid", () => expect(_vb(layout).valid).toBe(true));
   it("prompt interior tanpa blueprint gagal", () => expect(() => _bip(base)).toThrow());
   it("prompt interior depan memuat SPATIAL STRUCTURE CONTRACT", () =>
-    expect(_bip({ ...base, frontLayout: layout })).toContain("SPATIAL STRUCTURE CONTRACT")); // was FRONT BLUEPRINT"));
+    expect(_bip({ ...base, frontLayout: layout })).toContain("SPATIAL STRUCTURE CONTRACT"));
   it("tampak luar tetap jalan tanpa blueprint", () => expect(() => _bep(base)).not.toThrow());
   it("spek lama tanpa blueprint tetap bisa dibuka", () => expect(_shs.safeParse(base).success).toBe(true));
   it("hash blueprint deterministik dan berubah bila struktur berubah", () => {
