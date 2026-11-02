@@ -267,3 +267,10 @@ describe("LED strip jalur eksak", () => {
     expect(_ip3(base)).toContain("never merge two stacked doors");
   });
 });
+
+import { slideLook as _sl } from "./interior-spec";
+describe("warna rel laci TACO", () => {
+  it("BBS double track hitam", () => expect(_sl("dt_slowmo")).toMatch(/MATTE BLACK/));
+  it("RLT roller putih", () => expect(_sl("roller")).toMatch(/WHITE/));
+  it("tandem tersembunyi di bawah", () => expect(_sl("tandem")).toMatch(/UNDERMOUNT/));
+});
