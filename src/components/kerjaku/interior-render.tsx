@@ -169,6 +169,8 @@ export function InteriorRender({
     }
   };
   const missing = missingFinalSpec(spec);
+  const blueprintGate = validateInteriorBlueprint(saved?.frontLayout);
+  const blueprintOk = blueprintGate.valid;
   const sheets = hplPurchaseList(spec.hplCodes);
   const strip = (s: SpecHints | undefined) => (s ? JSON.stringify({ ...s, version: undefined, generations: undefined }) : "");
   const save = async () => {
@@ -707,13 +709,13 @@ export function InteriorRender({
               <Wand2 className="size-4" />
               {view === "exterior" ? "Menerapkan spek…" : outside ? "Buat ulang tampak luar (AI)" : "Buat tampak luar (AI)"}
             </Button>
-            <Button disabled={busy || saving} onClick={() => void generate("interior")}>
+            <Button disabled={busy || saving || !blueprintOk} onClick={() => void generate("interior")}>
               <Wand2 className="size-4" />
               {view === "interior" ? "Membuat tampak depan…" : preview ? "Buat ulang tampak dalam DEPAN (AI)" : "1. Buat tampak dalam DEPAN (AI)"}
             </Button>
             <Button
               variant="outline"
-              disabled={busy || saving || !preview || !final}
+              disabled={busy || saving || !blueprintOk || !preview || !final}
               onClick={() => void generate("interior_side")}
             >
               <Wand2 className="size-4" />
