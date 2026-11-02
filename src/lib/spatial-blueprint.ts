@@ -101,7 +101,7 @@ export const spatialBlueprintSchema = z.object({
       if (c.front.kind === "drawers") c.front.drawers.forEach((d) => unique("drawer", d.drawerId));
       if (c.front.kind !== "leaves") continue;
       const leaves = c.front.leaves;
-      if (leaves.length === 2 && (!leaves[0].pairId || leaves[0].pairId !== leaves[1].pairId))
+      if (leaves.length === 2 && (!leaves[0]?.pairId || leaves[0]?.pairId !== leaves[1]?.pairId))
         issue(`Dua daun di ${c.cellId} wajib satu pairId`);
       for (const l of leaves) {
         unique("leaf", l.leafId);

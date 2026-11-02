@@ -38,11 +38,11 @@ describe("spatial blueprint — positive", () => {
     expect([t.hingeSets, t.hingePcs, t.slideSets, t.gasSpringPcs]).toEqual([12, 24, 3, 4]);
   });
   it("2. double → 2 daun independen dengan pairId sama, kiri + kanan", () => {
-    const c = fromFrontLayout(adji).runs[0].columns[4].cells[0];
+    const c = fromFrontLayout(adji).runs[0]!.columns[4]!.cells[0]!;
     expect(c.front.kind).toBe("leaves");
     if (c.front.kind !== "leaves") return;
     expect(c.front.leaves).toHaveLength(2);
-    expect(c.front.leaves[0].pairId).toBe(c.front.leaves[1].pairId);
+    expect(c.front.leaves[0]!.pairId).toBe(c.front.leaves[1]!.pairId);
     expect(c.front.leaves.map((l) => l.mechanism.kind === "swing" && l.mechanism.hingeSide)).toEqual(["left", "right"]);
   });
   it("3. pintu tunggal: engsel tidak ditebak (unknown)", () => {
@@ -55,7 +55,7 @@ describe("spatial blueprint — positive", () => {
     const r = validateSpatialBlueprint(bp);
     expect(r.valid).toBe(true);
     if (!r.valid) return;
-    expect(r.blueprint.runs[0].columns[1].cells[1].front.kind).toBe("leaves");
+    expect(r.blueprint.runs[0]!.columns[1]!.cells[1]!.front.kind).toBe("leaves");
     expect(compileSpatialPrompt(r.blueprint)).toMatch(/BEHIND the open leaf and never replaces it/);
   });
   it("5. kitchen L: main + wing + corner", () => {
