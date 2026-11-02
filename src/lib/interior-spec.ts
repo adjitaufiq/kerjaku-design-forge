@@ -103,6 +103,22 @@ export function layoutCounts(l: FrontLayout | undefined) {
   const lift = n("lift_glass") + n("lift_wood");
   return { swing, drawers: n("drawer"), lift, hingeSets: swing, slideSets: n("drawer"), gasSpringPcs: lift * 2 };
 }
+/** Strict gate for interior views: schema-valid, at least one cabinet row, no empty column. */
+export function validateInteriorBlueprint(l: unknown): { valid: true; layout: FrontLayout } | { valid: false; error: string } {
+  if (l === undefined || l === null) return { valid: false, error: "Struktur pintu per kolom wajib diisi sebelum membuat tampak dalam." };
+  const parsed = frontLayoutSchema.safeParse(l);
+  if (!parsed.success) return { valid: false, error: "Struktur pintu tidak valid: periksa jenis bagian dan jumlah kolom." };
+  const { upper, lower } = parsed.data;
+  if (!upper.length && !lower.length) return { valid: false, error: "Isi minimal satu kolom di kabinet atas atau bawah." };
+  return { valid: true, layout: parsed.data };
+}
+/** Deterministic short hash of the blueprint (same result in browser and server). */
+export function blueprintHash(l: FrontLayout): string {
+  const s = JSON.stringify({ upper: l.upper.map((c) => c.fronts), lower: l.lower.map((c) => c.fronts) });
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193) >>> 0;
+  return h.toString(16).padStart(8, "0");
+}
 /** Explicit left-to-right blueprint; the strongest structure lock in the interior prompt. */
 export function layoutPrompt(l: FrontLayout | undefined): string {
   if (!l || (!l.upper.length && !l.lower.length)) return "";
@@ -123,8 +139,20 @@ export function layoutPrompt(l: FrontLayout | undefined): string {
     .filter(Boolean)
     .join(" ");
 }
+export const generationRecordSchema = z.object({
+  generationId: z.string().max(64),
+  view: z.enum(["interior", "interior_side"]),
+  blueprintVersion: z.number().int().optional(),
+  blueprintHash: z.string().max(16),
+  frontLayout: frontLayoutSchema,
+  status: z.literal("GENERATED"),
+  createdAt: z.string().max(40),
+});
+export type GenerationRecord = z.infer<typeof generationRecordSchema>;
 export const specHintsSchema = z.object({
   frontLayout: frontLayoutSchema.optional(),
+  // Snapshot of the exact blueprint each interior image was generated from.
+  generations: z.array(generationRecordSchema).max(20).optional(),
   material: z.enum(MATERIALS).optional(),
   outside: z.enum(["hpl", "hpl_premium", "tacosheet", "duco"]),
   inside: z.enum(["blockmin", "tacosheet", "hpl"]),
