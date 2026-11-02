@@ -18,6 +18,9 @@ import {
   specReviewRows,
   specVersionLabel,
   type SpecHints,
+  blueprintHash,
+  validateInteriorBlueprint,
+  type GenerationRecord,
 } from "@/lib/interior-spec";
 import { TacoCodeField } from "@/components/kerjaku/taco-code-field";
 import { FrontLayoutEditor } from "@/components/kerjaku/front-layout-editor";
@@ -166,8 +169,10 @@ export function InteriorRender({
     }
   };
   const missing = missingFinalSpec(spec);
+  const blueprintGate = validateInteriorBlueprint(saved?.frontLayout);
+  const blueprintOk = blueprintGate.valid;
   const sheets = hplPurchaseList(spec.hplCodes);
-  const strip = (s: SpecHints | undefined) => (s ? JSON.stringify({ ...s, version: undefined }) : "");
+  const strip = (s: SpecHints | undefined) => (s ? JSON.stringify({ ...s, version: undefined, generations: undefined }) : "");
   const save = async () => {
     setSaving(true);
     setError("");
@@ -205,8 +210,23 @@ export function InteriorRender({
     else setSide("");
     try {
       if (!saved || editing) throw new Error("Simpan data spek master dulu.");
-      const chosen = specHintsSchema.parse(saved);
+      // One immutable snapshot is validated, sent and stored; never re-read React state mid-flow.
+      const chosen = specHintsSchema.parse(structuredClone(saved));
       if (missingFinalSpec(chosen).length) throw new Error("Spek master belum lengkap.");
+      let record: GenerationRecord | undefined;
+      if (kind !== "exterior") {
+        const gate = validateInteriorBlueprint(chosen.frontLayout);
+        if (!gate.valid) throw new Error(gate.error);
+        record = {
+          generationId: crypto.randomUUID(),
+          view: kind,
+          blueprintVersion: chosen.version,
+          blueprintHash: blueprintHash(gate.layout),
+          frontLayout: structuredClone(gate.layout),
+          status: "GENERATED",
+          createdAt: new Date().toISOString(),
+        };
+      }
       const { data } = await supabase.auth.getSession();
       if (!data.session) throw new Error("Silakan login kembali.");
       const source = await fetch(image);
@@ -214,6 +234,7 @@ export function InteriorRender({
       const file = new File([await source.blob()], "after.png", {
         type: source.headers.get("content-type")?.split(";")[0] ?? "image/png",
       });
+      const body = JSON.stringify(chosen);
       const run = async (
         v: "interior" | "interior_side" | "exterior",
         setImg: (u: string) => void,
@@ -221,9 +242,13 @@ export function InteriorRender({
       ) => {
         const form = new FormData();
         form.set("image", file);
-        form.set("specHints", JSON.stringify(chosen));
+        form.set("specHints", body);
         form.set("note", note);
         form.set("view", v);
+        if (record) {
+          form.set("generationId", record.generationId);
+          form.set("blueprintHash", record.blueprintHash);
+        }
         let result = "";
         await streamImage(
           "/api/render-interior",
@@ -239,20 +264,26 @@ export function InteriorRender({
         if (!result) throw new Error("Gambar belum selesai.");
         return result;
       };
+      // Stored spec = the sent snapshot plus the record of this generation (latest per view kept first).
+      const stored: SpecHints = record
+        ? { ...chosen, generations: [record, ...(chosen.generations ?? []).filter((g) => g.view !== record.view)].slice(0, 20) }
+        : chosen;
       if (kind === "exterior") {
         const out = await run("exterior", setOutside, setOutsideFinal);
-        await onSave(chosen, final && preview ? preview : undefined, out, sideFinal && side ? side : undefined);
+        await onSave(stored, final && preview ? preview : undefined, out, sideFinal && side ? side : undefined);
         toast.success("Final tampak luar tersimpan");
       } else if (kind === "interior") {
         // Satu sudut per klik: depan diverifikasi dulu, hemat token.
         const front = await run("interior", setPreview, setFinal);
-        await onSave(chosen, front, outsideFinal && outside ? outside : undefined, sideFinal && side ? side : undefined);
+        await onSave(stored, front, outsideFinal && outside ? outside : undefined, sideFinal && side ? side : undefined);
         toast.success("Tampak dalam depan tersimpan");
       } else {
         const angle = await run("interior_side", setSide, setSideFinal);
-        await onSave(chosen, final && preview ? preview : undefined, outsideFinal && outside ? outside : undefined, angle);
+        await onSave(stored, final && preview ? preview : undefined, outsideFinal && outside ? outside : undefined, angle);
         toast.success("Tampak dalam serong tersimpan");
       }
+      setSaved(stored);
+      setSpec(stored);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Gagal membuat gambar");
     } finally {
@@ -678,13 +709,13 @@ export function InteriorRender({
               <Wand2 className="size-4" />
               {view === "exterior" ? "Menerapkan spek…" : outside ? "Buat ulang tampak luar (AI)" : "Buat tampak luar (AI)"}
             </Button>
-            <Button disabled={busy || saving} onClick={() => void generate("interior")}>
+            <Button disabled={busy || saving || !blueprintOk} onClick={() => void generate("interior")}>
               <Wand2 className="size-4" />
               {view === "interior" ? "Membuat tampak depan…" : preview ? "Buat ulang tampak dalam DEPAN (AI)" : "1. Buat tampak dalam DEPAN (AI)"}
             </Button>
             <Button
               variant="outline"
-              disabled={busy || saving || !preview || !final}
+              disabled={busy || saving || !blueprintOk || !preview || !final}
               onClick={() => void generate("interior_side")}
             >
               <Wand2 className="size-4" />
@@ -693,6 +724,11 @@ export function InteriorRender({
           </>
         )}
       </div>
+      {review && !blueprintGate.valid && (
+        <p role="alert" className="text-xs text-destructive">
+          {blueprintGate.error} Klik "Edit / revisi spek", isi "Struktur pintu per kolom", lalu simpan.
+        </p>
+      )}
       {review && (
         <p className="text-xs text-muted-foreground">
           Tampak luar menerapkan spek yang terlihat (HPL, kaca, handle, lampu) tanpa mengubah Before/After di atas. Gambar opsional (pakai kredit AI) dan hanya mengikuti {specVersionLabel(review.version)}. Ukuran tetap dari ukur workshop.

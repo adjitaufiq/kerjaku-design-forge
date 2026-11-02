@@ -264,7 +264,7 @@ describe("LED strip jalur eksak", () => {
     expect(_mf3(base)).toContain("Jumlah jalur LED strip");
   });
   it("tampak dalam mengunci jumlah daun pintu bertingkat", () => {
-    expect(_ip3(base)).toContain("never merge fronts");
+    expect(_ip3({ ...(base as object), frontLayout: { upper: [{ fronts: ["swing"] }], lower: [] } } as never)).toContain("never merge fronts");
   });
 });
 
@@ -290,5 +290,30 @@ describe("front layout blueprint (Adji)", () => {
     expect(p).toContain("UPPER CABINETS: EXACTLY 5 vertical columns");
     expect(p).toContain("BASE CABINETS: EXACTLY 4 vertical columns");
     expect(p).toContain("exactly 12 swing door leaves");
+  });
+});
+
+import { validateInteriorBlueprint as _vb, blueprintHash as _bh, buildInteriorPrompt as _bip, buildExteriorPrompt as _bep, specHintsSchema as _shs } from "./interior-spec";
+describe("Fase 1 — blueprint gate", () => {
+  const base = { outside: "hpl", inside: "blockmin", hinge: "slowmo", slide: "dt_biasa", accessories: [] } as SpecHints;
+  const layout = { upper: [{ fronts: ["swing", "lift_glass"] }], lower: [{ fronts: ["drawer", "drawer"] }] } as SpecHints["frontLayout"];
+  it("menolak blueprint undefined", () => expect(_vb(undefined).valid).toBe(false));
+  it("menolak blueprint kosong", () => expect(_vb({ upper: [], lower: [] }).valid).toBe(false));
+  it("menolak kolom kosong", () => expect(_vb({ upper: [{ fronts: [] }], lower: [] }).valid).toBe(false));
+  it("menolak tipe komponen tak dikenal", () => expect(_vb({ upper: [{ fronts: ["pintu_ajaib"] }], lower: [] }).valid).toBe(false));
+  it("menolak bentuk bukan array", () => expect(_vb({ upper: "swing", lower: [] }).valid).toBe(false));
+  it("menerima blueprint valid", () => expect(_vb(layout).valid).toBe(true));
+  it("prompt interior tanpa blueprint gagal", () => expect(() => _bip(base)).toThrow());
+  it("prompt interior dengan blueprint memuat FRONT BLUEPRINT", () =>
+    expect(_bip({ ...base, frontLayout: layout })).toContain("FRONT BLUEPRINT"));
+  it("tampak luar tetap jalan tanpa blueprint", () => expect(() => _bep(base)).not.toThrow());
+  it("spek lama tanpa blueprint tetap bisa dibuka", () => expect(_shs.safeParse(base).success).toBe(true));
+  it("hash blueprint deterministik dan berubah bila struktur berubah", () => {
+    expect(_bh(layout!)).toBe(_bh(structuredClone(layout!)));
+    expect(_bh(layout!)).not.toBe(_bh({ ...layout!, lower: [{ fronts: ["drawer"] }] }));
+  });
+  it("catatan generasi tersimpan utuh lewat schema", () => {
+    const rec = { generationId: "g1", view: "interior", blueprintVersion: 6, blueprintHash: _bh(layout!), frontLayout: layout, status: "GENERATED", createdAt: "2026-11-03T00:00:00Z" };
+    expect(_shs.parse({ ...base, frontLayout: layout, generations: [rec] }).generations?.[0]).toEqual(rec);
   });
 });

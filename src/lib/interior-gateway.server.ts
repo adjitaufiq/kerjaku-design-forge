@@ -1,5 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
-import { buildExteriorPrompt, buildInteriorPrompt, specHintsSchema } from "@/lib/interior-spec";
+import {
+  blueprintHash,
+  buildExteriorPrompt,
+  buildInteriorPrompt,
+  layoutCounts,
+  specHintsSchema,
+  validateInteriorBlueprint,
+} from "@/lib/interior-spec";
 
 export async function renderInterior(request: Request): Promise<Response> {
   const token = request.headers.get("authorization")?.replace(/^Bearer /, "");
@@ -58,6 +65,19 @@ export async function renderInterior(request: Request): Promise<Response> {
   const payload = new FormData();
   payload.set("model", "openai/gpt-image-2.5-sunburst");
   const view = form.get("view");
+  if (view !== "exterior") {
+    // Backend is the authoritative gate: no interior image without a valid blueprint.
+    const gate = validateInteriorBlueprint(spec.frontLayout);
+    if (!gate.valid) return Response.json({ message: gate.error }, { status: 400 });
+    const hash = blueprintHash(gate.layout);
+    const sent = String(form.get("blueprintHash") ?? "");
+    if (sent && sent !== hash)
+      return Response.json({ message: "Struktur pintu berubah saat dikirim. Coba lagi." }, { status: 400 });
+    const c = layoutCounts(gate.layout);
+    console.log(
+      `[render-interior] view=${view} generation=${String(form.get("generationId") ?? "")} blueprint=${hash} v=${spec.version ?? "-"} upper=${gate.layout.upper.length} lower=${gate.layout.lower.length} swing=${c.swing} drawers=${c.drawers} lift=${c.lift}`,
+    );
+  }
   payload.set(
     "prompt",
     view === "exterior"
