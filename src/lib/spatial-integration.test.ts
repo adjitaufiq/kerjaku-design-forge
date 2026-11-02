@@ -10,7 +10,12 @@ const adji: FrontLayout = {
     { fronts: ["swing", "swing"] },
     { fronts: ["double", "lift_glass"] },
   ],
-  lower: [{ fronts: ["swing"] }, { fronts: ["drawer", "drawer", "drawer"] }, { fronts: ["swing"] }, { fronts: ["swing"] }],
+  lower: [
+    { fronts: ["swing"] },
+    { fronts: ["drawer", "drawer", "drawer"] },
+    { fronts: ["swing"] },
+    { fronts: ["swing"] },
+  ],
 };
 
 describe("spatial integration (front interior)", () => {
@@ -20,13 +25,22 @@ describe("spatial integration (front interior)", () => {
     expect([t.hingeSets, t.slideSets, t.gasSpringPcs]).toEqual([12, 3, 4]);
   });
   it("spatial hash is deterministic and changes when structure changes", () => {
-    expect(spatialHash(fromFrontLayout(adji))).toBe(spatialHash(fromFrontLayout(structuredClone(adji))));
+    expect(spatialHash(fromFrontLayout(adji))).toBe(
+      spatialHash(fromFrontLayout(structuredClone(adji))),
+    );
     const other = structuredClone(adji);
-    other.lower[0].fronts = ["double"];
+    other.lower[0] = { fronts: ["double"] };
     expect(spatialHash(fromFrontLayout(other))).not.toBe(spatialHash(fromFrontLayout(adji)));
   });
   it("front prompt carries the spatial contract with every leaf/drawer ID and no v1 FRONT BLUEPRINT", () => {
-    const spec = specHintsSchema.parse({ frontLayout: adji, outside: "hpl", inside: "blockmin", hinge: "slowmo", slide: "dt_slowmo", accessories: [] });
+    const spec = specHintsSchema.parse({
+      frontLayout: adji,
+      outside: "hpl",
+      inside: "blockmin",
+      hinge: "slowmo",
+      slide: "dt_slowmo",
+      accessories: [],
+    });
     const p = buildInteriorPrompt(spec, "", "front", fromFrontLayout(adji));
     expect(p).toContain("SPATIAL STRUCTURE CONTRACT");
     expect(p).not.toContain("FRONT BLUEPRINT");
