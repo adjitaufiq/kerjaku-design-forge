@@ -259,3 +259,11 @@ export function compileSpatialPrompt(bp: SpatialBlueprint): string {
     `TOTAL: exactly ${t.swingLeaves} swing leaves, ${t.liftLeaves} lift-up flaps and ${t.drawers} drawers. Shelves, LED and stored items are inside compartments and never replace a door leaf.`,
   ].join("\n");
 }
+
+/** Deterministic FNV-1a hash of a normalized v2 blueprint (same in browser and server). */
+export function spatialHash(bp: SpatialBlueprint): string {
+  const s = JSON.stringify(spatialBlueprintSchema.parse(bp));
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193) >>> 0;
+  return h.toString(16).padStart(8, "0");
+}

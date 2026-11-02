@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { compileSpatialPrompt, fromFrontLayout, spatialBlueprintSchema, type SpatialBlueprint } from "./spatial-blueprint";
 
 export const SHAPES = ["single", "L", "U"] as const;
 export const moduleSchema = z.object({
@@ -145,6 +146,9 @@ export const generationRecordSchema = z.object({
   blueprintVersion: z.number().int().optional(),
   blueprintHash: z.string().max(16),
   frontLayout: frontLayoutSchema,
+  // v2 normalized blueprint actually compiled into the prompt (front view).
+  spatialBlueprint: spatialBlueprintSchema.optional(),
+  spatialHash: z.string().max(16).optional(),
   status: z.literal("GENERATED"),
   createdAt: z.string().max(40),
 });
@@ -486,7 +490,12 @@ export function slideLook(slide: SpecHints["slide"]): string {
   return "Drawer runners are TACO BBS ball-bearing double-track rails in MATTE BLACK steel, mounted on the drawer sides; never chrome, silver or white.";
 }
 
-export function buildInteriorPrompt(spec: SpecHints, note = "", angle: "front" | "side" = "front"): string {
+export function buildInteriorPrompt(
+  spec: SpecHints,
+  note = "",
+  angle: "front" | "side" = "front",
+  spatial?: SpatialBlueprint,
+): string {
   // Never build an interior prompt without a FRONT BLUEPRINT.
   const gate = validateInteriorBlueprint(spec.frontLayout);
   if (!gate.valid) throw new Error(gate.error);
@@ -501,7 +510,8 @@ export function buildInteriorPrompt(spec: SpecHints, note = "", angle: "front" |
     camera,
     "LOCK the cabinet carcass dimensions, module count, positions, outside colours, outside HPL grain, materials, handles, countertop, sink, appliances, walls, ceiling, floor and lighting. Never resize, remove, redesign or add cabinet modules. No full-ceiling extension.",
     "1:1 FRONT MAPPING: every closed front panel in IMAGE 1 (an area bounded by visible gap lines) becomes exactly ONE leaf in the open view, hinged on its own outer edge; only fronts listed as a pair open outward from their shared centre gap. Never split a front, never add a front, never merge fronts, never add a filler or narrow extra leaf. Upper fronts stacked in two rows stay two rows of separate leaves over the same number of bays. Drawers stay drawers, pulled out.",
-    layoutPrompt(spec.frontLayout),
+    // Front view: the v2 spatial contract is the single structure source; side view keeps v1 for now.
+    angle === "front" ? compileSpatialPrompt(spatial ?? fromFrontLayout(gate.layout)) : layoutPrompt(spec.frontLayout),
     "OPEN ANGLE: swing every leaf only about 60 degrees so each open leaf stays clearly attached to its own opening and never covers a neighbouring opening. Behind every open leaf show only its own compartment interior (shelves, dividers), never another door.",
     `Selected outside specification: ${label("outside", spec.outside)}; keep the outside finishes exactly as the FINISH RULE below. Selected interior finish: ${label("inside", spec.inside)}. Hinge: ${label("hinge", spec.hinge)}. Drawer runners: ${label("slide", spec.slide)}. ${slideLook(spec.slide)} Show realistic shelving inside existing modules.`,
     [
