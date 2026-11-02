@@ -68,7 +68,63 @@ export function tacoDesc(spec: SpecHints, code: string): string {
   const i = tacoInfoFor(spec, code);
   return i ? `TACO ${i.code} "${i.name}" (${i.texture})` : `TACO ${code}`;
 }
+/** One physical front, listed top-to-bottom inside a column. "double" = 2 swing leaves side by side. */
+export const FRONT_TYPES = ["swing", "double", "drawer", "lift_glass", "lift_wood", "glass_swing", "open"] as const;
+export type FrontType = (typeof FRONT_TYPES)[number];
+export const FRONT_LABEL: Record<FrontType, string> = {
+  swing: "1 pintu swing",
+  double: "2 pintu swing (dobel)",
+  drawer: "1 laci",
+  lift_glass: "Pintu kaca angkat",
+  lift_wood: "Pintu kayu angkat",
+  glass_swing: "1 pintu kaca swing",
+  open: "Rak terbuka",
+};
+const FRONT_PROMPT: Record<FrontType, string> = {
+  swing: "exactly ONE single swing door leaf",
+  double: "exactly TWO swing door leaves side by side meeting at a centre gap (a pair)",
+  drawer: "ONE drawer front, pulled out",
+  lift_glass: "ONE horizontal glass lift-up flap door raised upward on gas springs",
+  lift_wood: "ONE horizontal solid lift-up flap door raised upward on gas springs",
+  glass_swing: "exactly ONE single glass swing door leaf",
+  open: "an open niche with NO door",
+};
+export const columnSchema = z.object({ fronts: z.array(z.enum(FRONT_TYPES)).min(1).max(8) });
+export const frontLayoutSchema = z.object({
+  upper: z.array(columnSchema).max(16),
+  lower: z.array(columnSchema).max(16),
+});
+export type FrontLayout = z.infer<typeof frontLayoutSchema>;
+/** Hardware derived from the workshop-entered front layout (hinge 1 set = 2 pcs per swing leaf). */
+export function layoutCounts(l: FrontLayout | undefined) {
+  const all = [...(l?.upper ?? []), ...(l?.lower ?? [])].flatMap((c) => c.fronts);
+  const n = (t: FrontType) => all.filter((f) => f === t).length;
+  const swing = n("swing") + n("glass_swing") + 2 * n("double");
+  const lift = n("lift_glass") + n("lift_wood");
+  return { swing, drawers: n("drawer"), lift, hingeSets: swing, slideSets: n("drawer"), gasSpringPcs: lift * 2 };
+}
+/** Explicit left-to-right blueprint; the strongest structure lock in the interior prompt. */
+export function layoutPrompt(l: FrontLayout | undefined): string {
+  if (!l || (!l.upper.length && !l.lower.length)) return "";
+  const row = (name: string, cols: FrontLayout["upper"]) =>
+    cols.length
+      ? `${name}: EXACTLY ${cols.length} vertical columns, counted from the viewer's left. ` +
+        cols
+          .map((c, i) => `Column ${i + 1} (top to bottom): ${c.fronts.map((f) => FRONT_PROMPT[f]).join(", then ")}.`)
+          .join(" ")
+      : "";
+  const c = layoutCounts(l);
+  return [
+    "FRONT BLUEPRINT (verified by the workshop, overrides anything you infer from IMAGE 1):",
+    row("UPPER CABINETS", l.upper),
+    row("BASE CABINETS", l.lower),
+    `TOTAL in the whole image: exactly ${c.swing} swing door leaves, ${c.drawers} drawers and ${c.lift} lift-up flap doors. Never draw more or fewer leaves, never merge columns, never split a single leaf into two, never turn a single door into a pair. Column widths follow IMAGE 1.`,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
 export const specHintsSchema = z.object({
+  frontLayout: frontLayoutSchema.optional(),
   material: z.enum(MATERIALS).optional(),
   outside: z.enum(["hpl", "hpl_premium", "tacosheet", "duco"]),
   inside: z.enum(["blockmin", "tacosheet", "hpl"]),
