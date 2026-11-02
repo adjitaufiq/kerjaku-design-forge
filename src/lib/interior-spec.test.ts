@@ -122,7 +122,7 @@ describe("estimate gate (spek wajib lengkap sebelum ke SME)", () => {
     slide: "dt_slowmo", glue: "active", accessories: [],
     modules: defaultModules("single").map((m) => ({ ...m, finish: "TACO TH 825 NT" })),
     hplCodes: { lower: "TH 825 NT", upperSame: true, upper: "", top: "TH 003 AA", hasAccent: false, accent: "", accentNote: "" },
-    topLayers: "2", edge: "edging", handle: "profile_j", glass: "none", lighting: "led", accessoryMode: "plain",
+    topLayers: "2", edge: "edging", handle: "profile_j", glass: "none", lighting: "led", ledRunCount: 1, accessoryMode: "plain",
     hplInfo: { "825 NT": { code: "TH 825 NT", name: "Cherry Afromosia", texture: "woodgrain" }, "003 AA": { code: "TH 003 AA", name: "Black", texture: "solid" }, "001 AA": { code: "TH 001 AA", name: "Porcelain White", texture: "solid" } },
   } as const;
   it("passes when body, glue and every HPL code are filled", () => {
@@ -176,7 +176,7 @@ describe("final spec HPL sheets", () => {
     const base: SpecHints = { outside: "hpl", inside: "blockmin", hinge: "slowmo", slide: "tandem", accessories: [] };
     expect(missingFinalSpec({ ...base, hplCodes: { ...codes, top: "" } })).toContain("Kode HPL top table");
     expect(
-      missingFinalSpec({ ...base, hplInfo: { "825 NT": { code: "TH 825 NT", name: "Cherry Afromosia", texture: "woodgrain" }, "003 AA": { code: "TH 003 AA", name: "Black", texture: "solid" }, "001 AA": { code: "TH 001 AA", name: "Porcelain White", texture: "solid" } }, hplCodes: codes, topLayers: "2", edge: "edging", handle: "none", glass: "dark", lighting: "led_spot", spotlightCount: 2, accessoryMode: "plain" }),
+      missingFinalSpec({ ...base, hplInfo: { "825 NT": { code: "TH 825 NT", name: "Cherry Afromosia", texture: "woodgrain" }, "003 AA": { code: "TH 003 AA", name: "Black", texture: "solid" }, "001 AA": { code: "TH 001 AA", name: "Porcelain White", texture: "solid" } }, hplCodes: codes, topLayers: "2", edge: "edging", handle: "none", glass: "dark", lighting: "led_spot", spotlightCount: 2, ledRunCount: 2, accessoryMode: "plain" }),
     ).toEqual([]);
   });
   it("requires choosing 1 or 2 layer top table", () => {
@@ -252,5 +252,18 @@ describe("lampu sorot", () => {
   it("wajib isi jumlah titik bila lampu mencakup sorot", () => {
     expect(missingFinalSpec(base)).toContain("Jumlah titik lampu sorot");
     expect(missingFinalSpec({ ...base, spotlightCount: 2 })).not.toContain("Jumlah titik lampu sorot");
+  });
+});
+import { toSmeSpec as _sme3, missingFinalSpec as _mf3, buildInteriorPrompt as _ip3 } from "./interior-spec";
+describe("LED strip jalur eksak", () => {
+  const base = { outside: "hpl", inside: "blockmin", hinge: "slowmo", slide: "tandem", lighting: "led_spot", accessories: [] } as never;
+  it("mengirim 2 jalur LED ke SME", () => {
+    expect(_sme3({ ...(base as object), ledRunCount: 2 } as never).finishExtras.ledRun.qty).toBe(2);
+  });
+  it("wajib isi jumlah jalur LED bila pakai LED", () => {
+    expect(_mf3(base)).toContain("Jumlah jalur LED strip");
+  });
+  it("tampak dalam mengunci jumlah daun pintu bertingkat", () => {
+    expect(_ip3(base)).toContain("never merge two stacked doors");
   });
 });
