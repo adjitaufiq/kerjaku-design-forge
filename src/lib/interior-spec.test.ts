@@ -176,7 +176,7 @@ describe("final spec HPL sheets", () => {
     const base: SpecHints = { outside: "hpl", inside: "blockmin", hinge: "slowmo", slide: "tandem", accessories: [] };
     expect(missingFinalSpec({ ...base, hplCodes: { ...codes, top: "" } })).toContain("Kode HPL top table");
     expect(
-      missingFinalSpec({ ...base, hplInfo: { "825 NT": { code: "TH 825 NT", name: "Cherry Afromosia", texture: "woodgrain" }, "003 AA": { code: "TH 003 AA", name: "Black", texture: "solid" }, "001 AA": { code: "TH 001 AA", name: "Porcelain White", texture: "solid" } }, hplCodes: codes, topLayers: "2", edge: "edging", handle: "none", glass: "dark", lighting: "led_spot", accessoryMode: "plain" }),
+      missingFinalSpec({ ...base, hplInfo: { "825 NT": { code: "TH 825 NT", name: "Cherry Afromosia", texture: "woodgrain" }, "003 AA": { code: "TH 003 AA", name: "Black", texture: "solid" }, "001 AA": { code: "TH 001 AA", name: "Porcelain White", texture: "solid" } }, hplCodes: codes, topLayers: "2", edge: "edging", handle: "none", glass: "dark", lighting: "led_spot", spotlightCount: 2, accessoryMode: "plain" }),
     ).toEqual([]);
   });
   it("requires choosing 1 or 2 layer top table", () => {
@@ -241,5 +241,16 @@ describe("TACO catalogue validation", () => {
   it("SME gets motif name + texture", () => {
     const s = _sme2(specHintsSchema.parse({ ...base, hplCodes: codes, hplInfo: info }));
     expect(s.hplMotifs[0]).toMatchObject({ code: "TH 1205 FC", name: "Scandinavia Walnut", texture: "woodgrain" });
+  });
+});
+
+describe("lampu sorot", () => {
+  const base: SpecHints = { outside: "hpl", inside: "blockmin", hinge: "slowmo", slide: "tandem", accessories: [], lighting: "led_spot" };
+  it("2 titik dari desainer dikirim ke SME sebagai qty 2", () => {
+    expect(_toSme({ ...base, spotlightCount: 2 }).finishExtras.spotlights.qty).toBe(2);
+  });
+  it("wajib isi jumlah titik bila lampu mencakup sorot", () => {
+    expect(missingFinalSpec(base)).toContain("Jumlah titik lampu sorot");
+    expect(missingFinalSpec({ ...base, spotlightCount: 2 })).not.toContain("Jumlah titik lampu sorot");
   });
 });

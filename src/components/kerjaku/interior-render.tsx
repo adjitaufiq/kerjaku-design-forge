@@ -458,6 +458,24 @@ export function InteriorRender({
               options={SPEC_OPTIONS[key]}
             />
           ))}
+          {(spec.lighting === "spot" || spec.lighting === "led_spot") && (
+            <label className="space-y-1 text-xs font-medium text-muted-foreground">
+              Jumlah titik lampu sorot (pcs) *
+              <input
+                type="number"
+                min={1}
+                max={50}
+                inputMode="numeric"
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground"
+                value={spec.spotlightCount ?? ""}
+                onChange={(e) => {
+                  const n = Number(e.target.value);
+                  setPreview("");
+                  setSpec((s) => ({ ...s, spotlightCount: Number.isInteger(n) && n >= 1 ? n : undefined }));
+                }}
+              />
+            </label>
+          )}
         </div>
         <div className="space-y-3">
           <p className="text-xs font-medium text-muted-foreground">Aksesori dalam *</p>

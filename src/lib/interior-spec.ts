@@ -98,6 +98,8 @@ export const specHintsSchema = z.object({
   handle: z.enum(HANDLES).optional(),
   glass: z.enum(GLASSES).optional(),
   lighting: z.enum(LIGHTINGS).optional(),
+  // Jumlah titik lampu sorot/downlight (pcs), diisi desainer; hanya dipakai bila lampu mencakup sorot.
+  spotlightCount: z.number().int().min(1).max(50).optional(),
   topLayers: z.enum(TOP_LAYERS).optional(),
   // Bahan top table: HPL TACO (pakai kode) atau granit (vendor batu, bukan HPL).
   topMaterial: z.enum(["hpl", "granite"]).optional(),
@@ -266,6 +268,8 @@ export function missingFinalSpec(spec: SpecHints): string[] {
   if (!spec.handle) miss.push("Handle");
   if (!spec.glass) miss.push("Kaca");
   if (!spec.lighting) miss.push("Lampu");
+  if ((spec.lighting === "spot" || spec.lighting === "led_spot") && !spec.spotlightCount)
+    miss.push("Jumlah titik lampu sorot");
   if (!spec.accessoryMode) miss.push("Aksesori dalam: polos atau pakai aksesori");
   if (spec.accessoryMode === "selected" && !spec.accessories.length)
     miss.push("Centang minimal 1 aksesori");
@@ -475,7 +479,7 @@ export function smeFinishExtras(spec: SpecHints) {
       : { type: "none", qty: 0 },
     gasSprings: lift.length ? { doors: liftDoors, qty: liftDoors * 2, unit: "pcs" } : { doors: 0, qty: 0, unit: "pcs" },
     ledRun: led ? { meters: null, transformers: null } : { meters: 0, transformers: 0 },
-    spotlights: spot ? { qty: null } : { qty: 0 },
+    spotlights: spot ? { qty: spec.spotlightCount ?? null } : { qty: 0 },
   };
 }
 export function toSmeSpec(spec: SpecHints) {
