@@ -476,6 +476,24 @@ export function InteriorRender({
               />
             </label>
           )}
+          {(spec.lighting === "led" || spec.lighting === "led_spot") && (
+            <label className="space-y-1 text-xs font-medium text-muted-foreground">
+              Jumlah jalur LED strip *
+              <input
+                type="number"
+                min={1}
+                max={20}
+                inputMode="numeric"
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground"
+                value={spec.ledRunCount ?? ""}
+                onChange={(e) => {
+                  const n = Number(e.target.value);
+                  setPreview("");
+                  setSpec((s) => ({ ...s, ledRunCount: Number.isInteger(n) && n >= 1 ? n : undefined }));
+                }}
+              />
+            </label>
+          )}
         </div>
         <div className="space-y-3">
           <p className="text-xs font-medium text-muted-foreground">Aksesori dalam *</p>

@@ -100,6 +100,8 @@ export const specHintsSchema = z.object({
   lighting: z.enum(LIGHTINGS).optional(),
   // Jumlah titik lampu sorot/downlight (pcs), diisi desainer; hanya dipakai bila lampu mencakup sorot.
   spotlightCount: z.number().int().min(1).max(50).optional(),
+  /** Number of separate LED strip runs (e.g. under upper cabinets + niche cove = 2). */
+  ledRunCount: z.number().int().min(1).max(20).optional(),
   topLayers: z.enum(TOP_LAYERS).optional(),
   // Bahan top table: HPL TACO (pakai kode) atau granit (vendor batu, bukan HPL).
   topMaterial: z.enum(["hpl", "granite"]).optional(),
@@ -270,6 +272,8 @@ export function missingFinalSpec(spec: SpecHints): string[] {
   if (!spec.lighting) miss.push("Lampu");
   if ((spec.lighting === "spot" || spec.lighting === "led_spot") && !spec.spotlightCount)
     miss.push("Jumlah titik lampu sorot");
+  if ((spec.lighting === "led" || spec.lighting === "led_spot") && !spec.ledRunCount)
+    miss.push("Jumlah jalur LED strip");
   if (!spec.accessoryMode) miss.push("Aksesori dalam: polos atau pakai aksesori");
   if (spec.accessoryMode === "selected" && !spec.accessories.length)
     miss.push("Centang minimal 1 aksesori");
@@ -401,6 +405,7 @@ export function buildInteriorPrompt(spec: SpecHints, note = "", angle: "front" |
     camera,
     "LOCK the cabinet carcass dimensions, module count, positions, outside colours, outside HPL grain, materials, handles, countertop, sink, appliances, walls, ceiling, floor and lighting. Never resize, remove, redesign or add cabinet modules. No full-ceiling extension.",
     "ONLY articulate the existing upper and lower cabinet doors open on their hinges, realistically avoiding collisions; pull existing drawers out so their runners can be seen. Do not invent drawers where there were doors, or change panel widths. Open doors retain their original exterior finish.",
+    "DOOR COUNT LOCK: keep exactly the same number of separate door leaves as IMAGE 1, each with its own hinges. Where upper cabinets are stacked in two tiers (a short top row of doors above a lower row, e.g. inside a lit niche), keep both rows as separate doors of their original heights; never merge two stacked doors into one tall door, never turn a closed door into an open shelf, and never split one door into two.",
     `Selected outside specification: ${label("outside", spec.outside)}; keep the outside finishes exactly as the FINISH RULE below. Selected interior finish: ${label("inside", spec.inside)}. Hinge: ${label("hinge", spec.hinge)}. Drawer runners: ${label("slide", spec.slide)}. Show realistic shelving inside existing modules.`,
     [
       countertopRule(spec),
@@ -478,7 +483,8 @@ export function smeFinishExtras(spec: SpecHints) {
       ? { type: glass, frame: "wood_hpl", hplCode: (spec.hplCodes?.hasAccent && spec.hplCodes.accent.trim()) || undefined, qty: null }
       : { type: "none", qty: 0 },
     gasSprings: lift.length ? { doors: liftDoors, qty: liftDoors * 2, unit: "pcs" } : { doors: 0, qty: 0, unit: "pcs" },
-    ledRun: led ? { meters: null, transformers: null } : { meters: 0, transformers: 0 },
+    // qty = exact number of strip runs (audit compares exactly); meters come from SME measuring.
+    ledRun: led ? { qty: spec.ledRunCount ?? null, meters: null, transformers: null } : { qty: 0, meters: 0, transformers: 0 },
     spotlights: spot ? { qty: spec.spotlightCount ?? null } : { qty: 0 },
   };
 }
