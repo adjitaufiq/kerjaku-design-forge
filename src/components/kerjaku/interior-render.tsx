@@ -724,6 +724,11 @@ export function InteriorRender({
           </>
         )}
       </div>
+      {review && !blueprintGate.valid && (
+        <p role="alert" className="text-xs text-destructive">
+          {blueprintGate.error} Klik "Ubah spek", isi "Struktur pintu per kolom", lalu simpan.
+        </p>
+      )}
       {review && (
         <p className="text-xs text-muted-foreground">
           Tampak luar menerapkan spek yang terlihat (HPL, kaca, handle, lampu) tanpa mengubah Before/After di atas. Gambar opsional (pakai kredit AI) dan hanya mengikuti {specVersionLabel(review.version)}. Ukuran tetap dari ukur workshop.
