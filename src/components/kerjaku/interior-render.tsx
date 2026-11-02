@@ -20,6 +20,7 @@ import {
   type SpecHints,
 } from "@/lib/interior-spec";
 import { TacoCodeField } from "@/components/kerjaku/taco-code-field";
+import { FrontLayoutEditor } from "@/components/kerjaku/front-layout-editor";
 import { tacoInfoFor, type TacoInfo } from "@/lib/interior-spec";
 import { scanInterior } from "@/lib/interior-scan.functions";
 import { streamImage } from "@/lib/interior-stream";
@@ -351,6 +352,13 @@ export function InteriorRender({
             Kabinet atas full plafon
           </label>
         )}
+        <FrontLayoutEditor
+          value={spec.frontLayout}
+          onChange={(frontLayout) => {
+            setPreview("");
+            setSpec((s) => ({ ...s, frontLayout }));
+          }}
+        />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {(["material", "outside", "inside", "hinge", "slide", "glue"] as const).map((key) => (
             <SelectField

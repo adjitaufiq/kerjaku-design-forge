@@ -274,3 +274,21 @@ describe("warna rel laci TACO", () => {
   it("RLT roller putih", () => expect(_sl("roller")).toMatch(/WHITE/));
   it("tandem tersembunyi di bawah", () => expect(_sl("tandem")).toMatch(/UNDERMOUNT/));
 });
+
+import { layoutCounts as _lc, layoutPrompt as _lp } from "./interior-spec";
+describe("front layout blueprint (Adji)", () => {
+  const adji = {
+    upper: [{ fronts: ["swing", "lift_glass"] }, { fronts: ["swing", "swing"] }, { fronts: ["swing", "swing"] }, { fronts: ["swing", "swing"] }, { fronts: ["double", "lift_glass"] }],
+    lower: [{ fronts: ["swing"] }, { fronts: ["drawer", "drawer", "drawer"] }, { fronts: ["swing"] }, { fronts: ["swing"] }],
+  } as const;
+  const l = { upper: adji.upper.map((c) => ({ fronts: [...c.fronts] })), lower: adji.lower.map((c) => ({ fronts: [...c.fronts] })) };
+  it("12 pintu swing = engsel 12 set, 3 rel, 4 pcs hidrolik", () => {
+    expect(_lc(l)).toMatchObject({ swing: 12, hingeSets: 12, slideSets: 3, gasSpringPcs: 4 });
+  });
+  it("prompt locks column counts", () => {
+    const p = _lp(l);
+    expect(p).toContain("UPPER CABINETS: EXACTLY 5 vertical columns");
+    expect(p).toContain("BASE CABINETS: EXACTLY 4 vertical columns");
+    expect(p).toContain("exactly 12 swing door leaves");
+  });
+});
