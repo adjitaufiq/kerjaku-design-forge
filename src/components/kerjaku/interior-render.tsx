@@ -672,7 +672,15 @@ export function InteriorRender({
             </Button>
             <Button disabled={busy || saving} onClick={() => void generate("interior")}>
               <Wand2 className="size-4" />
-              {view === "interior" ? "Membuat 2 sudut tampak dalam…" : preview ? "Buat ulang tampak dalam — 2 sudut (AI)" : "Buat tampak dalam — 2 sudut (AI)"}
+              {view === "interior" ? "Membuat tampak depan…" : preview ? "Buat ulang tampak dalam DEPAN (AI)" : "1. Buat tampak dalam DEPAN (AI)"}
+            </Button>
+            <Button
+              variant="outline"
+              disabled={busy || saving || !preview || !final}
+              onClick={() => void generate("interior_side")}
+            >
+              <Wand2 className="size-4" />
+              {view === "interior_side" ? "Membuat tampak serong…" : side ? "Buat ulang tampak dalam SERONG (AI)" : "2. Buat tampak dalam SERONG (AI)"}
             </Button>
           </>
         )}
