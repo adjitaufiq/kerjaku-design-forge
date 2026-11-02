@@ -243,3 +243,14 @@ describe("TACO catalogue validation", () => {
     expect(s.hplMotifs[0]).toMatchObject({ code: "TH 1205 FC", name: "Scandinavia Walnut", texture: "woodgrain" });
   });
 });
+
+describe("lampu sorot", () => {
+  const base: SpecHints = { outside: "hpl", inside: "blockmin", hinge: "slowmo", slide: "tandem", accessories: [], lighting: "led_spot" };
+  it("2 titik dari desainer dikirim ke SME sebagai qty 2", () => {
+    expect(_toSme({ ...base, spotlightCount: 2 }).finishExtras.spotlights.qty).toBe(2);
+  });
+  it("wajib isi jumlah titik bila lampu mencakup sorot", () => {
+    expect(missingFinalSpec(base)).toContain("Jumlah titik lampu sorot");
+    expect(missingFinalSpec({ ...base, spotlightCount: 2 })).not.toContain("Jumlah titik lampu sorot");
+  });
+});

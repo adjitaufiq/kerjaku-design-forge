@@ -268,6 +268,8 @@ export function missingFinalSpec(spec: SpecHints): string[] {
   if (!spec.handle) miss.push("Handle");
   if (!spec.glass) miss.push("Kaca");
   if (!spec.lighting) miss.push("Lampu");
+  if ((spec.lighting === "spot" || spec.lighting === "led_spot") && !spec.spotlightCount)
+    miss.push("Jumlah titik lampu sorot");
   if (!spec.accessoryMode) miss.push("Aksesori dalam: polos atau pakai aksesori");
   if (spec.accessoryMode === "selected" && !spec.accessories.length)
     miss.push("Centang minimal 1 aksesori");
