@@ -393,6 +393,15 @@ export function buildExteriorPrompt(spec: SpecHints, note = ""): string {
   ].filter(Boolean).join("\n");
 }
 
+/** TACO runner appearance: BBS double-track = matte black side-mount; RLT roller = white; tandem = hidden undermount. */
+export function slideLook(slide: SpecHints["slide"]): string {
+  if (slide === "tandem")
+    return "Drawer runners are TACO tandem UNDERMOUNT: hidden under the drawer bottom, so the drawer box sides are clean plain panels with NO visible side-mounted rail; never draw side rails.";
+  if (slide === "roller")
+    return "Drawer runners are TACO RLT standard roller rails in WHITE epoxy, mounted on the drawer sides; never chrome or black.";
+  return "Drawer runners are TACO BBS ball-bearing double-track rails in MATTE BLACK steel, mounted on the drawer sides; never chrome, silver or white.";
+}
+
 export function buildInteriorPrompt(spec: SpecHints, note = "", angle: "front" | "side" = "front"): string {
   const label = (key: keyof typeof SPEC_OPTIONS, value: string) =>
     SPEC_OPTIONS[key].find((o) => o.value === value)?.label ?? value;
@@ -407,7 +416,8 @@ export function buildInteriorPrompt(spec: SpecHints, note = "", angle: "front" |
     "ONLY articulate the existing upper and lower cabinet doors open on their hinges, realistically avoiding collisions; pull existing drawers out so their runners can be seen. Do not invent drawers where there were doors, or change panel widths. Open doors retain their original exterior finish.",
     "DOOR COUNT LOCK: keep exactly the same number of separate door leaves as IMAGE 1, each with its own hinges. Where upper cabinets are stacked in two tiers (a short top row of doors above a lower row, e.g. inside a lit niche), keep both rows as separate doors of their original heights; never merge two stacked doors into one tall door, never turn a closed door into an open shelf, and never split one door into two.",
     "STACKED-TIER BAY LOCK: a two-tier upper section is built as vertical bays, one bay per door column; the number of bays equals the number of doors in each row (e.g. 3 doors on top over 3 doors below = exactly 3 bays, never 2). Each bay is a separate compartment with its own vertical side panels/dividers aligned to its door edges, and a horizontal panel between the top tier and the lower tier. A lit recess / LED niche below the top row is still CLOSED by its own solid doors in IMAGE 1: in the open view those lower-tier doors MUST be shown swung open on their own hinges, attached to their bay, never removed and never drawn as an open display shelf. In the open-door view, every door of BOTH tiers is visibly open, so the lower-tier door count equals the top-row door count.",
-    `Selected outside specification: ${label("outside", spec.outside)}; keep the outside finishes exactly as the FINISH RULE below. Selected interior finish: ${label("inside", spec.inside)}. Hinge: ${label("hinge", spec.hinge)}. Drawer runners: ${label("slide", spec.slide)}. Show realistic shelving inside existing modules.`,
+    "SEAM MAP LOCK: before opening anything, read the visible door gaps (vertical and horizontal seam lines between fronts) in IMAGE 1. A door leaf exists ONLY where IMAGE 1 shows a front bounded by real seams; a front with no seam line through it is exactly ONE single leaf, however wide it is. Never add a new seam, never split a wide single front into two leaves, never insert an extra narrow door, filler door or extra compartment beside an end cabinet, and never merge fronts separated by a seam. Hinge side follows the seam logic: paired fronts meeting at a central seam open outward from that seam; a single front hinges on its outer side. Count leaves per row left to right in IMAGE 1 and the open view must have the identical count per row.",
+    `Selected outside specification: ${label("outside", spec.outside)}; keep the outside finishes exactly as the FINISH RULE below. Selected interior finish: ${label("inside", spec.inside)}. Hinge: ${label("hinge", spec.hinge)}. Drawer runners: ${label("slide", spec.slide)}. ${slideLook(spec.slide)} Show realistic shelving inside existing modules.`,
     [
       countertopRule(spec),
       spec.topLayers ? `Countertop thickness: ${spec.topLayers === "2" ? "thick double-layer slab (about 36mm front edge)" : "single-layer slab (18mm)"}.` : "",
