@@ -60,7 +60,7 @@ export function InteriorRender({
   const [sideFinal, setSideFinal] = useState(true);
   const [outside, setOutside] = useState(exteriorImage ?? "");
   const [outsideFinal, setOutsideFinal] = useState(true);
-  const [view, setView] = useState<"interior" | "exterior" | null>(null);
+  const [view, setView] = useState<"interior" | "interior_side" | "exterior" | null>(null);
   const [busy, setBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -195,15 +195,13 @@ export function InteriorRender({
       setSaving(false);
     }
   };
-  const generate = async (kind: "interior" | "exterior") => {
+  const generate = async (kind: "interior" | "interior_side" | "exterior") => {
     setBusy(true);
     setView(kind);
     setError("");
     if (kind === "exterior") setOutside("");
-    else {
-      setPreview("");
-      setSide("");
-    }
+    else if (kind === "interior") setPreview("");
+    else setSide("");
     try {
       if (!saved || editing) throw new Error("Simpan data spek master dulu.");
       const chosen = specHintsSchema.parse(saved);
@@ -244,12 +242,15 @@ export function InteriorRender({
         const out = await run("exterior", setOutside, setOutsideFinal);
         await onSave(chosen, final && preview ? preview : undefined, out, sideFinal && side ? side : undefined);
         toast.success("Final tampak luar tersimpan");
-      } else {
-        // Tampak dalam selalu 2 sudut: depan wide-angle + serong 3/4 untuk QC hardware.
+      } else if (kind === "interior") {
+        // Satu sudut per klik: depan diverifikasi dulu, hemat token.
         const front = await run("interior", setPreview, setFinal);
+        await onSave(chosen, front, outsideFinal && outside ? outside : undefined, sideFinal && side ? side : undefined);
+        toast.success("Tampak dalam depan tersimpan");
+      } else {
         const angle = await run("interior_side", setSide, setSideFinal);
-        await onSave(chosen, front, outsideFinal && outside ? outside : undefined, angle);
-        toast.success("2 foto tampak dalam tersimpan (depan + serong)");
+        await onSave(chosen, final && preview ? preview : undefined, outsideFinal && outside ? outside : undefined, angle);
+        toast.success("Tampak dalam serong tersimpan");
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Gagal membuat gambar");
