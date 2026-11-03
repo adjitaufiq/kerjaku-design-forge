@@ -36,12 +36,14 @@ function drawDoor(orig: Uint8Array, extraMm: number) {
   const ai = orig.slice();
   const q = D2.openPolygon!;
   const xh = (q[0].x + q[3].x) / 2, xf = (q[1].x + q[2].x) / 2;
-  const x1 = xf + (extraMm / 1500);
+  const sg = Math.sign(xf - xh);
+  const x1 = xf + sg * (extraMm / 1500); // handle beyond the free edge
+  const x0 = xh - sg * (18 / 1500); // leaf thickness/knuckle projecting past the hinge line
   for (let y = 0; y < H; y++)
     for (let x = 0; x < W; x++) {
       const u = (x + 0.5) / W, v = (y + 0.5) / H;
-      if (u < Math.min(xh, x1) || u > Math.max(xh, x1)) continue;
-      const t = (u - xh) / (xf - xh);
+      if (u < Math.min(x0, x1) || u > Math.max(x0, x1)) continue;
+      const t = Math.max(0, Math.min(1, (u - xh) / (xf - xh)));
       const top = q[0].y + (q[1].y - q[0].y) * t, bot = q[3].y + (q[2].y - q[3].y) * t;
       if (v >= top && v <= bot) ai.set([150, 90, 40, 255], (y * W + x) * 4);
     }
@@ -65,9 +67,10 @@ describe("swing envelope (Tahap 2.5 koridor ayunan)", () => {
     const env = buildSwingEnvelope(D2.openPolygon!, "outward_right", D2.closedBounds.width, full);
     const q = D2.openPolygon!;
     const xf = (q[1].x + q[2].x) / 2, xh = (q[0].x + q[3].x) / 2, ym = (q[0].y + q[3].y) / 2;
-    expect(pointInPolygon({ x: xf + 50 / 1500, y: ym }, env)).toBe(true); // thickness 18 + handle 35 − margin
-    expect(pointInPolygon({ x: xh - 30 / 1500, y: ym }, env)).toBe(true); // hinge cup/knuckle
-    expect(pointInPolygon({ x: xf + 200 / 1500, y: ym }, env)).toBe(false); // not an arbitrary blow-up
+    const sg = Math.sign(xf - xh);
+    expect(pointInPolygon({ x: xf + sg * 50 / 1500, y: ym }, env)).toBe(true); // thickness 18 + handle 35
+    expect(pointInPolygon({ x: xh - sg * 30 / 1500, y: ym }, env)).toBe(true); // knuckle/thickness past hinge line
+    expect(pointInPolygon({ x: xh - sg * 120 / 1500, y: ym }, env)).toBe(false); // not an arbitrary blow-up
   });
 
   it("zone map: envelope overrides carcass, no conflicts; unknown hinge cell and open niche stay protected", () => {
