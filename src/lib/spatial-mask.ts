@@ -238,15 +238,9 @@ export function buildSwingEnvelope(
   const top = Math.max(0, spec.topToleranceNorm ?? 0);
   if (top > 0) {
     // Top edge = smaller y. For swing (v = y) shift min v; for lift-up (u = y) shift min u.
-    if (!vertical) {
-      const vMin = Math.min(...pts.map((p) => p.v));
-      for (const p of pts) if (p.v === vMin) p.v -= top;
-      // also lift every free-edge top point so the slanted top edge moves uniformly
-      for (const p of pts) if (p.v < (vLo + vHi) / 2 && p.v !== vMin - top) p.v -= top;
-    } else {
-      const uMin = Math.min(...pts.map((p) => p.u));
-      for (const p of pts) if (p.u < (Math.min(uh, uf) + Math.max(uh, uf)) / 2 || p.u === uMin) p.u -= top;
-    }
+    // Top edge = smaller y. Swing: v = y, shift every upper-half point. Lift-up: u = y.
+    if (!vertical) { const mid = (vLo + vHi) / 2; for (const p of pts) if (p.v < mid) p.v -= top; }
+    else { const mid = (uh + uf) / 2; for (const p of pts) if (p.u < mid) p.u -= top; }
   }
   return convexHull(pts.map(({ u, v }) => (vertical ? { x: v, y: u } : { x: u, y: v })));
 }
