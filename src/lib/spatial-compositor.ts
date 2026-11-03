@@ -12,7 +12,7 @@ import { ZONE, type MaskZone } from "./spatial-mask";
 
 export type RgbaImage = { width: number; height: number; data: Uint8Array | Uint8ClampedArray };
 
-const EDITABLE = (z: number) => z === ZONE.cavity || z === ZONE.corridor;
+const EDITABLE = (z: number | undefined) => z === ZONE.cavity || z === ZONE.corridor;
 
 export class CompositorError extends Error {}
 
@@ -33,7 +33,7 @@ export function validateInputs(original: RgbaImage, ai: RgbaImage, zones: Uint8A
   if (!(zones instanceof Uint8Array)) throw new CompositorError("mask: buffer tidak valid");
   if (zones.length !== width * height) throw new CompositorError(`mask: panjang ${zones.length} ≠ ${width * height}`);
   for (let i = 0; i < zones.length; i++)
-    if (zones[i] > 3) throw new CompositorError(`mask: zona tidak terdefinisi (${zones[i]}) pada pixel ${i}`);
+    if (zones[i]! > 3) throw new CompositorError(`mask: zona tidak terdefinisi (${zones[i]}) pada pixel ${i}`);
 }
 
 export function compositeProtectedPixels(
@@ -48,10 +48,10 @@ export function compositeProtectedPixels(
   for (let p = 0; p < zones.length; p++) {
     const src = EDITABLE(zones[p]) ? ai.data : original.data;
     const o = p * 4;
-    out[o] = src[o];
-    out[o + 1] = src[o + 1];
-    out[o + 2] = src[o + 2];
-    out[o + 3] = src[o + 3];
+    out[o] = src[o]!;
+    out[o + 1] = src[o + 1]!;
+    out[o + 2] = src[o + 2]!;
+    out[o + 3] = src[o + 3]!;
   }
   return { width, height, data: out };
 }
@@ -78,24 +78,24 @@ function regionAudit(a: RgbaImage["data"], b: RgbaImage["data"], zones: Uint8Arr
   let pixels = 0, changed = 0;
   const sum = [0, 0, 0, 0], max = [0, 0, 0, 0];
   for (let p = 0; p < zones.length; p++) {
-    if (!pick(zones[p])) continue;
+    if (!pick(zones[p]!)) continue;
     pixels++;
     let diff = false;
     for (let c = 0; c < 4; c++) {
-      const d = Math.abs(a[p * 4 + c] - b[p * 4 + c]);
+      const d = Math.abs(a[p * 4 + c]! - b[p * 4 + c]!);
       if (d) diff = true;
-      sum[c] += d;
-      if (d > max[c]) max[c] = d;
+      sum[c] = sum[c]! + d;
+      if (d > max[c]!) max[c] = d;
     }
     if (diff) changed++;
   }
   const n = pixels || 1;
-  const ch = (v: number[]): ChannelStats => ({ r: v[0], g: v[1], b: v[2], a: v[3] });
+  const ch = (v: number[]): ChannelStats => ({ r: v[0]!, g: v[1]!, b: v[2]!, a: v[3]! });
   return {
     pixels,
     changedPixels: changed,
     identicalPct: pixels ? ((pixels - changed) / pixels) * 100 : 100,
-    mae: (sum[0] + sum[1] + sum[2] + sum[3]) / (n * 4),
+    mae: (sum[0]! + sum[1]! + sum[2]! + sum[3]!) / (n * 4),
     maeByChannel: ch(sum.map((s) => s / n)),
     maxDiffByChannel: ch(max),
   };
@@ -157,7 +157,7 @@ export function analyzeEditBoundary(
       if (!nb.some((q) => q >= 0 && EDITABLE(zones[q]))) continue;
       boundary++;
       let d = 0;
-      for (let c = 0; c < 3; c++) d = Math.max(d, Math.abs(original.data[p * 4 + c] - ai.data[p * 4 + c]));
+      for (let c = 0; c < 3; c++) d = Math.max(d, Math.abs(original.data[p * 4 + c]! - ai.data[p * 4 + c]!));
       if (d > threshold) clipped++;
     }
   const clippedPct = boundary ? (clipped / boundary) * 100 : 0;
@@ -167,7 +167,7 @@ export function analyzeEditBoundary(
 /** Binary white-is-edit mask → zone map (editable → cavity, protected → outside). */
 export function zonesFromBinaryMask(gray: Uint8Array, threshold = 128): Uint8Array {
   const z = new Uint8Array(gray.length);
-  for (let i = 0; i < gray.length; i++) z[i] = gray[i] >= threshold ? ZONE.cavity : ZONE.outside;
+  for (let i = 0; i < gray.length; i++) z[i] = gray[i]! >= threshold ? ZONE.cavity : ZONE.outside;
   return z;
 }
 
