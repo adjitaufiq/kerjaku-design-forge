@@ -347,24 +347,77 @@ export function overlaps(a: Box, b: Box): boolean {
   return a.x < b.x + b.w - EPS && b.x < a.x + a.w - EPS && a.y < b.y + b.h - EPS && b.y < a.y + a.h - EPS && a.z < b.z + b.d - EPS && b.z < a.z + a.d - EPS;
 }
 
+type P2 = [number, number];
+/** Exact posed shape: rotated rectangle in one plane + interval on the remaining axis. */
+interface Shape { plane: "xz" | "yz"; poly: P2[]; lo: number; hi: number }
+
+function rectPoly(u: number, v: number, du: number, dv: number): P2[] {
+  return [[u, v], [u + du, v], [u + du, v + dv], [u, v + dv]];
+}
+export function posedShape(c: KComponent, all: Map<string, KComponent>, pose: Pose): Shape | null {
+  const lead = c.movesWith ? all.get(c.movesWith) : undefined;
+  const mech = lead?.mechanism;
+  const v = c.movesWith ? pose[c.movesWith] ?? 0 : 0;
+  if (!mech || v === 0 || mech.kind === "drawer") return null;
+  const b = c.box, a = (Math.min(v, mech.maxOpen) * Math.PI) / 180;
+  if (mech.kind === "swing") {
+    const ang = mech.sign * a, s = Math.sin(ang), co = Math.cos(ang);
+    const poly = rectPoly(b.x, b.z, b.w, b.d).map(([x, z]): P2 => {
+      const dx = x - mech.pivot.x, dz = z - mech.pivot.z;
+      return [mech.pivot.x + dx * co + dz * s, mech.pivot.z - dx * s + dz * co];
+    });
+    return { plane: "xz", poly, lo: b.y, hi: b.y + b.h };
+  }
+  const s = Math.sin(a), co = Math.cos(a);
+  const poly = rectPoly(b.y, b.z, b.h, b.d).map(([y, z]): P2 => {
+    const dy = y - mech.pivot.y, dz = z - mech.pivot.z;
+    return [mech.pivot.y + dy * co + dz * s, mech.pivot.z - dy * s + dz * co];
+  });
+  return { plane: "yz", poly, lo: b.x, hi: b.x + b.w };
+}
+function boxShape(b: Box, plane: "xz" | "yz"): Shape {
+  return plane === "xz" ? { plane, poly: rectPoly(b.x, b.z, b.w, b.d), lo: b.y, hi: b.y + b.h }
+    : { plane, poly: rectPoly(b.y, b.z, b.h, b.d), lo: b.x, hi: b.x + b.w };
+}
+function satOverlap(A: P2[], B: P2[]): boolean {
+  for (const poly of [A, B]) for (let i = 0; i < poly.length; i++) {
+    const p = poly[i]!, q = poly[(i + 1) % poly.length]!;
+    const nx = q[1] - p[1], ny = p[0] - q[0];
+    const pa = A.map((t) => t[0] * nx + t[1] * ny), pb = B.map((t) => t[0] * nx + t[1] * ny);
+    const len = Math.hypot(nx, ny);
+    if (Math.max(...pa) <= Math.min(...pb) + EPS * len || Math.max(...pb) <= Math.min(...pa) + EPS * len) return false;
+  }
+  return true;
+}
+function shapesOverlap(a: Shape, b: Shape): boolean {
+  if (a.hi <= b.lo + EPS || b.hi <= a.lo + EPS) return false;
+  return satOverlap(a.poly, b.poly);
+}
+
 export interface Collision { a: string; b: string; pose: string }
 
-/** Checks closed state, every mechanism fully open alone, and all opened together. */
+/** Exact (SAT) interference: closed state, every mechanism fully open alone, and all swing+drawer open together. */
 export function detectCollisions(asm: KitchenAssembly): Collision[] {
   const all = new Map(asm.components.map((c) => [c.id, c]));
   const leads = asm.components.filter((c) => c.mechanism);
   const poses: [string, Pose][] = [["closed", {}]];
   for (const l of leads) poses.push([`open:${l.id}`, { [l.id]: l.mechanism!.maxOpen }]);
-  // "all swing+drawer open" (lift-ups operated alone: they rise in front of the leaf above by design)
   poses.push(["all-open", Object.fromEntries(leads.filter((l) => l.mechanism!.kind !== "lift-up").map((l) => [l.id, l.mechanism!.maxOpen]))]);
   const res: Collision[] = [];
   for (const [name, pose] of poses) {
-    const boxes = asm.components.map((c) => ({ c, b: posedBox(c, all, pose) }));
-    for (let i = 0; i < boxes.length; i++)
-      for (let j = i + 1; j < boxes.length; j++) {
-        const A = boxes[i]!, B = boxes[j]!;
-        if (A.c.movesWith && A.c.movesWith === B.c.movesWith) continue; // same rigid group
-        if (overlaps(A.b, B.b)) res.push({ a: A.c.id, b: B.c.id, pose: name });
+    const items = asm.components.map((c) => ({ c, box: posedBox(c, all, pose), shape: posedShape(c, all, pose) }));
+    for (let i = 0; i < items.length; i++)
+      for (let j = i + 1; j < items.length; j++) {
+        const A = items[i]!, B = items[j]!;
+        if (A.c.movesWith && A.c.movesWith === B.c.movesWith) continue;
+        if (!overlaps(A.box, B.box)) continue; // broad phase
+        let hit = true;
+        if (A.shape || B.shape) {
+          const plane = (A.shape ?? B.shape)!.plane;
+          const sa = A.shape ?? boxShape(A.box, plane), sb = B.shape ?? boxShape(B.box, plane);
+          hit = sa.plane === sb.plane ? shapesOverlap(sa, sb) : true; // cross-plane: conservative AABB
+        }
+        if (hit) res.push({ a: A.c.id, b: B.c.id, pose: name });
       }
   }
   return res;
