@@ -258,14 +258,14 @@ export function compileKitchen(bp: KitchenBlueprint): KitchenAssembly {
             out.push(f(l.id, "door", box, DT, M.door, {
               hingeSide: l.hingeSide,
               connects: [l.hingeSide === "left" ? `${moduleId}-SL` : `${moduleId}-SR`],
-              mechanism: { kind: "swing", pivot: { x: hx, y: 0, z: fz }, axis: "y", sign: l.hingeSide === "left" ? -1 : 1, maxOpen: 105 },
+              mechanism: { kind: "swing", pivot: { x: hx, y: 0, z: fz + DT }, axis: "y", sign: l.hingeSide === "left" ? -1 : 1, maxOpen: 105 },
             }));
           });
         } else if (sl.kind === "lift-up") {
           const box = { x: cx + G, y: yb + G / 2, z: fz, w: col.width - 2 * G, h: sl.height - G, d: 20 };
           out.push(f(sl.id, "lift-door", box, 20, M.glass, {
             connects: [`${moduleId}-SL`, `${moduleId}-SR`],
-            mechanism: { kind: "lift-up", pivot: { x: 0, y: box.y + box.h, z: fz }, axis: "x", sign: -1, maxOpen: 85 },
+            mechanism: { kind: "lift-up", pivot: { x: 0, y: box.y + box.h, z: fz + 20 }, axis: "x", sign: -1, maxOpen: 85 },
           }));
         } else {
           const n = sl.ids.length;
