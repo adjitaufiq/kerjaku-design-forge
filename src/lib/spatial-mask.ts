@@ -145,7 +145,34 @@ export type SwingEnvelopeSpec = {
    * Only for uncalibrated cameras; must be declared and reported, never tuned silently.
    */
   flareTolerance?: number;
+  /**
+   * Extra test tolerance added ONLY to the top edge of the envelope (normalized image units,
+   * e.g. 30/1024 for +30 px). A test tolerance, never a physical leaf dimension.
+   */
+  topToleranceNorm?: number;
 };
+
+/**
+ * Handle region of an open swing leaf: band on the FREE edge only (never the hinge edge),
+ * middle third of the leaf height, extended outward by handle protrusion.
+ * quad = [hingeStart, freeStart, freeEnd, hingeEnd].
+ */
+export function freeEdgeHandleRegion(quad: [P, P, P, P], handleBandNorm: number): P[] {
+  const [h0, f0, f1, h1] = quad;
+  const uh = (h0.x + h1.x) / 2, uf = (f0.x + f1.x) / 2;
+  const s = Math.sign(uf - uh) || 1;
+  const yTop = f0.y + (f1.y - f0.y) / 3, yBot = f0.y + (2 * (f1.y - f0.y)) / 3;
+  const xIn = uf - s * handleBandNorm, xOut = uf + s * handleBandNorm;
+  return [{ x: xIn, y: yTop }, { x: xOut, y: yTop }, { x: xOut, y: yBot }, { x: xIn, y: yBot }];
+}
+
+/** True when the handle region is on the free side, i.e. farther from the hinge than the leaf mid-line. */
+export function handleOnFreeSide(quad: [P, P, P, P], region: P[]): boolean {
+  const uh = (quad[0].x + quad[3].x) / 2, uf = (quad[1].x + quad[2].x) / 2;
+  const mid = (uh + uf) / 2;
+  const s = Math.sign(uf - uh) || 1;
+  return region.every((p) => s * (p.x - mid) > 0);
+}
 
 type P = Point2D;
 function convexHull(pts: P[]): P[] {
@@ -207,6 +234,13 @@ export function buildSwingEnvelope(
     const lo = vLo - kLo * d - shV, hi = vHi + kHi * d + shV;
     // free edge + leaf thickness + handle + shadow (outward along the swing axis)
     pts.push({ u, v: lo }, { u, v: hi }, { u: u + s * outU, v: lo }, { u: u + s * outU, v: hi });
+  }
+  const top = Math.max(0, spec.topToleranceNorm ?? 0);
+  if (top > 0) {
+    // Top edge = smaller y. For swing (v = y) shift min v; for lift-up (u = y) shift min u.
+    // Top edge = smaller y. Swing: v = y, shift every upper-half point. Lift-up: u = y.
+    if (!vertical) { const mid = (vLo + vHi) / 2; for (const p of pts) if (p.v < mid) p.v -= top; }
+    else { const mid = (uh + uf) / 2; for (const p of pts) if (p.u < mid) p.u -= top; }
   }
   return convexHull(pts.map(({ u, v }) => (vertical ? { x: v, y: u } : { x: u, y: v })));
 }
