@@ -65,7 +65,7 @@ export function compileCabinet(spec: ParametricCabinetSpec): CompiledCabinet {
       add({ id: `${id}-DIV-${i}`, role: "divider", parentCell: null, column: null, box: { x: x0 - t, y: t, z: bt, w: t, h: H - 2 * t, d: D - bt }, material: spec.material.body }, "w");
     const cellId = `${id}-C${i + 1}`;
     cells.push({ id: cellId, column: i + 1, box: { x: x0, y: t, z: bt, w: innerW, h: H - 2 * t, d: D - bt } });
-    spec.shelfHeights[i].forEach((hTop, k) =>
+    (spec.shelfHeights[i] ?? []).forEach((hTop, k) =>
       add({ id: `${id}-C${i + 1}-SHELF-${k + 1}`, role: "shelf", parentCell: cellId, column: i + 1, box: { x: x0, y: hTop - t, z: bt, w: innerW, h: t, d: D - bt - c.shelfFrontSetback }, material: spec.material.body }, "h"),
     );
   }

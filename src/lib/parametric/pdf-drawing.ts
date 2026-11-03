@@ -34,10 +34,10 @@ export function workingDrawingPdf(cab: CompiledCabinet, date = "2026-11-03"): js
       }
     }
   };
-  draw(frontElevation(cab), 30, 120);
-  draw(sideSection(cab), 175, 120);
-  draw(topView(cab), 30, 250);
-  draw(frontElevation(cab, false), 255, 120);
+  draw(frontElevation(cab), 30, 105);
+  draw(sideSection(cab), 175, 105);
+  draw(topView(cab), 30, 200);
+  draw(frontElevation(cab, false), 255, 105);
 
   // scale bar 0–500 mm
   doc.setLineWidth(0.4); doc.line(175, 250, 175 + 500 * s, 250);
@@ -63,10 +63,10 @@ export function workingDrawingPdf(cab: CompiledCabinet, date = "2026-11-03"): js
   doc.setFontSize(8);
   const cols = ["ID", "Peran", "Material", "P (mm)", "L (mm)", "T (mm)", "Qty", "Status"];
   const xs = [20, 90, 115, 190, 215, 240, 262, 278];
-  cols.forEach((c, i) => doc.text(c, xs[i], 32));
+  cols.forEach((c, i) => doc.text(c, xs[i] ?? 20, 32));
   cuttingList(cab).forEach((r, k) => {
     const y = 40 + k * 7;
-    [r.id, r.role, r.material, r.length, r.width, r.thickness, r.qty, r.status].forEach((v, i) => doc.text(String(v), xs[i], y));
+    [r.id, r.role, r.material, r.length, r.width, r.thickness, r.qty, r.status].forEach((v, i) => doc.text(String(v), xs[i] ?? 20, y));
   });
   if (!cab.productionReady) { doc.setTextColor(192, 57, 43); doc.text("PROVISIONAL: dimensi belum diverifikasi workshop.", 20, 280); }
   return doc;

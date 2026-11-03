@@ -8,7 +8,7 @@ import { testCabinetFixture } from "./fixture-test-cabinet";
 const cab = () => compileCabinet(testCabinetFixture());
 
 describe("Milestone A — parametric core", () => {
-  it("fixture menghasilkan tepat 2 pintu, 2 ambalan, 1 partisi, 11 komponen", () => {
+  it("fixture menghasilkan tepat 2 pintu, 2 ambalan, 1 partisi, 10 komponen", () => {
     const c = cab().components;
     expect(c.filter((x) => x.role === "door")).toHaveLength(2);
     expect(c.filter((x) => x.role === "shelf")).toHaveLength(2);
