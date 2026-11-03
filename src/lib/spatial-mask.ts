@@ -140,6 +140,11 @@ export type SwingEnvelopeSpec = {
   /** ± tolerance around the calibrated opening angle (model may open a bit more/less). */
   angleToleranceDeg: number;
   angleSamples?: number;
+  /**
+   * Multiplier on the calibrated perspective flare of the free edge (default 1 = strict).
+   * Only for uncalibrated cameras; must be declared and reported, never tuned silently.
+   */
+  flareTolerance?: number;
 };
 
 type P = Point2D;
@@ -184,8 +189,9 @@ export function buildSwingEnvelope(
   const W = Math.max(leafExtent, Math.abs(uf - uh));
   const th0 = Math.acos(Math.min(1, Math.abs(uf - uh) / W));
   const depth0 = W * Math.sin(th0);
-  const kLo = depth0 > 1e-9 ? flareLo / depth0 : 0;
-  const kHi = depth0 > 1e-9 ? flareHi / depth0 : 0;
+  const ft = Math.max(1, spec.flareTolerance ?? 1);
+  const kLo = depth0 > 1e-9 ? (ft * flareLo) / depth0 : 0;
+  const kHi = depth0 > 1e-9 ? (ft * flareHi) / depth0 : 0;
   const tol = (spec.angleToleranceDeg * Math.PI) / 180;
   const n = Math.max(2, spec.angleSamples ?? 9);
   const outU = (spec.leafThicknessMm + spec.handleProtrusionMm + spec.shadowToleranceMm) * mmU;
