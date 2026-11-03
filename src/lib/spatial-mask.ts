@@ -121,6 +121,176 @@ export function buildZoneMap(
 
 export const isEditable = (z: number) => z === ZONE.cavity || z === ZONE.corridor;
 
+// ---------------------------------------------------------------------------
+// Tahap 2.5 fix — physical swing envelope (replaces the thin corridor quad).
+// The old corridor was only the projected leaf plane at one angle, clipped to the
+// cavity. An opened leaf is foreground: its thickness, hinge knuckle, handle and
+// shadow project OVER the carcass, so they were cut by pixel restoration.
+// The envelope is derived only from the calibrated openPolygon + declared physical
+// tolerances (mm); nothing is fitted to the AI output.
+// ---------------------------------------------------------------------------
+export type SwingEnvelopeSpec = {
+  /** Frame size used to convert mm → normalized units. */
+  frameWidthMm: number;
+  frameHeightMm: number;
+  leafThicknessMm: number;
+  handleProtrusionMm: number;
+  hingeMarginMm: number;
+  shadowToleranceMm: number;
+  /** ± tolerance around the calibrated opening angle (model may open a bit more/less). */
+  angleToleranceDeg: number;
+  angleSamples?: number;
+  /**
+   * Multiplier on the calibrated perspective flare of the free edge (default 1 = strict).
+   * Only for uncalibrated cameras; must be declared and reported, never tuned silently.
+   */
+  flareTolerance?: number;
+};
+
+type P = Point2D;
+function convexHull(pts: P[]): P[] {
+  const s = [...pts].sort((a, b) => a.x - b.x || a.y - b.y);
+  const cr = (o: P, a: P, b: P) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+  const lo: P[] = [];
+  for (const p of s) {
+    while (lo.length >= 2 && cr(lo[lo.length - 2]!, lo[lo.length - 1]!, p) <= 0) lo.pop();
+    lo.push(p);
+  }
+  const up: P[] = [];
+  for (const p of [...s].reverse()) {
+    while (up.length >= 2 && cr(up[up.length - 2]!, up[up.length - 1]!, p) <= 0) up.pop();
+    up.push(p);
+  }
+  return lo.slice(0, -1).concat(up.slice(0, -1));
+}
+
+/**
+ * Envelope polygon of an open swing/lift leaf. quad = [hingeStart, freeStart, freeEnd, hingeEnd].
+ * leafExtent = closed leaf size along the swing axis (normalized; width for swing, height for lift-up).
+ */
+export function buildSwingEnvelope(
+  quad: [P, P, P, P],
+  swing: "outward_left" | "outward_right" | "upward",
+  leafExtent: number,
+  spec: SwingEnvelopeSpec,
+): P[] {
+  const vertical = swing === "upward";
+  // Work in (u = swing axis, v = hinge axis); map back at the end.
+  const toUV = (p: P) => (vertical ? { u: p.y, v: p.x } : { u: p.x, v: p.y });
+  const mmU = 1 / (vertical ? spec.frameHeightMm : spec.frameWidthMm);
+  const mmV = 1 / (vertical ? spec.frameWidthMm : spec.frameHeightMm);
+  const [h0, f0, f1, h1] = quad.map(toUV) as [{ u: number; v: number }, { u: number; v: number }, { u: number; v: number }, { u: number; v: number }];
+  const uh = (h0.u + h1.u) / 2;
+  const uf = (f0.u + f1.u) / 2;
+  const s = Math.sign(uf - uh) || (swing === "outward_left" || swing === "upward" ? -1 : 1);
+  const vLo = Math.min(h0.v, h1.v), vHi = Math.max(h0.v, h1.v);
+  const flareLo = Math.max(0, vLo - Math.min(f0.v, f1.v));
+  const flareHi = Math.max(0, Math.max(f0.v, f1.v) - vHi);
+  const W = Math.max(leafExtent, Math.abs(uf - uh));
+  const th0 = Math.acos(Math.min(1, Math.abs(uf - uh) / W));
+  const depth0 = W * Math.sin(th0);
+  const ft = Math.max(1, spec.flareTolerance ?? 1);
+  const kLo = depth0 > 1e-9 ? (ft * flareLo) / depth0 : 0;
+  const kHi = depth0 > 1e-9 ? (ft * flareHi) / depth0 : 0;
+  const tol = (spec.angleToleranceDeg * Math.PI) / 180;
+  const n = Math.max(2, spec.angleSamples ?? 9);
+  const outU = (spec.leafThicknessMm + spec.handleProtrusionMm + spec.shadowToleranceMm) * mmU;
+  const shV = (spec.shadowToleranceMm + spec.leafThicknessMm) * mmV;
+  const pts: { u: number; v: number }[] = [];
+  // Hinge side: knuckle/cup margin back toward the cavity, full height + shadow.
+  const hu = uh - s * spec.hingeMarginMm * mmU;
+  pts.push({ u: hu, v: vLo - shV }, { u: hu, v: vHi + shV }, { u: uh, v: vLo - shV }, { u: uh, v: vHi + shV });
+  for (let i = 0; i < n; i++) {
+    const th = Math.max(0, Math.min(Math.PI / 2, th0 - tol + (2 * tol * i) / (n - 1)));
+    const d = W * Math.sin(th);
+    const u = uh + s * W * Math.cos(th);
+    const lo = vLo - kLo * d - shV, hi = vHi + kHi * d + shV;
+    // free edge + leaf thickness + handle + shadow (outward along the swing axis)
+    pts.push({ u, v: lo }, { u, v: hi }, { u: u + s * outU, v: lo }, { u: u + s * outU, v: hi });
+  }
+  return convexHull(pts.map(({ u, v }) => (vertical ? { x: v, y: u } : { x: u, y: v })));
+}
+
+/** Point-in-polygon for arbitrary polygons (exported for tests/evidence). */
+export const pointInPolygon = (p: Point2D, poly: Point2D[]) => inPolygon(p, poly);
+
+/**
+ * Zone map with physical swing envelopes. Envelopes are foreground (in front of the frame),
+ * so they override carcass instead of being counted as conflicts. Unverified-hinge cells and
+ * open niches stay fully protected, exactly like buildZoneMap.
+ */
+export function buildEnvelopeZoneMap(
+  geometry: SpatialGeometry,
+  frame: GeometryFrame,
+  width: number,
+  height: number,
+  spec: Omit<SwingEnvelopeSpec, "frameWidthMm" | "frameHeightMm">,
+): ZoneMap & { envelopes: { leafId: string; polygon: Point2D[] }[] } {
+  const base = buildZoneMap(geometry, frame, width, height);
+  const full = { ...spec, frameWidthMm: frame.widthMm, frameHeightMm: frame.heightMm };
+  const envelopes: { leafId: string; polygon: Point2D[] }[] = [];
+  for (const l of geometry.leaves) {
+    if (l.ownerId !== frame.ownerId || !l.openPolygon || !l.swingDirection) continue;
+    if (base.protectedCells.includes(l.parentCellId)) continue;
+    const ext = l.swingDirection === "upward" ? l.closedBounds.height : l.closedBounds.width;
+    envelopes.push({ leafId: l.leafId, polygon: buildSwingEnvelope(l.openPolygon, l.swingDirection, ext, full) });
+  }
+  const zones = base.zones;
+  for (let py = 0; py < height; py++)
+    for (let px = 0; px < width; px++) {
+      const i = py * width + px;
+      if (zones[i] === ZONE.cavity) continue;
+      const p = { x: (px + 0.5) / width, y: (py + 0.5) / height };
+      if (envelopes.some((e) => inPolygon(p, e.polygon))) zones[i] = ZONE.corridor;
+    }
+  return { ...base, zones, conflicts: 0, envelopes };
+}
+
+/**
+ * Inner-only feather: weight 0..1 for editable pixels, ramping from the protected boundary
+ * inward over bandPx (chebyshev distance). Protected pixels always have weight 0.
+ */
+export function innerFeatherWeights(zones: Uint8Array, width: number, height: number, bandPx: number): Float32Array {
+  const w = new Float32Array(width * height);
+  const dist = new Int32Array(width * height).fill(-1);
+  let q: number[] = [];
+  for (let i = 0; i < zones.length; i++) if (!isEditable(zones[i]!)) { dist[i] = 0; q.push(i); }
+  while (q.length) {
+    const nx: number[] = [];
+    for (const i of q) {
+      const x = i % width, y = (i / width) | 0;
+      for (let dy = -1; dy <= 1; dy++)
+        for (let dx = -1; dx <= 1; dx++) {
+          const X = x + dx, Y = y + dy;
+          if (X < 0 || Y < 0 || X >= width || Y >= height) continue;
+          const j = Y * width + X;
+          if (dist[j]! >= 0) continue;
+          dist[j] = dist[i]! + 1;
+          nx.push(j);
+        }
+    }
+    q = nx;
+  }
+  for (let i = 0; i < w.length; i++) {
+    if (!isEditable(zones[i]!)) continue;
+    const d = dist[i]! < 0 ? Infinity : dist[i]!;
+    w[i] = bandPx <= 0 ? 1 : Math.min(1, d / (bandPx + 1));
+  }
+  return w;
+}
+
+/** Blend composite toward original ONLY inside the edit zone; protected pixels are copied from original. */
+export function applyInnerFeather(original: Uint8Array, composite: Uint8Array, zones: Uint8Array, weights: Float32Array): Uint8Array {
+  const out = new Uint8Array(original.length);
+  for (let i = 0; i < zones.length; i++) {
+    const o = i * 4;
+    if (!isEditable(zones[i]!)) { out.set(original.subarray(o, o + 4), o); continue; }
+    const a = weights[i]!;
+    for (let c = 0; c < 4; c++) out[o + c] = Math.round(original[o + c]! * (1 - a) + composite[o + c]! * a);
+  }
+  return out;
+}
+
 /** RGBA mask buffer with the requested endpoint semantics. Values are strictly 0 or 255. */
 export function zoneMapToRgba(map: ZoneMap, semantics: MaskSemantics): Uint8Array {
   const out = new Uint8Array(map.width * map.height * 4);
