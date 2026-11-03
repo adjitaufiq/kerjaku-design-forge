@@ -157,7 +157,7 @@ export function analyzeEditBoundary(
       if (!nb.some((q) => q >= 0 && EDITABLE(zones[q]))) continue;
       boundary++;
       let d = 0;
-      for (let c = 0; c < 3; c++) d = Math.max(d, Math.abs(original.data[p * 4 + c] - ai.data[p * 4 + c]));
+      for (let c = 0; c < 3; c++) d = Math.max(d, Math.abs(original.data[p * 4 + c]! - ai.data[p * 4 + c]!));
       if (d > threshold) clipped++;
     }
   const clippedPct = boundary ? (clipped / boundary) * 100 : 0;
@@ -167,7 +167,7 @@ export function analyzeEditBoundary(
 /** Binary white-is-edit mask → zone map (editable → cavity, protected → outside). */
 export function zonesFromBinaryMask(gray: Uint8Array, threshold = 128): Uint8Array {
   const z = new Uint8Array(gray.length);
-  for (let i = 0; i < gray.length; i++) z[i] = gray[i] >= threshold ? ZONE.cavity : ZONE.outside;
+  for (let i = 0; i < gray.length; i++) z[i] = gray[i]! >= threshold ? ZONE.cavity : ZONE.outside;
   return z;
 }
 
