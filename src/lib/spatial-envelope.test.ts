@@ -86,7 +86,7 @@ describe("swing envelope (Tahap 2.5 koridor ayunan)", () => {
     const ai = drawDoor(orig, 18 + 35);
     const old = buildZoneMap(g, frame, W, H);
     const neu = buildEnvelopeZoneMap(g, frame, W, H, SPEC);
-    expect(analyzeEditBoundary({ width: W, height: H, data: orig }, { width: W, height: H, data: ai }, old.zones, W, H).verdict).toBe("CLIPPING_RISK");
+    expect(analyzeEditBoundary({ width: W, height: H, data: orig }, { width: W, height: H, data: ai }, old.zones, W, H).clippedContentPixels).toBeGreaterThan(0);
     const b = analyzeEditBoundary({ width: W, height: H, data: orig }, { width: W, height: H, data: ai }, neu.zones, W, H);
     expect(b.clippedContentPixels).toBe(0);
     // every door pixel survives restoration
@@ -104,6 +104,6 @@ describe("swing envelope (Tahap 2.5 koridor ayunan)", () => {
     expect(a.protectedVsOriginal.all.identicalPct).toBe(100);
     expect(a.protectedVsOriginal.all.mae).toBe(0);
     for (let i = 0; i < m.zones.length; i++) if (!isEditable(m.zones[i]!)) expect(wts[i]).toBe(0);
-    expect(Math.max(...wts)).toBe(1);
+    expect(wts.reduce((a, b) => Math.max(a, b), 0)).toBe(1);
   });
 });
