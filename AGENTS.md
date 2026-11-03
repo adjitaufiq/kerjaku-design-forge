@@ -16,3 +16,4 @@
 
 - Interior views (front/side) require a valid front-layout blueprint, enforced in browser, server route and prompt builder; each generation stores its blueprint snapshot + hash in specHints.generations. Why: AI must never guess door structure, and every image must be traceable to its blueprint.
 - Interior door geometry lives in src/lib/spatial-geometry.ts as a separate layer bound to the blueprint hash; coordinates come only from verified measurement/annotation and open polygons use an explicit camera. Why: geometry must be deterministic and never invented, without changing blueprint hashes.
+- Parametric furniture engine (src/lib/parametric/) is isolated: production generators must not import it until integration is approved behind a default-OFF flag. Why: protect the running Interior/Exterior/SME flows.
